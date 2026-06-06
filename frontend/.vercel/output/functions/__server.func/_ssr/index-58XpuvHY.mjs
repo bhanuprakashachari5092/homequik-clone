@@ -1,7 +1,7 @@
 import { j as jsxRuntimeExports } from "../_libs/react.mjs";
 import { L as Link } from "../_libs/tanstack__react-router.mjs";
-import { S as SiteLayout } from "./SiteLayout-Ctj3i0fx.mjs";
-import { a as useLocation } from "./router-BaTSiW1U.mjs";
+import { S as SiteLayout } from "./SiteLayout-CghcIKG8.mjs";
+import { c as useLocation } from "./router-BI9GhMvI.mjs";
 import "../_libs/firebase.mjs";
 import "../_libs/firebase__analytics.mjs";
 import "../_libs/firebase__auth.mjs";
@@ -9,7 +9,7 @@ import "../_libs/firebase__app.mjs";
 import "../_libs/firebase__logger.mjs";
 import "../_libs/firebase__firestore.mjs";
 import "../_libs/sonner.mjs";
-import { l as MapPin, m as Search, d as Star, A as ArrowRight, j as ShieldCheck, i as Clock, n as Sparkles } from "../_libs/lucide-react.mjs";
+import { j as MapPin, k as Search, l as Star, A as ArrowRight, h as ShieldCheck, g as Clock, m as Sparkles } from "../_libs/lucide-react.mjs";
 import "../_libs/tanstack__router-core.mjs";
 import "../_libs/tanstack__history.mjs";
 import "../_libs/cookie-es.mjs";
@@ -60,7 +60,10 @@ import "../_libs/protobufjs__path.mjs";
 const categories = [{
   name: "CCTV & Surveillance",
   emoji: "📹",
-  to: "/services/cctv-surveillance"
+  to: "/services/$serviceId",
+  params: {
+    serviceId: "cctv-surveillance"
+  }
 }, {
   name: "Biometric System",
   emoji: "👆",
@@ -181,7 +184,7 @@ function Home() {
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative hidden md:block", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute -top-6 -right-6 h-72 w-72 rounded-full bg-brand-soft blur-3xl" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "relative grid grid-cols-2 gap-4", children: categories.slice(0, 4).map((c, i) => /* @__PURE__ */ jsxRuntimeExports.jsxs(Link, { to: c.to, className: `rounded-2xl border border-border bg-card p-5 shadow-card hover:shadow-hover hover:-translate-y-1 transition ${i % 2 ? "mt-8" : ""}`, children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "relative grid grid-cols-2 gap-4", children: categories.slice(0, 4).map((c, i) => /* @__PURE__ */ jsxRuntimeExports.jsxs(Link, { to: c.to, params: c.params, className: `rounded-2xl border border-border bg-card p-5 shadow-card hover:shadow-hover hover:-translate-y-1 transition ${i % 2 ? "mt-8" : ""}`, children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-3xl", children: c.emoji }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 text-sm font-semibold leading-tight", children: c.name }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 text-xs text-brand", children: "Book now →" })
@@ -196,7 +199,7 @@ function Home() {
           /* @__PURE__ */ jsxRuntimeExports.jsx(ArrowRight, { className: "ml-1 inline h-4 w-4" })
         ] })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4", children: categories.map((c) => /* @__PURE__ */ jsxRuntimeExports.jsxs(Link, { to: c.to, className: "rounded-xl border border-border bg-card p-5 text-left hover:border-brand hover:shadow-card transition", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4", children: categories.map((c) => /* @__PURE__ */ jsxRuntimeExports.jsxs(Link, { to: c.to, params: c.params, className: "rounded-xl border border-border bg-card p-5 text-left hover:border-brand hover:shadow-card transition", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-3xl", children: c.emoji }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 text-sm font-semibold leading-snug", children: c.name })
       ] }, c.name)) })
@@ -207,7 +210,9 @@ function Home() {
         "Loved by ",
         location
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3", children: mostBooked.map((s) => /* @__PURE__ */ jsxRuntimeExports.jsxs(Link, { to: `/services/${s.id}`, className: "group relative overflow-hidden rounded-2xl border border-border bg-card shadow-lg hover:-translate-y-2 hover:shadow-2xl hover:border-brand/40 transition-all duration-300 ease-out", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3", children: mostBooked.map((s) => /* @__PURE__ */ jsxRuntimeExports.jsxs(Link, { to: "/services/$serviceId", params: {
+        serviceId: s.id
+      }, className: "group relative overflow-hidden rounded-2xl border border-border bg-card shadow-lg hover:-translate-y-2 hover:shadow-2xl hover:border-brand/40 transition-all duration-300 ease-out", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-0 bg-gradient-to-t from-brand/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 pointer-events-none" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "aspect-[4/3] overflow-hidden relative", children: /* @__PURE__ */ jsxRuntimeExports.jsx("img", { src: s.img, alt: s.title, loading: "lazy", className: "h-full w-full object-cover group-hover:scale-110 transition-transform duration-500 ease-in-out" }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-5 relative z-20 bg-card", children: [

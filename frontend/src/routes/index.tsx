@@ -23,14 +23,14 @@ export const Route = createFileRoute("/")({
 });
 
 const categories = [
-  { name: "CCTV & Surveillance", emoji: "📹", to: "/services/cctv-surveillance" },
+  { name: "CCTV & Surveillance", emoji: "📹", to: "/services/$serviceId", params: { serviceId: "cctv-surveillance" } },
   { name: "Biometric System", emoji: "👆", to: "/services" },
   { name: "Access Control System", emoji: "🚪", to: "/services" },
   { name: "UPS and Invertor", emoji: "🔋", to: "/services" },
   { name: "Home Automation", emoji: "🏠", to: "/services" },
   { name: "Smart Film & Glass (PDLC)", emoji: "🪟", to: "/services" },
   { name: "Electrical Work", emoji: "⚡", to: "/services" },
-] as const;
+] as any;
 
 const mostBooked = [
   {
@@ -148,10 +148,11 @@ function Home() {
           <div className="relative hidden md:block">
             <div className="absolute -top-6 -right-6 h-72 w-72 rounded-full bg-brand-soft blur-3xl" />
             <div className="relative grid grid-cols-2 gap-4">
-              {categories.slice(0, 4).map((c, i) => (
+              {categories.slice(0, 4).map((c: any, i) => (
                 <Link
                   key={c.name}
                   to={c.to}
+                  params={c.params}
                   className={`rounded-2xl border border-border bg-card p-5 shadow-card hover:shadow-hover hover:-translate-y-1 transition ${i % 2 ? "mt-8" : ""}`}
                 >
                   <div className="text-3xl">{c.emoji}</div>
@@ -176,10 +177,11 @@ function Home() {
           </Link>
         </div>
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-          {categories.map((c) => (
+          {categories.map((c: any) => (
             <Link
               key={c.name}
               to={c.to}
+              params={c.params}
               className="rounded-xl border border-border bg-card p-5 text-left hover:border-brand hover:shadow-card transition"
             >
               <div className="text-3xl">{c.emoji}</div>
@@ -198,7 +200,8 @@ function Home() {
             {mostBooked.map((s) => (
               <Link
                 key={s.id}
-                to={`/services/${s.id}`}
+                to="/services/$serviceId"
+                params={{ serviceId: s.id }}
                 className="group relative overflow-hidden rounded-2xl border border-border bg-card shadow-lg hover:-translate-y-2 hover:shadow-2xl hover:border-brand/40 transition-all duration-300 ease-out"
               >
                 <div className="absolute inset-0 bg-gradient-to-t from-brand/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 pointer-events-none" />

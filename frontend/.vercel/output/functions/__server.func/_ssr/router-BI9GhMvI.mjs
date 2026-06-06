@@ -55,7 +55,7 @@ import "../_libs/long.mjs";
 import "../_libs/protobufjs__codegen.mjs";
 import "../_libs/protobufjs__fetch.mjs";
 import "../_libs/protobufjs__path.mjs";
-const appCss = "/assets/styles-BHFohRft.css";
+const appCss = "/assets/styles-D6d_4PVl.css";
 const firebaseConfig = {
   apiKey: "AIzaSyC8yfL_9YR9ZvfO9ID6MKfn3eqCpZdhy-8",
   authDomain: "homequik-clone.firebaseapp.com",
@@ -314,20 +314,8 @@ function RootComponent() {
   const { queryClient } = Route$8.useRouteContext();
   return /* @__PURE__ */ jsxRuntimeExports.jsx(QueryClientProvider, { client: queryClient, children: /* @__PURE__ */ jsxRuntimeExports.jsx(LocationProvider, { children: /* @__PURE__ */ jsxRuntimeExports.jsx(AuthProvider, { children: /* @__PURE__ */ jsxRuntimeExports.jsx(CartProvider, { children: /* @__PURE__ */ jsxRuntimeExports.jsx(Outlet, {}) }) }) }) });
 }
-const $$splitComponentImporter$7 = () => import("./services-Drv0qyWX.mjs");
-const Route$7 = createFileRoute("/services")({
-  head: () => ({
-    meta: [{
-      title: "All services — HomeQuik"
-    }, {
-      name: "description",
-      content: "Browse all tech and business services: Digital Marketing, Web Development, CCTV, and more."
-    }]
-  }),
-  component: lazyRouteComponent($$splitComponentImporter$7, "component")
-});
-const $$splitComponentImporter$6 = () => import("./native-FW9hBwx5.mjs");
-const Route$6 = createFileRoute("/native")({
+const $$splitComponentImporter$7 = () => import("./native-BcvzRZOS.mjs");
+const Route$7 = createFileRoute("/native")({
   head: () => ({
     meta: [{
       title: "Native by HomeQuik — Smart water purifiers"
@@ -336,10 +324,10 @@ const Route$6 = createFileRoute("/native")({
       content: "Smart water purifiers, locks and security cameras from Native. Designed for Indian homes."
     }]
   }),
-  component: lazyRouteComponent($$splitComponentImporter$6, "component")
+  component: lazyRouteComponent($$splitComponentImporter$7, "component")
 });
-const $$splitComponentImporter$5 = () => import("./login-BoiB-VhY.mjs");
-const Route$5 = createFileRoute("/login")({
+const $$splitComponentImporter$6 = () => import("./login-OzESJgvL.mjs");
+const Route$6 = createFileRoute("/login")({
   head: () => ({
     meta: [{
       title: "Login or Sign up — HomeQuik"
@@ -348,10 +336,10 @@ const Route$5 = createFileRoute("/login")({
       content: "Login to book trusted professionals."
     }]
   }),
-  component: lazyRouteComponent($$splitComponentImporter$5, "component")
+  component: lazyRouteComponent($$splitComponentImporter$6, "component")
 });
-const $$splitComponentImporter$4 = () => import("./insta-help-D8AJqguX.mjs");
-const Route$4 = createFileRoute("/insta-help")({
+const $$splitComponentImporter$5 = () => import("./insta-help-Bc-IR5QU.mjs");
+const Route$5 = createFileRoute("/insta-help")({
   head: () => ({
     meta: [{
       title: "Insta Help — Quick fixes in under 15 minutes"
@@ -360,19 +348,19 @@ const Route$4 = createFileRoute("/insta-help")({
       content: "Get a verified pro at your door in 15 minutes for small fixes around the house."
     }]
   }),
-  component: lazyRouteComponent($$splitComponentImporter$4, "component")
+  component: lazyRouteComponent($$splitComponentImporter$5, "component")
 });
-const $$splitComponentImporter$3 = () => import("./cart-BcQn3vV5.mjs");
-const Route$3 = createFileRoute("/cart")({
+const $$splitComponentImporter$4 = () => import("./cart-DKh-qN3m.mjs");
+const Route$4 = createFileRoute("/cart")({
   head: () => ({
     meta: [{
       title: "Your cart — HomeQuik"
     }]
   }),
-  component: lazyRouteComponent($$splitComponentImporter$3, "component")
+  component: lazyRouteComponent($$splitComponentImporter$4, "component")
 });
-const $$splitComponentImporter$2 = () => import("./about-CRV9u0CA.mjs");
-const Route$2 = createFileRoute("/about")({
+const $$splitComponentImporter$3 = () => import("./about-GJTBx0d7.mjs");
+const Route$3 = createFileRoute("/about")({
   head: () => ({
     meta: [{
       title: "About — HomeQuik"
@@ -381,10 +369,10 @@ const Route$2 = createFileRoute("/about")({
       content: "HomeQuik connects businesses with trained, background-checked tech professionals."
     }]
   }),
-  component: lazyRouteComponent($$splitComponentImporter$2, "component")
+  component: lazyRouteComponent($$splitComponentImporter$3, "component")
 });
-const $$splitComponentImporter$1 = () => import("./index-DJ6D2ha8.mjs");
-const Route$1 = createFileRoute("/")({
+const $$splitComponentImporter$2 = () => import("./index-58XpuvHY.mjs");
+const Route$2 = createFileRoute("/")({
   head: () => ({
     meta: [{
       title: "HomeQuik | Expert B2B tech & business services"
@@ -397,6 +385,18 @@ const Route$1 = createFileRoute("/")({
     }, {
       property: "og:description",
       content: "Expert tech professionals at your service."
+    }]
+  }),
+  component: lazyRouteComponent($$splitComponentImporter$2, "component")
+});
+const $$splitComponentImporter$1 = () => import("./services.index-CXX3v1Yd.mjs");
+const Route$1 = createFileRoute("/services/")({
+  head: () => ({
+    meta: [{
+      title: "All services — HomeQuik"
+    }, {
+      name: "description",
+      content: "Browse all tech and business services: Digital Marketing, Web Development, CCTV, and more."
     }]
   }),
   component: lazyRouteComponent($$splitComponentImporter$1, "component")
@@ -569,8 +569,8 @@ function getServiceById(id) {
   }
   return null;
 }
-const $$splitComponentImporter = () => import("./services._serviceId-BGDbYcFL.mjs");
-const Route = createFileRoute("/services/$serviceId")({
+const $$splitComponentImporter = () => import("./services_._serviceId-DL3wiaL1.mjs");
+const Route = createFileRoute("/services_/$serviceId")({
   loader: ({
     params
   }) => {
@@ -594,52 +594,46 @@ const Route = createFileRoute("/services/$serviceId")({
   }),
   component: lazyRouteComponent($$splitComponentImporter, "component")
 });
-const ServicesRoute = Route$7.update({
-  id: "/services",
-  path: "/services",
-  getParentRoute: () => Route$8
-});
-const NativeRoute = Route$6.update({
+const NativeRoute = Route$7.update({
   id: "/native",
   path: "/native",
   getParentRoute: () => Route$8
 });
-const LoginRoute = Route$5.update({
+const LoginRoute = Route$6.update({
   id: "/login",
   path: "/login",
   getParentRoute: () => Route$8
 });
-const InstaHelpRoute = Route$4.update({
+const InstaHelpRoute = Route$5.update({
   id: "/insta-help",
   path: "/insta-help",
   getParentRoute: () => Route$8
 });
-const CartRoute = Route$3.update({
+const CartRoute = Route$4.update({
   id: "/cart",
   path: "/cart",
   getParentRoute: () => Route$8
 });
-const AboutRoute = Route$2.update({
+const AboutRoute = Route$3.update({
   id: "/about",
   path: "/about",
   getParentRoute: () => Route$8
 });
-const IndexRoute = Route$1.update({
+const IndexRoute = Route$2.update({
   id: "/",
   path: "/",
   getParentRoute: () => Route$8
 });
-const ServicesServiceIdRoute = Route.update({
-  id: "/$serviceId",
-  path: "/$serviceId",
-  getParentRoute: () => ServicesRoute
+const ServicesIndexRoute = Route$1.update({
+  id: "/services/",
+  path: "/services/",
+  getParentRoute: () => Route$8
 });
-const ServicesRouteChildren = {
-  ServicesServiceIdRoute
-};
-const ServicesRouteWithChildren = ServicesRoute._addFileChildren(
-  ServicesRouteChildren
-);
+const ServicesServiceIdRoute = Route.update({
+  id: "/services_/$serviceId",
+  path: "/services/$serviceId",
+  getParentRoute: () => Route$8
+});
 const rootRouteChildren = {
   IndexRoute,
   AboutRoute,
@@ -647,7 +641,8 @@ const rootRouteChildren = {
   InstaHelpRoute,
   LoginRoute,
   NativeRoute,
-  ServicesRoute: ServicesRouteWithChildren
+  ServicesServiceIdRoute,
+  ServicesIndexRoute
 };
 const routeTree = Route$8._addFileChildren(rootRouteChildren)._addFileTypes();
 const getRouter = () => {
@@ -666,9 +661,9 @@ const router = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProper
 }, Symbol.toStringTag, { value: "Module" }));
 export {
   Route as R,
-  useLocation as a,
-  auth as b,
-  useAuth as c,
+  auth as a,
+  useAuth as b,
+  useLocation as c,
   db as d,
   router as r,
   servicesData as s,

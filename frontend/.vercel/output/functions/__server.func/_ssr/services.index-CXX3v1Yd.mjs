@@ -1,7 +1,7 @@
 import { j as jsxRuntimeExports } from "../_libs/react.mjs";
 import { L as Link } from "../_libs/tanstack__react-router.mjs";
-import { S as SiteLayout } from "./SiteLayout-Ctj3i0fx.mjs";
-import { u as useCart, a as useLocation, s as servicesData } from "./router-BaTSiW1U.mjs";
+import { S as SiteLayout } from "./SiteLayout-CghcIKG8.mjs";
+import { u as useCart, c as useLocation, s as servicesData } from "./router-BI9GhMvI.mjs";
 import { t as toast } from "../_libs/sonner.mjs";
 import "../_libs/firebase.mjs";
 import "../_libs/firebase__analytics.mjs";
@@ -9,7 +9,7 @@ import "../_libs/firebase__auth.mjs";
 import "../_libs/firebase__app.mjs";
 import "../_libs/firebase__logger.mjs";
 import "../_libs/firebase__firestore.mjs";
-import { c as ChevronRight, d as Star } from "../_libs/lucide-react.mjs";
+import { n as ChevronRight, l as Star } from "../_libs/lucide-react.mjs";
 import "../_libs/tanstack__router-core.mjs";
 import "../_libs/tanstack__history.mjs";
 import "../_libs/cookie-es.mjs";
@@ -93,7 +93,9 @@ function ServicesPage() {
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-12", children: servicesData.map((g) => /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: g.name.toLowerCase().replace(/\s+/g, "-"), children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-bold md:text-2xl", children: g.name }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3", children: g.items.map((item) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "overflow-hidden rounded-2xl border border-border bg-card shadow-card hover:shadow-hover transition flex flex-col justify-between", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs(Link, { to: `/services/${item.id}`, className: "block group", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(Link, { to: "/services/$serviceId", params: {
+            serviceId: item.id
+          }, className: "block group", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "aspect-[4/3] bg-secondary w-full relative overflow-hidden", children: /* @__PURE__ */ jsxRuntimeExports.jsx("img", { src: item.image, alt: item.title, className: "h-full w-full object-cover group-hover:scale-105 transition-transform duration-500" }) }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-5 pt-5", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [

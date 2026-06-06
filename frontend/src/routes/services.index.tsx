@@ -14,7 +14,7 @@ import { useCart } from "@/context/CartContext";
 import { toast } from "sonner";
 import { useLocation } from "@/context/LocationContext";
 
-export const Route = createFileRoute("/services")({
+export const Route = createFileRoute("/services/")({
   head: () => ({
     meta: [
       { title: "All services — HomeQuik" },
@@ -85,7 +85,7 @@ function ServicesPage() {
                     key={item.id}
                     className="overflow-hidden rounded-2xl border border-border bg-card shadow-card hover:shadow-hover transition flex flex-col justify-between"
                   >
-                    <Link to={`/services/${item.id}`} className="block group">
+                    <Link to="/services/$serviceId" params={{ serviceId: item.id }} className="block group">
                       <div className="aspect-[4/3] bg-secondary w-full relative overflow-hidden">
                         <img 
                           src={item.image} 

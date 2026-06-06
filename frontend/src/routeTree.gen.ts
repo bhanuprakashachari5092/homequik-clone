@@ -9,20 +9,15 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as ServicesRouteImport } from './routes/services'
 import { Route as NativeRouteImport } from './routes/native'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as InstaHelpRouteImport } from './routes/insta-help'
 import { Route as CartRouteImport } from './routes/cart'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as ServicesServiceIdRouteImport } from './routes/services.$serviceId'
+import { Route as ServicesIndexRouteImport } from './routes/services.index'
+import { Route as ServicesServiceIdRouteImport } from './routes/services_.$serviceId'
 
-const ServicesRoute = ServicesRouteImport.update({
-  id: '/services',
-  path: '/services',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const NativeRoute = NativeRouteImport.update({
   id: '/native',
   path: '/native',
@@ -53,10 +48,15 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ServicesIndexRoute = ServicesIndexRouteImport.update({
+  id: '/services/',
+  path: '/services/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ServicesServiceIdRoute = ServicesServiceIdRouteImport.update({
-  id: '/$serviceId',
-  path: '/$serviceId',
-  getParentRoute: () => ServicesRoute,
+  id: '/services_/$serviceId',
+  path: '/services/$serviceId',
+  getParentRoute: () => rootRouteImport,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -66,8 +66,8 @@ export interface FileRoutesByFullPath {
   '/insta-help': typeof InstaHelpRoute
   '/login': typeof LoginRoute
   '/native': typeof NativeRoute
-  '/services': typeof ServicesRouteWithChildren
   '/services/$serviceId': typeof ServicesServiceIdRoute
+  '/services/': typeof ServicesIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -76,8 +76,8 @@ export interface FileRoutesByTo {
   '/insta-help': typeof InstaHelpRoute
   '/login': typeof LoginRoute
   '/native': typeof NativeRoute
-  '/services': typeof ServicesRouteWithChildren
   '/services/$serviceId': typeof ServicesServiceIdRoute
+  '/services': typeof ServicesIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -87,8 +87,8 @@ export interface FileRoutesById {
   '/insta-help': typeof InstaHelpRoute
   '/login': typeof LoginRoute
   '/native': typeof NativeRoute
-  '/services': typeof ServicesRouteWithChildren
-  '/services/$serviceId': typeof ServicesServiceIdRoute
+  '/services_/$serviceId': typeof ServicesServiceIdRoute
+  '/services/': typeof ServicesIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -99,8 +99,8 @@ export interface FileRouteTypes {
     | '/insta-help'
     | '/login'
     | '/native'
-    | '/services'
     | '/services/$serviceId'
+    | '/services/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -109,8 +109,8 @@ export interface FileRouteTypes {
     | '/insta-help'
     | '/login'
     | '/native'
-    | '/services'
     | '/services/$serviceId'
+    | '/services'
   id:
     | '__root__'
     | '/'
@@ -119,8 +119,8 @@ export interface FileRouteTypes {
     | '/insta-help'
     | '/login'
     | '/native'
-    | '/services'
-    | '/services/$serviceId'
+    | '/services_/$serviceId'
+    | '/services/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -130,18 +130,12 @@ export interface RootRouteChildren {
   InstaHelpRoute: typeof InstaHelpRoute
   LoginRoute: typeof LoginRoute
   NativeRoute: typeof NativeRoute
-  ServicesRoute: typeof ServicesRouteWithChildren
+  ServicesServiceIdRoute: typeof ServicesServiceIdRoute
+  ServicesIndexRoute: typeof ServicesIndexRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/services': {
-      id: '/services'
-      path: '/services'
-      fullPath: '/services'
-      preLoaderRoute: typeof ServicesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/native': {
       id: '/native'
       path: '/native'
@@ -184,27 +178,22 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/services/$serviceId': {
-      id: '/services/$serviceId'
-      path: '/$serviceId'
+    '/services/': {
+      id: '/services/'
+      path: '/services'
+      fullPath: '/services/'
+      preLoaderRoute: typeof ServicesIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/services_/$serviceId': {
+      id: '/services_/$serviceId'
+      path: '/services/$serviceId'
       fullPath: '/services/$serviceId'
       preLoaderRoute: typeof ServicesServiceIdRouteImport
-      parentRoute: typeof ServicesRoute
+      parentRoute: typeof rootRouteImport
     }
   }
 }
-
-interface ServicesRouteChildren {
-  ServicesServiceIdRoute: typeof ServicesServiceIdRoute
-}
-
-const ServicesRouteChildren: ServicesRouteChildren = {
-  ServicesServiceIdRoute: ServicesServiceIdRoute,
-}
-
-const ServicesRouteWithChildren = ServicesRoute._addFileChildren(
-  ServicesRouteChildren,
-)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
@@ -213,7 +202,8 @@ const rootRouteChildren: RootRouteChildren = {
   InstaHelpRoute: InstaHelpRoute,
   LoginRoute: LoginRoute,
   NativeRoute: NativeRoute,
-  ServicesRoute: ServicesRouteWithChildren,
+  ServicesServiceIdRoute: ServicesServiceIdRoute,
+  ServicesIndexRoute: ServicesIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

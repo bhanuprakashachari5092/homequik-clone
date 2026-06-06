@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { Star, CheckCircle, ArrowLeft, ShieldCheck, Clock } from "lucide-react";
 import { CCTVSurveillanceDetails } from "@/components/CCTVSurveillanceDetails";
 
-export const Route = createFileRoute("/services/$serviceId")({
+export const Route = createFileRoute("/services_/$serviceId")({
   loader: ({ params }) => {
     const service = getServiceById(params.serviceId);
     if (!service) {
