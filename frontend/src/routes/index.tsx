@@ -34,6 +34,13 @@ const categories = [
 
 const mostBooked = [
   {
+    title: "CCTV & Surveillance",
+    price: "₹18,000+",
+    rating: 4.9,
+    reviews: "8.5M",
+    img: "/services/cctv.png",
+  },
+  {
     title: "Digital Marketing",
     price: "₹25,000 / Month",
     rating: 4.9,
@@ -67,13 +74,6 @@ const mostBooked = [
     rating: 4.9,
     reviews: "900K",
     img: "/services/app-development.png",
-  },
-  {
-    title: "Printer/Stationery",
-    price: "Quote per vol.",
-    rating: 4.8,
-    reviews: "1.2M",
-    img: "/services/printer-stationery.png",
   },
 ] as const;
 
@@ -193,17 +193,18 @@ function Home() {
               <Link
                 key={s.title}
                 to="/services"
-                className="group overflow-hidden rounded-2xl border border-border bg-card shadow-card hover:shadow-hover transition"
+                className="group relative overflow-hidden rounded-2xl border border-border bg-card shadow-lg hover:-translate-y-2 hover:shadow-2xl hover:border-brand/40 transition-all duration-300 ease-out"
               >
-                <div className="aspect-[4/3] overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-t from-brand/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 pointer-events-none" />
+                <div className="aspect-[4/3] overflow-hidden relative">
                   <img
                     src={s.img}
                     alt={s.title}
                     loading="lazy"
-                    className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    className="h-full w-full object-cover group-hover:scale-110 transition-transform duration-500 ease-in-out"
                   />
                 </div>
-                <div className="p-5">
+                <div className="p-5 relative z-20 bg-card">
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     <Star className="h-3 w-3 fill-brand text-brand" />
                     <span className="font-semibold text-foreground">{s.rating}</span>
