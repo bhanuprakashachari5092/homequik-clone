@@ -23,7 +23,7 @@ export const Route = createFileRoute("/")({
 });
 
 const categories = [
-  { name: "CCTV & Surveillance", emoji: "📹", to: "/services" },
+  { name: "CCTV & Surveillance", emoji: "📹", to: "/services/cctv-surveillance" },
   { name: "Biometric System", emoji: "👆", to: "/services" },
   { name: "Access Control System", emoji: "🚪", to: "/services" },
   { name: "UPS and Invertor", emoji: "🔋", to: "/services" },
@@ -34,6 +34,7 @@ const categories = [
 
 const mostBooked = [
   {
+    id: "cctv-surveillance",
     title: "CCTV & Surveillance",
     price: "₹18,000+",
     rating: 4.9,
@@ -41,6 +42,7 @@ const mostBooked = [
     img: "/services/cctv.png",
   },
   {
+    id: "digital-marketing",
     title: "Digital Marketing",
     price: "₹25,000 / Month",
     rating: 4.9,
@@ -48,6 +50,7 @@ const mostBooked = [
     img: "/services/digital-marketing.png",
   },
   {
+    id: "telemarketing",
     title: "Telemarketing",
     price: "₹15,000 / Month",
     rating: 4.8,
@@ -55,6 +58,7 @@ const mostBooked = [
     img: "/services/telemarketing.png",
   },
   {
+    id: "graphic-design",
     title: "Graphic Design",
     price: "₹5,000 / Package",
     rating: 4.9,
@@ -62,6 +66,7 @@ const mostBooked = [
     img: "/services/graphic-design.png",
   },
   {
+    id: "web-development",
     title: "Web Development",
     price: "₹35,000+",
     rating: 4.9,
@@ -69,6 +74,7 @@ const mostBooked = [
     img: "/services/web-development.png",
   },
   {
+    id: "app-development",
     title: "App Development",
     price: "₹1,50,000+",
     rating: 4.9,
@@ -191,8 +197,8 @@ function Home() {
           <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {mostBooked.map((s) => (
               <Link
-                key={s.title}
-                to="/services"
+                key={s.id}
+                to={`/services/${s.id}`}
                 className="group relative overflow-hidden rounded-2xl border border-border bg-card shadow-lg hover:-translate-y-2 hover:shadow-2xl hover:border-brand/40 transition-all duration-300 ease-out"
               >
                 <div className="absolute inset-0 bg-gradient-to-t from-brand/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 pointer-events-none" />

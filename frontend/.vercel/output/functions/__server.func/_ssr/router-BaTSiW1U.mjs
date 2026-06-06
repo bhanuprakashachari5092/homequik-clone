@@ -1,6 +1,7 @@
 import { Q as QueryClient } from "../_libs/tanstack__query-core.mjs";
 import { Q as QueryClientProvider } from "../_libs/tanstack__react-query.mjs";
 import { c as createRouter, a as createRootRouteWithContext, u as useRouter, L as Link, O as Outlet, H as HeadContent, S as Scripts, b as createFileRoute, l as lazyRouteComponent } from "../_libs/tanstack__react-router.mjs";
+import { S as notFound } from "../_libs/tanstack__router-core.mjs";
 import { j as jsxRuntimeExports, r as reactExports } from "../_libs/react.mjs";
 import "../_libs/firebase.mjs";
 import { g as getAnalytics } from "../_libs/firebase__analytics.mjs";
@@ -9,19 +10,19 @@ import { i as initializeApp } from "../_libs/firebase__app.mjs";
 import "../_libs/firebase__logger.mjs";
 import { c as collection, a as addDoc, s as serverTimestamp, g as getFirestore } from "../_libs/firebase__firestore.mjs";
 import { t as toast } from "../_libs/sonner.mjs";
-import "../_libs/tanstack__router-core.mjs";
-import "../_libs/tanstack__history.mjs";
-import "../_libs/cookie-es.mjs";
-import "../_libs/seroval.mjs";
-import "../_libs/seroval-plugins.mjs";
-import "node:stream/web";
-import "node:stream";
+import { V as Video, M as Megaphone, P as PhoneCall, a as PenTool, C as Code, S as Smartphone, b as Printer } from "../_libs/lucide-react.mjs";
 import "../_libs/react-dom.mjs";
 import "async_hooks";
 import "stream";
 import "util";
 import "crypto";
+import "node:stream";
 import "../_libs/isbot.mjs";
+import "../_libs/tanstack__history.mjs";
+import "../_libs/cookie-es.mjs";
+import "../_libs/seroval.mjs";
+import "../_libs/seroval-plugins.mjs";
+import "node:stream/web";
 import "../_libs/firebase__util.mjs";
 import "../_libs/firebase__component.mjs";
 import "../_libs/firebase__installations.mjs";
@@ -54,7 +55,7 @@ import "../_libs/long.mjs";
 import "../_libs/protobufjs__codegen.mjs";
 import "../_libs/protobufjs__fetch.mjs";
 import "../_libs/protobufjs__path.mjs";
-const appCss = "/assets/styles-BWaumxjW.css";
+const appCss = "/assets/styles-BHFohRft.css";
 const firebaseConfig = {
   apiKey: "AIzaSyC8yfL_9YR9ZvfO9ID6MKfn3eqCpZdhy-8",
   authDomain: "homequik-clone.firebaseapp.com",
@@ -274,7 +275,7 @@ function ErrorComponent({ error, reset }) {
     ] })
   ] }) });
 }
-const Route$7 = createRootRouteWithContext()({
+const Route$8 = createRootRouteWithContext()({
   head: () => ({
     meta: [
       { charSet: "utf-8" },
@@ -310,11 +311,11 @@ function RootShell({ children }) {
   ] });
 }
 function RootComponent() {
-  const { queryClient } = Route$7.useRouteContext();
+  const { queryClient } = Route$8.useRouteContext();
   return /* @__PURE__ */ jsxRuntimeExports.jsx(QueryClientProvider, { client: queryClient, children: /* @__PURE__ */ jsxRuntimeExports.jsx(LocationProvider, { children: /* @__PURE__ */ jsxRuntimeExports.jsx(AuthProvider, { children: /* @__PURE__ */ jsxRuntimeExports.jsx(CartProvider, { children: /* @__PURE__ */ jsxRuntimeExports.jsx(Outlet, {}) }) }) }) });
 }
-const $$splitComponentImporter$6 = () => import("./services-B96fa0Yw.mjs");
-const Route$6 = createFileRoute("/services")({
+const $$splitComponentImporter$7 = () => import("./services-Drv0qyWX.mjs");
+const Route$7 = createFileRoute("/services")({
   head: () => ({
     meta: [{
       title: "All services — HomeQuik"
@@ -323,10 +324,10 @@ const Route$6 = createFileRoute("/services")({
       content: "Browse all tech and business services: Digital Marketing, Web Development, CCTV, and more."
     }]
   }),
-  component: lazyRouteComponent($$splitComponentImporter$6, "component")
+  component: lazyRouteComponent($$splitComponentImporter$7, "component")
 });
-const $$splitComponentImporter$5 = () => import("./native-pPJcxbpE.mjs");
-const Route$5 = createFileRoute("/native")({
+const $$splitComponentImporter$6 = () => import("./native-FW9hBwx5.mjs");
+const Route$6 = createFileRoute("/native")({
   head: () => ({
     meta: [{
       title: "Native by HomeQuik — Smart water purifiers"
@@ -335,10 +336,10 @@ const Route$5 = createFileRoute("/native")({
       content: "Smart water purifiers, locks and security cameras from Native. Designed for Indian homes."
     }]
   }),
-  component: lazyRouteComponent($$splitComponentImporter$5, "component")
+  component: lazyRouteComponent($$splitComponentImporter$6, "component")
 });
-const $$splitComponentImporter$4 = () => import("./login-C0JGi0kS.mjs");
-const Route$4 = createFileRoute("/login")({
+const $$splitComponentImporter$5 = () => import("./login-BoiB-VhY.mjs");
+const Route$5 = createFileRoute("/login")({
   head: () => ({
     meta: [{
       title: "Login or Sign up — HomeQuik"
@@ -347,10 +348,10 @@ const Route$4 = createFileRoute("/login")({
       content: "Login to book trusted professionals."
     }]
   }),
-  component: lazyRouteComponent($$splitComponentImporter$4, "component")
+  component: lazyRouteComponent($$splitComponentImporter$5, "component")
 });
-const $$splitComponentImporter$3 = () => import("./insta-help-Bp7KFusw.mjs");
-const Route$3 = createFileRoute("/insta-help")({
+const $$splitComponentImporter$4 = () => import("./insta-help-D8AJqguX.mjs");
+const Route$4 = createFileRoute("/insta-help")({
   head: () => ({
     meta: [{
       title: "Insta Help — Quick fixes in under 15 minutes"
@@ -359,19 +360,19 @@ const Route$3 = createFileRoute("/insta-help")({
       content: "Get a verified pro at your door in 15 minutes for small fixes around the house."
     }]
   }),
-  component: lazyRouteComponent($$splitComponentImporter$3, "component")
+  component: lazyRouteComponent($$splitComponentImporter$4, "component")
 });
-const $$splitComponentImporter$2 = () => import("./cart-Bt1KMRXh.mjs");
-const Route$2 = createFileRoute("/cart")({
+const $$splitComponentImporter$3 = () => import("./cart-BcQn3vV5.mjs");
+const Route$3 = createFileRoute("/cart")({
   head: () => ({
     meta: [{
       title: "Your cart — HomeQuik"
     }]
   }),
-  component: lazyRouteComponent($$splitComponentImporter$2, "component")
+  component: lazyRouteComponent($$splitComponentImporter$3, "component")
 });
-const $$splitComponentImporter$1 = () => import("./about-bVMqU7ra.mjs");
-const Route$1 = createFileRoute("/about")({
+const $$splitComponentImporter$2 = () => import("./about-CRV9u0CA.mjs");
+const Route$2 = createFileRoute("/about")({
   head: () => ({
     meta: [{
       title: "About — HomeQuik"
@@ -380,10 +381,10 @@ const Route$1 = createFileRoute("/about")({
       content: "HomeQuik connects businesses with trained, background-checked tech professionals."
     }]
   }),
-  component: lazyRouteComponent($$splitComponentImporter$1, "component")
+  component: lazyRouteComponent($$splitComponentImporter$2, "component")
 });
-const $$splitComponentImporter = () => import("./index-BShp4-SH.mjs");
-const Route = createFileRoute("/")({
+const $$splitComponentImporter$1 = () => import("./index-DJ6D2ha8.mjs");
+const Route$1 = createFileRoute("/")({
   head: () => ({
     meta: [{
       title: "HomeQuik | Expert B2B tech & business services"
@@ -398,43 +399,247 @@ const Route = createFileRoute("/")({
       content: "Expert tech professionals at your service."
     }]
   }),
+  component: lazyRouteComponent($$splitComponentImporter$1, "component")
+});
+const servicesData = [
+  {
+    name: "Business & Digital Services",
+    items: [
+      {
+        id: "cctv-surveillance",
+        title: "CCTV & Surveillance",
+        details: "Complete Enterprise Security Solutions",
+        price: "₹18,000+",
+        rating: 4.9,
+        reviews: "8.5M",
+        image: "/services/cctv.png",
+        Icon: Video,
+        description: "Protect your business with our state-of-the-art 4K CCTV and surveillance systems. We provide end-to-end security solutions including installation, remote monitoring setup, and maintenance for enterprise and commercial properties.",
+        features: [
+          "4K Ultra HD Night Vision Cameras",
+          "30-Day Cloud & Local Storage Backup",
+          "Motion Detection & Mobile Alerts",
+          "1 Year Free Maintenance & Support"
+        ],
+        costBreakdown: [
+          { label: "Hardware & Cameras", value: "₹12,000" },
+          { label: "Installation & Cabling", value: "₹4,000" },
+          { label: "DVR/NVR Setup", value: "₹2,000" }
+        ]
+      },
+      {
+        id: "digital-marketing",
+        title: "Digital Marketing",
+        details: "SEO, Social Ads, Lead Generation",
+        price: "₹25,000 / Month",
+        rating: 4.9,
+        reviews: "3.2M",
+        image: "/services/digital-marketing.png",
+        Icon: Megaphone,
+        description: "Scale your business with our comprehensive digital marketing solutions. From top-ranking SEO strategies to high-converting social media ads, our experts drive qualified leads directly to your sales funnel.",
+        features: [
+          "Advanced SEO & Keyword Ranking",
+          "Meta & Google Ads Management",
+          "Dedicated Account Manager",
+          "Weekly Performance Reports"
+        ],
+        costBreakdown: [
+          { label: "Ad Campaign Setup", value: "₹10,000" },
+          { label: "SEO & Content", value: "₹10,000" },
+          { label: "Management Fee", value: "₹5,000" }
+        ]
+      },
+      {
+        id: "telemarketing",
+        title: "Telemarketing",
+        details: "B2B/B2C Outbound Campaigns",
+        price: "₹15,000 / Month",
+        rating: 4.8,
+        reviews: "1.8M",
+        image: "/services/telemarketing.png",
+        Icon: PhoneCall,
+        description: "Boost your sales with our professional outbound telemarketing campaigns. Our trained executives specialize in B2B lead generation, appointment setting, and customer retention strategies.",
+        features: [
+          "Trained Regional Calling Experts",
+          "Custom Script Development",
+          "Lead Qualification & CRM Sync",
+          "Call Recording & Audits"
+        ],
+        costBreakdown: [
+          { label: "Dedicated Caller", value: "₹10,000" },
+          { label: "Telecom Infrastructure", value: "₹2,500" },
+          { label: "Scripting & QA", value: "₹2,500" }
+        ]
+      },
+      {
+        id: "graphic-design",
+        title: "Graphic Design",
+        details: "Branding & Social Assets",
+        price: "₹5,000 / Package",
+        rating: 4.9,
+        reviews: "4.5M",
+        image: "/services/graphic-design.png",
+        Icon: PenTool,
+        description: "Elevate your brand's visual identity with our premium graphic design services. We craft stunning logos, social media posts, brochures, and complete branding kits tailored to your industry.",
+        features: [
+          "Unlimited Revisions",
+          "High-Resolution Source Files",
+          "Brand Guideline Book",
+          "Social Media Ready Assets"
+        ],
+        costBreakdown: [
+          { label: "Concept Creation", value: "₹2,000" },
+          { label: "Design Execution", value: "₹2,000" },
+          { label: "Source File Delivery", value: "₹1,000" }
+        ]
+      },
+      {
+        id: "web-development",
+        title: "Web Development",
+        details: "Responsive Custom Build",
+        price: "₹35,000+",
+        rating: 4.9,
+        reviews: "2.1M",
+        image: "/services/web-development.png",
+        Icon: Code,
+        description: "Build a high-performance, responsive website that converts visitors into customers. We specialize in modern web technologies, ensuring your site is blazing fast, secure, and SEO-optimized.",
+        features: [
+          "Custom UI/UX Design",
+          "Mobile-First Responsive Build",
+          "CMS Integration & Training",
+          "1 Year Free Hosting & SSL"
+        ],
+        costBreakdown: [
+          { label: "Design & Prototyping", value: "₹10,000" },
+          { label: "Frontend & Backend Dev", value: "₹20,000" },
+          { label: "Deployment & Setup", value: "₹5,000" }
+        ]
+      },
+      {
+        id: "app-development",
+        title: "App Development",
+        details: "iOS & Android Development",
+        price: "₹1,50,000+",
+        rating: 4.9,
+        reviews: "900K",
+        image: "/services/app-development.png",
+        Icon: Smartphone,
+        description: "Transform your business idea into a powerful mobile application. We build native and cross-platform apps for iOS and Android with scalable architectures and stunning user interfaces.",
+        features: [
+          "iOS & Android Dual Platform",
+          "Scalable Cloud Backend",
+          "Payment Gateway Integration",
+          "App Store & Play Store Publishing"
+        ],
+        costBreakdown: [
+          { label: "UI/UX & Architecture", value: "₹40,000" },
+          { label: "App Development", value: "₹80,000" },
+          { label: "Testing & Deployment", value: "₹30,000" }
+        ]
+      },
+      {
+        id: "printer-stationery",
+        title: "Printer/Stationery",
+        details: "Custom Corporate Printing",
+        price: "Quote per volume",
+        rating: 4.8,
+        reviews: "1.2M",
+        image: "/services/printer-stationery.png",
+        Icon: Printer,
+        description: "High-quality corporate printing and premium stationery solutions. From business cards and letterheads to custom merchandise and bulk printing, we deliver professional quality with fast turnarounds.",
+        features: [
+          "Premium Paper Qualities",
+          "Color Accurate Bulk Printing",
+          "Custom Corporate Gifting",
+          "Free Pan-India Delivery"
+        ],
+        costBreakdown: [
+          { label: "Design Setup", value: "Custom" },
+          { label: "Material Cost", value: "Custom" },
+          { label: "Printing Volume", value: "Custom" }
+        ]
+      }
+    ]
+  }
+];
+function getServiceById(id) {
+  for (const group of servicesData) {
+    const service = group.items.find((item) => item.id === id);
+    if (service) return service;
+  }
+  return null;
+}
+const $$splitComponentImporter = () => import("./services._serviceId-BGDbYcFL.mjs");
+const Route = createFileRoute("/services/$serviceId")({
+  loader: ({
+    params
+  }) => {
+    const service = getServiceById(params.serviceId);
+    if (!service) {
+      throw notFound();
+    }
+    return {
+      service
+    };
+  },
+  head: ({
+    loaderData
+  }) => ({
+    meta: [{
+      title: `${loaderData.service.title} — HomeQuik Services`
+    }, {
+      name: "description",
+      content: loaderData.service.description
+    }]
+  }),
   component: lazyRouteComponent($$splitComponentImporter, "component")
 });
-const ServicesRoute = Route$6.update({
+const ServicesRoute = Route$7.update({
   id: "/services",
   path: "/services",
-  getParentRoute: () => Route$7
+  getParentRoute: () => Route$8
 });
-const NativeRoute = Route$5.update({
+const NativeRoute = Route$6.update({
   id: "/native",
   path: "/native",
-  getParentRoute: () => Route$7
+  getParentRoute: () => Route$8
 });
-const LoginRoute = Route$4.update({
+const LoginRoute = Route$5.update({
   id: "/login",
   path: "/login",
-  getParentRoute: () => Route$7
+  getParentRoute: () => Route$8
 });
-const InstaHelpRoute = Route$3.update({
+const InstaHelpRoute = Route$4.update({
   id: "/insta-help",
   path: "/insta-help",
-  getParentRoute: () => Route$7
+  getParentRoute: () => Route$8
 });
-const CartRoute = Route$2.update({
+const CartRoute = Route$3.update({
   id: "/cart",
   path: "/cart",
-  getParentRoute: () => Route$7
+  getParentRoute: () => Route$8
 });
-const AboutRoute = Route$1.update({
+const AboutRoute = Route$2.update({
   id: "/about",
   path: "/about",
-  getParentRoute: () => Route$7
+  getParentRoute: () => Route$8
 });
-const IndexRoute = Route.update({
+const IndexRoute = Route$1.update({
   id: "/",
   path: "/",
-  getParentRoute: () => Route$7
+  getParentRoute: () => Route$8
 });
+const ServicesServiceIdRoute = Route.update({
+  id: "/$serviceId",
+  path: "/$serviceId",
+  getParentRoute: () => ServicesRoute
+});
+const ServicesRouteChildren = {
+  ServicesServiceIdRoute
+};
+const ServicesRouteWithChildren = ServicesRoute._addFileChildren(
+  ServicesRouteChildren
+);
 const rootRouteChildren = {
   IndexRoute,
   AboutRoute,
@@ -442,9 +647,9 @@ const rootRouteChildren = {
   InstaHelpRoute,
   LoginRoute,
   NativeRoute,
-  ServicesRoute
+  ServicesRoute: ServicesRouteWithChildren
 };
-const routeTree = Route$7._addFileChildren(rootRouteChildren)._addFileTypes();
+const routeTree = Route$8._addFileChildren(rootRouteChildren)._addFileTypes();
 const getRouter = () => {
   const queryClient = new QueryClient();
   const router2 = createRouter({
@@ -460,9 +665,12 @@ const router = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProper
   getRouter
 }, Symbol.toStringTag, { value: "Module" }));
 export {
+  Route as R,
   useLocation as a,
   auth as b,
   useAuth as c,
+  db as d,
   router as r,
+  servicesData as s,
   useCart as u
 };

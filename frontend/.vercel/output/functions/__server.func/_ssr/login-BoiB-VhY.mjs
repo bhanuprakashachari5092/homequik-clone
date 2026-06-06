@@ -1,15 +1,15 @@
 import { r as reactExports, j as jsxRuntimeExports } from "../_libs/react.mjs";
 import { u as useRouter, L as Link } from "../_libs/tanstack__react-router.mjs";
-import { S as SiteLayout } from "./SiteLayout-DIUK9Iw7.mjs";
-import { b as auth } from "./router-CNBc7bU7.mjs";
+import { S as SiteLayout } from "./SiteLayout-Ctj3i0fx.mjs";
+import { b as auth, d as db } from "./router-BaTSiW1U.mjs";
 import { c as createUserWithEmailAndPassword, u as updateProfile, a as signInWithEmailAndPassword } from "../_libs/firebase__auth.mjs";
 import "../_libs/firebase__app.mjs";
 import "../_libs/firebase__logger.mjs";
+import { b as setDoc, d as doc } from "../_libs/firebase__firestore.mjs";
 import "../_libs/firebase.mjs";
 import "../_libs/firebase__analytics.mjs";
-import "../_libs/firebase__firestore.mjs";
 import "../_libs/sonner.mjs";
-import { f as Mail, L as Lock, g as LoaderCircle } from "../_libs/lucide-react.mjs";
+import { f as Phone, g as Mail, L as Lock, h as LoaderCircle } from "../_libs/lucide-react.mjs";
 import "../_libs/tanstack__router-core.mjs";
 import "../_libs/tanstack__history.mjs";
 import "../_libs/cookie-es.mjs";
@@ -61,6 +61,7 @@ function Login() {
   const router = useRouter();
   const [mode, setMode] = reactExports.useState("login");
   const [name, setName] = reactExports.useState("");
+  const [phone, setPhone] = reactExports.useState("");
   const [email, setEmail] = reactExports.useState("");
   const [password, setPassword] = reactExports.useState("");
   const [error, setError] = reactExports.useState("");
@@ -74,6 +75,12 @@ function Login() {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         await updateProfile(userCredential.user, {
           displayName: name
+        });
+        await setDoc(doc(db, "users", userCredential.user.uid), {
+          name,
+          email,
+          phone,
+          createdAt: (/* @__PURE__ */ new Date()).toISOString()
         });
       } else {
         await signInWithEmailAndPassword(auth, email, password);
@@ -111,9 +118,18 @@ function Login() {
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm text-muted-foreground", children: mode === "login" ? "Sign in to manage your bookings." : "It takes less than a minute." }),
       error && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 rounded-md bg-destructive/15 p-3 text-sm text-destructive", children: error }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("form", { className: "mt-6 space-y-4", onSubmit: handleSubmit, children: [
-        mode === "register" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "text-xs text-muted-foreground", children: "Full name" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("input", { required: true, value: name, onChange: (e) => setName(e.target.value), className: "mt-1 w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm outline-none focus:border-brand", placeholder: "Your name" })
+        mode === "register" && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "text-xs text-muted-foreground", children: "Full name" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("input", { required: true, value: name, onChange: (e) => setName(e.target.value), className: "mt-1 w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm outline-none focus:border-brand", placeholder: "Your name" })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "text-xs text-muted-foreground", children: "Contact Number" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative mt-1", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(Phone, { className: "absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("input", { required: true, type: "tel", value: phone, onChange: (e) => setPhone(e.target.value), className: "w-full rounded-lg border border-border bg-background py-2.5 pl-9 pr-3 text-sm outline-none focus:border-brand", placeholder: "+91 90000 00000" })
+            ] })
+          ] })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "text-xs text-muted-foreground", children: "Email address" }),

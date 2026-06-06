@@ -15064,6 +15064,15 @@ function resultChangeType(type) {
       return fail(61501, { type });
   }
 }
+function setDoc(reference, data, options2) {
+  reference = cast(reference, DocumentReference);
+  const firestore = cast(reference.firestore, Firestore);
+  const convertedValue = applyFirestoreDataConverter(reference.converter, data);
+  const dataReader = newUserDataReader(firestore);
+  const parsed = parseSetData(dataReader, "setDoc", reference._key, convertedValue, reference.converter !== null, options2);
+  const mutation = parsed.toMutation(reference._key, Precondition.none());
+  return executeWrite(firestore, [mutation]);
+}
 function addDoc(reference, data) {
   const firestore = cast(reference.firestore, Firestore);
   const docRef = doc(reference);
@@ -15080,7 +15089,9 @@ function executeWrite(firestore, mutations) {
 registerFirestore("node");
 export {
   addDoc as a,
+  setDoc as b,
   collection as c,
+  doc as d,
   getFirestore as g,
   serverTimestamp as s
 };

@@ -1,7 +1,7 @@
 import { j as jsxRuntimeExports } from "../_libs/react.mjs";
 import { L as Link } from "../_libs/tanstack__react-router.mjs";
-import { S as SiteLayout } from "./SiteLayout-DIUK9Iw7.mjs";
-import { a as useLocation } from "./router-CNBc7bU7.mjs";
+import { S as SiteLayout } from "./SiteLayout-Ctj3i0fx.mjs";
+import { a as useLocation } from "./router-BaTSiW1U.mjs";
 import "../_libs/firebase.mjs";
 import "../_libs/firebase__analytics.mjs";
 import "../_libs/firebase__auth.mjs";
@@ -9,7 +9,7 @@ import "../_libs/firebase__app.mjs";
 import "../_libs/firebase__logger.mjs";
 import "../_libs/firebase__firestore.mjs";
 import "../_libs/sonner.mjs";
-import { k as MapPin, l as Search, d as Star, A as ArrowRight, i as ShieldCheck, h as Clock, m as Sparkles } from "../_libs/lucide-react.mjs";
+import { l as MapPin, m as Search, d as Star, A as ArrowRight, j as ShieldCheck, i as Clock, n as Sparkles } from "../_libs/lucide-react.mjs";
 import "../_libs/tanstack__router-core.mjs";
 import "../_libs/tanstack__history.mjs";
 import "../_libs/cookie-es.mjs";
@@ -60,7 +60,7 @@ import "../_libs/protobufjs__path.mjs";
 const categories = [{
   name: "CCTV & Surveillance",
   emoji: "📹",
-  to: "/services"
+  to: "/services/cctv-surveillance"
 }, {
   name: "Biometric System",
   emoji: "👆",
@@ -87,41 +87,47 @@ const categories = [{
   to: "/services"
 }];
 const mostBooked = [{
+  id: "cctv-surveillance",
+  title: "CCTV & Surveillance",
+  price: "₹18,000+",
+  rating: 4.9,
+  reviews: "8.5M",
+  img: "/services/cctv.png"
+}, {
+  id: "digital-marketing",
   title: "Digital Marketing",
   price: "₹25,000 / Month",
   rating: 4.9,
   reviews: "3.2M",
   img: "/services/digital-marketing.png"
 }, {
+  id: "telemarketing",
   title: "Telemarketing",
   price: "₹15,000 / Month",
   rating: 4.8,
   reviews: "1.8M",
   img: "/services/telemarketing.png"
 }, {
+  id: "graphic-design",
   title: "Graphic Design",
   price: "₹5,000 / Package",
   rating: 4.9,
   reviews: "4.5M",
   img: "/services/graphic-design.png"
 }, {
+  id: "web-development",
   title: "Web Development",
   price: "₹35,000+",
   rating: 4.9,
   reviews: "2.1M",
   img: "/services/web-development.png"
 }, {
+  id: "app-development",
   title: "App Development",
   price: "₹1,50,000+",
   rating: 4.9,
   reviews: "900K",
   img: "/services/app-development.png"
-}, {
-  title: "Printer/Stationery",
-  price: "Quote per vol.",
-  rating: 4.8,
-  reviews: "1.2M",
-  img: "/services/printer-stationery.png"
 }];
 const benefits = [{
   icon: ShieldCheck,
@@ -201,9 +207,10 @@ function Home() {
         "Loved by ",
         location
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3", children: mostBooked.map((s) => /* @__PURE__ */ jsxRuntimeExports.jsxs(Link, { to: "/services", className: "group overflow-hidden rounded-2xl border border-border bg-card shadow-card hover:shadow-hover transition", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "aspect-[4/3] overflow-hidden", children: /* @__PURE__ */ jsxRuntimeExports.jsx("img", { src: s.img, alt: s.title, loading: "lazy", className: "h-full w-full object-cover group-hover:scale-105 transition-transform duration-500" }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-5", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3", children: mostBooked.map((s) => /* @__PURE__ */ jsxRuntimeExports.jsxs(Link, { to: `/services/${s.id}`, className: "group relative overflow-hidden rounded-2xl border border-border bg-card shadow-lg hover:-translate-y-2 hover:shadow-2xl hover:border-brand/40 transition-all duration-300 ease-out", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-0 bg-gradient-to-t from-brand/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 pointer-events-none" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "aspect-[4/3] overflow-hidden relative", children: /* @__PURE__ */ jsxRuntimeExports.jsx("img", { src: s.img, alt: s.title, loading: "lazy", className: "h-full w-full object-cover group-hover:scale-110 transition-transform duration-500 ease-in-out" }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-5 relative z-20 bg-card", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2 text-xs text-muted-foreground", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(Star, { className: "h-3 w-3 fill-brand text-brand" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-foreground", children: s.rating }),
@@ -219,7 +226,7 @@ function Home() {
             /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-brand", children: "Book →" })
           ] })
         ] })
-      ] }, s.title)) })
+      ] }, s.id)) })
     ] }) }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "mx-auto max-w-7xl px-6 py-20", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-12 text-center", children: [
