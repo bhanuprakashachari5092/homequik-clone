@@ -1,13 +1,16 @@
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { SiteLayout } from "@/components/SiteLayout";
-import { useState } from "react";
-import { Mail, Lock, Loader2 } from "lucide-react";
-import { auth } from "@/lib/firebase";
+import { useState, useEffect } from "react";
+import { Mail, Phone, User as UserIcon, Loader2 } from "lucide-react";
+import { auth, db } from "@/lib/firebase";
 import { 
-  createUserWithEmailAndPassword, 
-  signInWithEmailAndPassword,
-  updateProfile
+  RecaptchaVerifier, 
+  signInWithPhoneNumber,
+  updateProfile,
+  ConfirmationResult
 } from "firebase/auth";
+import { doc, getDoc, setDoc } from "firebase/firestore";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/login")({
   head: () => ({
@@ -21,31 +24,112 @@ export const Route = createFileRoute("/login")({
 
 function Login() {
   const router = useRouter();
-  const [mode, setMode] = useState<"login" | "register">("login");
+  const [step, setStep] = useState<"phone" | "otp" | "details">("phone");
+  const [phone, setPhone] = useState("+91");
+  const [otp, setOtp] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  
+  const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  useEffect(() => {
+    // Initialize reCAPTCHA on mount
+    if (!window.recaptchaVerifier) {
+      try {
+        window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+          size: 'invisible',
+          callback: () => {
+            // reCAPTCHA solved
+          }
+        });
+      } catch (err) {
+        console.error("Failed to initialize reCAPTCHA", err);
+      }
+    }
+  }, []);
+
+  const handleSendOTP = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setLoading(true);
 
     try {
-      if (mode === "register") {
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        await updateProfile(userCredential.user, { displayName: name });
-      } else {
-        await signInWithEmailAndPassword(auth, email, password);
+      if (!window.recaptchaVerifier) {
+        throw new Error("Recaptcha not initialized");
       }
+      const formattedPhone = phone.startsWith("+") ? phone : `+91${phone}`;
+      const result = await signInWithPhoneNumber(auth, formattedPhone, window.recaptchaVerifier);
+      setConfirmationResult(result);
+      setStep("otp");
+      toast.success("OTP sent successfully!");
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || "Failed to send OTP. Please check the phone number.");
+      // Reset reCAPTCHA so the user can try again
+      if (window.recaptchaVerifier) {
+         window.recaptchaVerifier.render().then((widgetId) => {
+           window.grecaptcha.reset(widgetId);
+         });
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyOTP = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+
+    try {
+      if (!confirmationResult) throw new Error("No OTP requested");
       
-      // Navigate to home after successful auth
+      const result = await confirmationResult.confirm(otp);
+      const user = result.user;
+      
+      // Check if user exists in Firestore
+      const userDoc = await getDoc(doc(db, "users", user.uid));
+      if (userDoc.exists()) {
+        // User already exists, navigate to home
+        toast.success("Login successful!");
+        router.navigate({ to: "/" });
+      } else {
+        // New user, ask for details
+        setStep("details");
+      }
+    } catch (err: any) {
+      console.error(err);
+      setError("Invalid OTP. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSaveDetails = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+
+    try {
+      if (!auth.currentUser) throw new Error("Not authenticated");
+      
+      await updateProfile(auth.currentUser, { displayName: name });
+      
+      await setDoc(doc(db, "users", auth.currentUser.uid), {
+        name,
+        email,
+        phone: auth.currentUser.phoneNumber,
+        createdAt: new Date().toISOString()
+      });
+
+      toast.success("Account created successfully!");
       router.navigate({ to: "/" });
     } catch (err: any) {
       console.error(err);
-      setError(err.message || "Authentication failed. Please check your credentials.");
+      setError("Failed to save details.");
     } finally {
       setLoading(false);
     }
@@ -71,32 +155,16 @@ function Login() {
           </div>
 
           <div className="mx-auto w-full max-w-md rounded-2xl border border-border bg-card p-8 shadow-card">
-            <div className="flex rounded-lg bg-secondary p-1 text-sm">
-              {(["login", "register"] as const).map((m) => (
-                <button
-                  key={m}
-                  onClick={() => {
-                    setMode(m);
-                    setError("");
-                  }}
-                  className={`flex-1 rounded-md py-2 transition ${
-                    mode === m
-                      ? "bg-background text-foreground shadow-card"
-                      : "text-muted-foreground"
-                  }`}
-                >
-                  {m === "login" ? "Login" : "Sign up"}
-                </button>
-              ))}
-            </div>
+            
+            <div id="recaptcha-container"></div>
 
-            <h1 className="mt-6 text-2xl font-bold">
-              {mode === "login" ? "Welcome back" : "Create your account"}
+            <h1 className="mt-2 text-2xl font-bold">
+              {step === "phone" ? "Login or Sign up" : 
+               step === "otp" ? "Verify OTP" : "Complete your profile"}
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              {mode === "login"
-                ? "Sign in to manage your bookings."
-                : "It takes less than a minute."}
+              {step === "phone" ? "Enter your phone number to continue." : 
+               step === "otp" ? `OTP sent to ${phone}` : "Just a few more details."}
             </p>
 
             {error && (
@@ -105,62 +173,109 @@ function Login() {
               </div>
             )}
 
-            <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
-              {mode === "register" && (
+            {step === "phone" && (
+              <form className="mt-6 space-y-4" onSubmit={handleSendOTP}>
+                <div>
+                  <label className="text-xs text-muted-foreground">Phone Number</label>
+                  <div className="relative mt-1">
+                    <Phone className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <input
+                      required
+                      type="tel"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      className="w-full rounded-lg border border-border bg-background py-2.5 pl-9 pr-3 text-sm outline-none focus:border-brand"
+                      placeholder="+91 90000 00000"
+                    />
+                  </div>
+                </div>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full flex justify-center items-center rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-dark disabled:opacity-70"
+                >
+                  {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : "Send OTP"}
+                </button>
+              </form>
+            )}
+
+            {step === "otp" && (
+              <form className="mt-6 space-y-4" onSubmit={handleVerifyOTP}>
+                <div>
+                  <label className="text-xs text-muted-foreground">6-Digit OTP</label>
+                  <input
+                    required
+                    type="text"
+                    maxLength={6}
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value)}
+                    className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm tracking-widest text-center outline-none focus:border-brand"
+                    placeholder="000000"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={loading || otp.length !== 6}
+                  className="w-full flex justify-center items-center rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-dark disabled:opacity-70"
+                >
+                  {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : "Verify"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStep("phone")}
+                  className="mt-4 w-full text-sm text-brand hover:underline"
+                >
+                  Edit phone number
+                </button>
+              </form>
+            )}
+
+            {step === "details" && (
+              <form className="mt-6 space-y-4" onSubmit={handleSaveDetails}>
                 <div>
                   <label className="text-xs text-muted-foreground">Full name</label>
-                  <input
-                    required
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm outline-none focus:border-brand"
-                    placeholder="Your name"
-                  />
+                  <div className="relative mt-1">
+                    <UserIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <input
+                      required
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      className="w-full rounded-lg border border-border bg-background py-2.5 pl-9 pr-3 text-sm outline-none focus:border-brand"
+                      placeholder="Your name"
+                    />
+                  </div>
                 </div>
-              )}
-              <div>
-                <label className="text-xs text-muted-foreground">Email address</label>
-                <div className="relative mt-1">
-                  <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <input
-                    required
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full rounded-lg border border-border bg-background py-2.5 pl-9 pr-3 text-sm outline-none focus:border-brand"
-                    placeholder="you@company.com"
-                  />
+                <div>
+                  <label className="text-xs text-muted-foreground">Email address</label>
+                  <div className="relative mt-1">
+                    <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <input
+                      required
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="w-full rounded-lg border border-border bg-background py-2.5 pl-9 pr-3 text-sm outline-none focus:border-brand"
+                      placeholder="you@company.com"
+                    />
+                  </div>
                 </div>
-              </div>
-              <div>
-                <label className="text-xs text-muted-foreground">Password</label>
-                <div className="relative mt-1">
-                  <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <input
-                    required
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full rounded-lg border border-border bg-background py-2.5 pl-9 pr-3 text-sm outline-none focus:border-brand"
-                    placeholder="••••••••"
-                  />
-                </div>
-              </div>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full flex justify-center items-center rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-dark disabled:opacity-70"
+                >
+                  {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : "Complete Setup"}
+                </button>
+              </form>
+            )}
 
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full flex justify-center items-center rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-dark disabled:opacity-70"
-              >
-                {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : (mode === "login" ? "Login" : "Create account")}
-              </button>
-            </form>
-
-            <p className="mt-6 text-center text-xs text-muted-foreground">
-              By continuing you agree to our{" "}
-              <Link to="/" className="underline">Terms</Link> &{" "}
-              <Link to="/" className="underline">Privacy</Link>.
-            </p>
+            {step === "phone" && (
+              <p className="mt-6 text-center text-xs text-muted-foreground">
+                By continuing you agree to our{" "}
+                <Link to="/" className="underline">Terms</Link> &{" "}
+                <Link to="/" className="underline">Privacy</Link>.
+              </p>
+            )}
           </div>
         </div>
       </section>
