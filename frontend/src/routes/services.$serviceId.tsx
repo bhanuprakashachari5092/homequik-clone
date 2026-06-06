@@ -4,6 +4,7 @@ import { getServiceById } from "@/data/services";
 import { useCart } from "@/context/CartContext";
 import { toast } from "sonner";
 import { Star, CheckCircle, ArrowLeft, ShieldCheck, Clock } from "lucide-react";
+import { CCTVSurveillanceDetails } from "@/components/CCTVSurveillanceDetails";
 
 export const Route = createFileRoute("/services/$serviceId")({
   loader: ({ params }) => {
@@ -35,6 +36,10 @@ function ServiceDetailsPage() {
     });
     toast.success(`${service.title} added to cart!`);
   };
+
+  if (service.id === "cctv-surveillance") {
+    return <SiteLayout><CCTVSurveillanceDetails /></SiteLayout>;
+  }
 
   return (
     <SiteLayout>
