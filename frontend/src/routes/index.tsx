@@ -188,6 +188,15 @@ function Home() {
               <div className="mt-3 text-sm font-semibold leading-snug">{c.name}</div>
             </Link>
           ))}
+          <Link
+            to="/services"
+            className="rounded-xl border border-border bg-brand/5 p-5 text-center hover:border-brand hover:bg-brand/10 hover:shadow-card transition flex flex-col items-center justify-center"
+          >
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-brand text-white shadow-sm">
+              <ArrowRight className="h-6 w-6" />
+            </div>
+            <div className="mt-4 text-sm font-bold text-brand">More Services</div>
+          </Link>
         </div>
       </section>
 
