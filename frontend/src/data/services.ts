@@ -11,7 +11,9 @@ import {
   BatteryCharging,
   Home,
   Laptop,
-  Zap
+  Zap,
+  Paintbrush,
+  Armchair
 } from "lucide-react";
 
 export const servicesData = [
@@ -131,6 +133,55 @@ export const servicesData = [
           { label: "PDLC Film/Glass per sq.ft", value: "Quote on Request" },
           { label: "Transformers & Wiring", value: "Quote on Request" },
           { label: "Application & Setup", value: "Quote on Request" }
+        ]
+      }
+    ]
+  },
+  {
+    name: "Renovation & Interiors",
+    items: [
+      { 
+        id: "home-interior",
+        title: "Home Interior", 
+        details: "Complete Modular & Custom Interiors", 
+        price: "Custom Quote", 
+        rating: 4.9, 
+        reviews: "1.2M",
+        image: "/services/home-interior.png",
+        Icon: Armchair,
+        description: "Transform your living spaces with our premium modular and custom interior design services. From 3D visualization to final execution, we deliver luxurious, functional, and contemporary interiors.",
+        features: [
+          "Free 3D Design Consultation",
+          "Premium Modular Woodwork",
+          "Dedicated Project Manager",
+          "10-Year Material Warranty"
+        ],
+        costBreakdown: [
+          { label: "Design & Consultation", value: "Quote on Request" },
+          { label: "Material & Carpentry", value: "Quote on Request" },
+          { label: "Execution & Fit-outs", value: "Quote on Request" }
+        ]
+      },
+      { 
+        id: "painting",
+        title: "Professional Painting", 
+        details: "Interior & Exterior Painting", 
+        price: "Custom Quote", 
+        rating: 4.8, 
+        reviews: "2.1M",
+        image: "/services/painting.png",
+        Icon: Paintbrush,
+        description: "Refresh your property with our high-quality professional painting services. We offer end-to-end solutions including wall prep, waterproofing, textures, and premium finish coats.",
+        features: [
+          "Laser Measurement & Masking",
+          "Dust-Free Sanding Process",
+          "Premium Brand Paints",
+          "Post-Painting Cleanup"
+        ],
+        costBreakdown: [
+          { label: "Surface Preparation", value: "Quote on Request" },
+          { label: "Paint Material", value: "Quote on Request" },
+          { label: "Labor & Execution", value: "Quote on Request" }
         ]
       }
     ]
