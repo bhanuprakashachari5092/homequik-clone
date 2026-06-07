@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Star, CheckCircle, ArrowLeft, ShieldCheck, Clock } from "lucide-react";
 import { CCTVSurveillanceDetails } from "@/components/CCTVSurveillanceDetails";
 import { HomeAutomationDetails } from "@/components/HomeAutomationDetails";
+import { SmartFilmGlassDetails } from "@/components/SmartFilmGlassDetails";
 
 export const Route = createFileRoute("/services_/$serviceId")({
   loader: ({ params }) => {
@@ -44,6 +45,10 @@ function ServiceDetailsPage() {
 
   if (service.id === "home-automation") {
     return <SiteLayout><HomeAutomationDetails /></SiteLayout>;
+  }
+
+  if (service.id === "smart-film-glass") {
+    return <SiteLayout><SmartFilmGlassDetails /></SiteLayout>;
   }
 
   return (
