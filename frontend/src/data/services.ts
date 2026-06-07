@@ -47,7 +47,7 @@ export const servicesData = [
         price: "Custom Quote", 
         rating: 4.8, 
         reviews: "4.2M",
-        image: "/services/cctv.png", // Reusing image placeholder
+        image: "/services/biometric-system.png",
         Icon: Fingerprint,
         description: "Advanced biometric authentication systems for secure facility access and employee time tracking. From fingerprint scanners to facial recognition, we deploy enterprise-grade identity management.",
         features: [
@@ -69,7 +69,7 @@ export const servicesData = [
         price: "Custom Quote", 
         rating: 4.9, 
         reviews: "5.1M",
-        image: "/services/cctv.png",
+        image: "/services/access-control.png",
         Icon: DoorOpen,
         description: "Restrict and monitor entry to sensitive areas with our smart access control systems. We install electromagnetic locks, RFID card readers, and centralized lockdown management systems.",
         features: [
@@ -96,7 +96,7 @@ export const servicesData = [
         price: "Custom Quote", 
         rating: 4.8, 
         reviews: "2.1M",
-        image: "/services/cctv.png",
+        image: "/services/home-automation.png",
         Icon: Home,
         description: "Transform your living space with intelligent home automation. Control lighting, temperature, curtains, and entertainment systems directly from your smartphone or voice assistant.",
         features: [
@@ -118,7 +118,7 @@ export const servicesData = [
         price: "Custom Quote", 
         rating: 4.7, 
         reviews: "900K",
-        image: "/services/cctv.png",
+        image: "/services/smart-film-glass.png",
         Icon: Laptop,
         description: "Switchable PDLC (Polymer Dispersed Liquid Crystal) smart glass and film installations. Transition any glass surface from transparent to opaque instantly for ultimate privacy.",
         features: [
@@ -145,7 +145,7 @@ export const servicesData = [
         price: "Custom Quote", 
         rating: 4.9, 
         reviews: "3.4M",
-        image: "/services/cctv.png",
+        image: "/services/ups-inverter.png",
         Icon: BatteryCharging,
         description: "Ensure zero downtime for your critical systems with enterprise-grade UPS and pure sine-wave inverter installations. Perfect for server rooms, offices, and heavy-duty appliances.",
         features: [
@@ -172,7 +172,7 @@ export const servicesData = [
         price: "Custom Quote", 
         rating: 4.8, 
         reviews: "6.7M",
-        image: "/services/cctv.png",
+        image: "/services/electrical-work.png",
         Icon: Zap,
         description: "Professional electrical services for commercial and residential properties. From fresh wiring and panel upgrades to short-circuit diagnostics and safety audits.",
         features: [
