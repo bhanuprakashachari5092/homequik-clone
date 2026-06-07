@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { 
   ArrowLeft, ShieldCheck, Clock, 
@@ -8,12 +9,28 @@ import {
 
 export function CCTVSurveillanceDetails() {
   const WHATSAPP_NUMBER = "919141052539"; 
+  const [selectedItems, setSelectedItems] = useState<string[]>([]);
   
-  const handleWhatsApp = (serviceName: string) => {
-    const text = `Hello HomeQuik, I would like to book or inquire about: *${serviceName}* (CCTV & Surveillance)`;
-    window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(text)}`, '_blank');
+  const toggleSelection = (serviceName: string) => {
+    setSelectedItems(prev => 
+      prev.includes(serviceName) 
+        ? prev.filter(item => item !== serviceName)
+        : [...prev, serviceName]
+    );
   };
 
+  const handleWhatsApp = (serviceName?: string) => {
+    let text = "";
+    if (serviceName) {
+      text = `Hello HomeQuik, I would like to book or inquire about: *${serviceName}* (CCTV & Surveillance)`;
+    } else if (selectedItems.length > 0) {
+      const itemList = selectedItems.map(item => `- ${item}`).join('\n');
+      text = `Hello HomeQuik, I would like to book or inquire about the following services (CCTV & Surveillance):\n\n${itemList}`;
+    } else {
+      text = `Hello HomeQuik, I need a Certified Technician for CCTV & Surveillance.`;
+    }
+    window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(text)}`, '_blank');
+  };
   return (
     <div className="bg-background min-h-screen pb-24">
       {/* Header */}
@@ -92,7 +109,16 @@ export function CCTVSurveillanceDetails() {
                   <p className="text-xs text-muted-foreground uppercase font-bold">Fixed Rate</p>
                   <p className="text-2xl font-bold">₹399 <span className="text-sm text-muted-foreground font-normal">/ Cam</span></p>
                 </div>
-                <button onClick={() => handleWhatsApp("Standard CCTV Installation (₹399/Cam)")} className="bg-foreground text-background px-6 py-2.5 rounded-lg font-bold hover:bg-foreground/90">ADD</button>
+                <button 
+                  onClick={() => toggleSelection("Standard CCTV Installation (₹399/Cam)")} 
+                  className={`px-6 py-2.5 rounded-lg font-bold transition-colors ${
+                    selectedItems.includes("Standard CCTV Installation (₹399/Cam)")
+                      ? "bg-brand text-white"
+                      : "bg-foreground text-background hover:bg-foreground/90"
+                  }`}
+                >
+                  {selectedItems.includes("Standard CCTV Installation (₹399/Cam)") ? "SELECTED ✓" : "ADD"}
+                </button>
               </div>
             </div>
 
@@ -109,7 +135,16 @@ export function CCTVSurveillanceDetails() {
                   <p className="text-xs text-muted-foreground uppercase font-bold">Fixed Rate</p>
                   <p className="text-lg font-bold">Custom Quote</p>
                 </div>
-                <button onClick={() => handleWhatsApp("System Relocation Quote")} className="bg-foreground text-background px-6 py-2.5 rounded-lg font-bold hover:bg-foreground/90 whitespace-nowrap">GET QUOTE</button>
+                <button 
+                  onClick={() => toggleSelection("System Relocation Quote")} 
+                  className={`px-6 py-2.5 rounded-lg font-bold whitespace-nowrap transition-colors ${
+                    selectedItems.includes("System Relocation Quote")
+                      ? "bg-brand text-white"
+                      : "bg-foreground text-background hover:bg-foreground/90"
+                  }`}
+                >
+                  {selectedItems.includes("System Relocation Quote") ? "SELECTED ✓" : "GET QUOTE"}
+                </button>
               </div>
             </div>
           </div>
@@ -142,7 +177,16 @@ export function CCTVSurveillanceDetails() {
                   <p className="text-sm text-muted-foreground">{item.desc}</p>
                   <div className="text-xl font-bold md:text-right">{item.price}</div>
                   <div className="md:text-center">
-                    <button onClick={() => handleWhatsApp(`DVR Programming - ${item.spec}`)} className="bg-brand/10 text-brand px-6 py-2 rounded-lg font-bold hover:bg-brand hover:text-white transition w-full md:w-auto">ADD</button>
+                    <button 
+                      onClick={() => toggleSelection(`DVR Programming - ${item.spec}`)} 
+                      className={`px-6 py-2 rounded-lg font-bold transition w-full md:w-auto ${
+                        selectedItems.includes(`DVR Programming - ${item.spec}`)
+                          ? "bg-brand text-white"
+                          : "bg-brand/10 text-brand hover:bg-brand hover:text-white"
+                      }`}
+                    >
+                      {selectedItems.includes(`DVR Programming - ${item.spec}`) ? "SELECTED ✓" : "ADD"}
+                    </button>
                   </div>
                 </div>
               ))}
@@ -184,7 +228,16 @@ export function CCTVSurveillanceDetails() {
                   </div>
                   <p className="text-sm text-muted-foreground mt-2">{cab.desc}</p>
                 </div>
-                <button onClick={() => handleWhatsApp(`Cabling: ${cab.type}`)} className="mt-6 w-full border border-border bg-secondary hover:bg-foreground hover:text-background text-foreground px-4 py-2 rounded-lg font-bold transition">Select</button>
+                <button 
+                  onClick={() => toggleSelection(`Cabling: ${cab.type}`)} 
+                  className={`mt-6 w-full border border-border px-4 py-2 rounded-lg font-bold transition ${
+                    selectedItems.includes(`Cabling: ${cab.type}`)
+                      ? "bg-brand text-white border-brand"
+                      : "bg-secondary hover:bg-foreground hover:text-background text-foreground"
+                  }`}
+                >
+                  {selectedItems.includes(`Cabling: ${cab.type}`) ? "Selected ✓" : "Select"}
+                </button>
               </div>
             ))}
           </div>
@@ -211,7 +264,14 @@ export function CCTVSurveillanceDetails() {
                     <span className="text-sm font-medium">{item.name}</span>
                     <div className="flex items-center gap-4">
                       <span className="font-bold">{item.price}</span>
-                      <button onClick={() => handleWhatsApp(`Rack Install: ${item.name}`)} className="text-brand font-bold text-sm hover:underline">ADD +</button>
+                      <button 
+                        onClick={() => toggleSelection(`Rack Install: ${item.name}`)} 
+                        className={`font-bold text-sm hover:underline ${
+                          selectedItems.includes(`Rack Install: ${item.name}`) ? "text-brand" : "text-brand"
+                        }`}
+                      >
+                        {selectedItems.includes(`Rack Install: ${item.name}`) ? "ADDED ✓" : "ADD +"}
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -230,7 +290,14 @@ export function CCTVSurveillanceDetails() {
                     <span className="text-sm font-medium">{item.name}</span>
                     <div className="flex items-center gap-4">
                       <span className="font-bold">{item.price}</span>
-                      <button onClick={() => handleWhatsApp(`Monitor Install: ${item.name}`)} className="text-brand font-bold text-sm hover:underline">ADD +</button>
+                      <button 
+                        onClick={() => toggleSelection(`Monitor Install: ${item.name}`)} 
+                        className={`font-bold text-sm hover:underline ${
+                          selectedItems.includes(`Monitor Install: ${item.name}`) ? "text-brand" : "text-brand"
+                        }`}
+                      >
+                        {selectedItems.includes(`Monitor Install: ${item.name}`) ? "ADDED ✓" : "ADD +"}
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -264,7 +331,16 @@ export function CCTVSurveillanceDetails() {
                 </div>
                 <div className="flex items-center gap-6">
                   <span className="font-bold whitespace-nowrap">₹249 / Job</span>
-                  <button onClick={() => handleWhatsApp(`Repair Request: ${diag.title}`)} className="bg-red-600 text-white px-5 py-2 rounded-lg font-bold hover:bg-red-700 whitespace-nowrap shadow-sm">BOOK FIX</button>
+                  <button 
+                    onClick={() => toggleSelection(`Repair Request: ${diag.title}`)} 
+                    className={`px-5 py-2 rounded-lg font-bold whitespace-nowrap shadow-sm ${
+                      selectedItems.includes(`Repair Request: ${diag.title}`)
+                        ? "bg-emerald-600 text-white hover:bg-emerald-700"
+                        : "bg-red-600 text-white hover:bg-red-700"
+                    }`}
+                  >
+                    {selectedItems.includes(`Repair Request: ${diag.title}`) ? "ADDED ✓" : "BOOK FIX"}
+                  </button>
                 </div>
               </div>
             ))}
@@ -273,16 +349,31 @@ export function CCTVSurveillanceDetails() {
 
         {/* Floating WhatsApp CTA */}
         <section className="fixed bottom-6 right-6 z-50">
-          <button 
-            onClick={() => handleWhatsApp("General Inquiry: Need a Certified Technician")}
-            className="bg-[#25D366] hover:bg-[#1ebd5c] text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3 font-bold transition-transform hover:scale-105"
-          >
-            <Phone className="h-6 w-6" />
-            <div className="text-left">
-              <div className="text-xs font-normal opacity-90">Need a Technician?</div>
-              <div>Book via WhatsApp</div>
-            </div>
-          </button>
+          {selectedItems.length > 0 ? (
+            <button 
+              onClick={() => handleWhatsApp()}
+              className="bg-brand hover:bg-brand-dark text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3 font-bold transition-transform hover:scale-105"
+            >
+              <div className="bg-white text-brand rounded-full h-6 w-6 flex items-center justify-center text-xs">
+                {selectedItems.length}
+              </div>
+              <div className="text-left">
+                <div className="text-xs font-normal opacity-90">Send Request</div>
+                <div>Proceed to WhatsApp ➔</div>
+              </div>
+            </button>
+          ) : (
+            <button 
+              onClick={() => handleWhatsApp("General Inquiry: Need a Certified Technician")}
+              className="bg-[#25D366] hover:bg-[#1ebd5c] text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3 font-bold transition-transform hover:scale-105"
+            >
+              <Phone className="h-6 w-6" />
+              <div className="text-left">
+                <div className="text-xs font-normal opacity-90">Need a Technician?</div>
+                <div>Book via WhatsApp</div>
+              </div>
+            </button>
+          )}
         </section>
       </div>
     </div>
