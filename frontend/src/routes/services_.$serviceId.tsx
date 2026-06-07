@@ -18,8 +18,8 @@ export const Route = createFileRoute("/services_/$serviceId")({
   },
   head: ({ loaderData }) => ({
     meta: [
-      { title: `${loaderData.service.title} — HomeQuik Services` },
-      { name: "description", content: loaderData.service.description },
+      { title: `${loaderData?.service?.title || "Service"} — HomeQuik Services` },
+      { name: "description", content: loaderData?.service?.description || "Book trusted professionals." },
     ],
   }),
   component: ServiceDetailsPage,
