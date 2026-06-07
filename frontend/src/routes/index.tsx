@@ -158,7 +158,7 @@ function Home() {
           {/* Floating category card */}
           <div className="relative hidden md:flex items-center justify-center z-10">
             <div className="relative grid grid-cols-2 gap-5 w-full max-w-md">
-              {categories.slice(0, 4).map((c: any, i) => (
+              {categories.slice(0, 4).map((c: { name: string; emoji: string; to: string; params: any }, i: number) => (
                 <Link
                   key={c.name}
                   to={c.to}
@@ -305,7 +305,7 @@ function Home() {
             </div>
             <div className="relative hidden h-64 md:block">
               <div className="absolute inset-0 grid grid-cols-3 gap-3 opacity-90">
-                {categories.slice(0, 6).map((c, i) => (
+                {categories.slice(0, 6).map((c: { name: string; emoji: string }, i: number) => (
                   <div
                     key={c.name}
                     className="rounded-xl bg-background/10 p-4 backdrop-blur-sm animate-float"
