@@ -363,7 +363,7 @@ export function PaintingDetails() {
             <ul className="space-y-3 text-sm text-muted-foreground">
               <li><strong className="text-foreground">Minimum Project Value:</strong> Full managed service setups require an active project value exceeding ₹25,000.</li>
               <li><strong className="text-foreground">Payment Architecture:</strong> 35% Advance Payment (Fully refundable up to 24 hours prior to work) and 65% Milestone Balance Settlement upon final structural handover.</li>
-              <li><strong className="text-foreground">Cancellation Policy:</strong> Free if processed >24 hours prior to start. Late-stage cancellations attract a structured baseline operational processing fee of ₹1,000.</li>
+              <li><strong className="text-foreground">Cancellation Policy:</strong> Free if processed {">"}24 hours prior to start. Late-stage cancellations attract a structured baseline operational processing fee of ₹1,000.</li>
             </ul>
           </div>
         </section>
