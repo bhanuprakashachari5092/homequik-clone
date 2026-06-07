@@ -9,6 +9,7 @@ import { HomeAutomationDetails } from "@/components/HomeAutomationDetails";
 import { SmartFilmGlassDetails } from "@/components/SmartFilmGlassDetails";
 import { ElectricalWorkDetails } from "@/components/ElectricalWorkDetails";
 import { PaintingDetails } from "@/components/PaintingDetails";
+import { HomeInteriorDetails } from "@/components/HomeInteriorDetails";
 
 export const Route = createFileRoute("/services_/$serviceId")({
   loader: ({ params }) => {
@@ -59,6 +60,10 @@ function ServiceDetailsPage() {
 
   if (service.id === "painting") {
     return <SiteLayout><PaintingDetails /></SiteLayout>;
+  }
+
+  if (service.id === "home-interior") {
+    return <SiteLayout><HomeInteriorDetails /></SiteLayout>;
   }
 
   return (
