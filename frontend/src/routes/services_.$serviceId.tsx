@@ -5,6 +5,7 @@ import { useCart } from "@/context/CartContext";
 import { toast } from "sonner";
 import { Star, CheckCircle, ArrowLeft, ShieldCheck, Clock } from "lucide-react";
 import { CCTVSurveillanceDetails } from "@/components/CCTVSurveillanceDetails";
+import { HomeAutomationDetails } from "@/components/HomeAutomationDetails";
 
 export const Route = createFileRoute("/services_/$serviceId")({
   loader: ({ params }) => {
@@ -39,6 +40,10 @@ function ServiceDetailsPage() {
 
   if (service.id === "cctv-surveillance") {
     return <SiteLayout><CCTVSurveillanceDetails /></SiteLayout>;
+  }
+
+  if (service.id === "home-automation") {
+    return <SiteLayout><HomeAutomationDetails /></SiteLayout>;
   }
 
   return (
