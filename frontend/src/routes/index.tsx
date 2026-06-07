@@ -34,54 +34,51 @@ const categories = [
 
 const mostBooked = [
   {
-    id: "cctv-surveillance",
-    title: "CCTV & Surveillance",
-    price: "₹18,000+",
+    id: "security-surveillance",
+    title: "Security & Surveillance",
+    desc: "CCTV, Biometric, Access Control",
     rating: 4.9,
-    reviews: "8.5M",
-    img: "/services/cctv.png",
+    reviews: "15M+",
+    img: "/services/access-control.png",
+    hash: "#security-&-surveillance"
   },
   {
-    id: "digital-marketing",
-    title: "Digital Marketing",
-    price: "₹25,000 / Month",
+    id: "business-digital",
+    title: "Business & Digital Services",
+    desc: "Marketing, Web & App Development",
     rating: 4.9,
-    reviews: "3.2M",
+    reviews: "10M+",
     img: "/services/digital-marketing.png",
+    hash: "#business-&-digital-services"
   },
   {
-    id: "telemarketing",
-    title: "Telemarketing",
-    price: "₹15,000 / Month",
+    id: "smart-home",
+    title: "Smart Home & Automation",
+    desc: "Smart Lights, Climate, PDLC Glass",
     rating: 4.8,
-    reviews: "1.8M",
-    img: "/services/telemarketing.png",
+    reviews: "3M+",
+    img: "/services/home-automation.png",
+    hash: "#smart-home-&-automation"
   },
   {
-    id: "graphic-design",
-    title: "Graphic Design",
-    price: "₹5,000 / Package",
+    id: "power-solutions",
+    title: "Power Solutions",
+    desc: "Enterprise UPS & Inverter setups",
     rating: 4.9,
-    reviews: "4.5M",
-    img: "/services/graphic-design.png",
+    reviews: "3.4M",
+    img: "/services/ups-inverter.png",
+    hash: "#power-solutions"
   },
   {
-    id: "web-development",
-    title: "Web Development",
-    price: "₹35,000+",
-    rating: 4.9,
-    reviews: "2.1M",
-    img: "/services/web-development.png",
-  },
-  {
-    id: "app-development",
-    title: "App Development",
-    price: "₹1,50,000+",
-    rating: 4.9,
-    reviews: "900K",
-    img: "/services/app-development.png",
-  },
-] as const;
+    id: "maintenance-repairs",
+    title: "Maintenance & Repairs",
+    desc: "Electrical Wiring & Diagnostics",
+    rating: 4.8,
+    reviews: "6.7M",
+    img: "/services/electrical-work.png",
+    hash: "#maintenance-&-repairs"
+  }
+];
 
 const benefits = [
   {
@@ -198,11 +195,10 @@ function Home() {
           <p className="mt-2 text-muted-foreground">Loved by {location}</p>
           <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {mostBooked.map((s) => (
-              <Link
+              <a
                 key={s.id}
-                to="/services/$serviceId"
-                params={{ serviceId: s.id }}
-                className="group relative overflow-hidden rounded-2xl border border-border bg-card shadow-lg hover:-translate-y-2 hover:shadow-2xl hover:border-brand/40 transition-all duration-300 ease-out"
+                href={`/services${s.hash}`}
+                className="group relative overflow-hidden rounded-2xl border border-border bg-card shadow-lg hover:-translate-y-2 hover:shadow-2xl hover:border-brand/40 transition-all duration-300 ease-out flex flex-col"
               >
                 <div className="absolute inset-0 bg-gradient-to-t from-brand/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 pointer-events-none" />
                 <div className="aspect-[4/3] overflow-hidden relative">
@@ -213,19 +209,22 @@ function Home() {
                     className="h-full w-full object-cover group-hover:scale-110 transition-transform duration-500 ease-in-out"
                   />
                 </div>
-                <div className="p-5 relative z-20 bg-card">
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <Star className="h-3 w-3 fill-brand text-brand" />
-                    <span className="font-semibold text-foreground">{s.rating}</span>
-                    <span>({s.reviews})</span>
+                <div className="p-5 relative z-20 bg-card flex-1 flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Star className="h-3 w-3 fill-brand text-brand" />
+                      <span className="font-semibold text-foreground">{s.rating}</span>
+                      <span>({s.reviews})</span>
+                    </div>
+                    <h3 className="mt-2 text-base font-semibold">{s.title}</h3>
+                    <p className="mt-1 text-sm text-muted-foreground line-clamp-2">{s.desc}</p>
                   </div>
-                  <h3 className="mt-2 text-base font-semibold">{s.title}</h3>
-                  <div className="mt-3 flex items-center justify-between">
-                    <span className="text-sm font-semibold">{s.price}</span>
-                    <span className="text-xs text-brand">Book →</span>
+                  <div className="mt-4 flex items-center justify-between border-t border-border/50 pt-3">
+                    <span className="text-sm font-semibold">Custom Quotes</span>
+                    <span className="text-xs font-bold text-brand flex items-center">View All <ArrowRight className="ml-1 h-3 w-3" /></span>
                   </div>
                 </div>
-              </Link>
+              </a>
             ))}
           </div>
           <div className="mt-12 flex justify-center">
