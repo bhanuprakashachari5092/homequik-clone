@@ -24,12 +24,12 @@ export const Route = createFileRoute("/")({
 
 const categories = [
   { name: "CCTV & Surveillance", emoji: "📹", to: "/services/$serviceId", params: { serviceId: "cctv-surveillance" } },
-  { name: "Biometric System", emoji: "👆", to: "/services" },
-  { name: "Access Control System", emoji: "🚪", to: "/services" },
-  { name: "UPS and Invertor", emoji: "🔋", to: "/services" },
-  { name: "Home Automation", emoji: "🏠", to: "/services" },
-  { name: "Smart Film & Glass (PDLC)", emoji: "🪟", to: "/services" },
-  { name: "Electrical Work", emoji: "⚡", to: "/services" },
+  { name: "Biometric System", emoji: "👆", to: "/services/$serviceId", params: { serviceId: "biometric-system" } },
+  { name: "Access Control System", emoji: "🚪", to: "/services/$serviceId", params: { serviceId: "access-control" } },
+  { name: "UPS and Invertor", emoji: "🔋", to: "/services/$serviceId", params: { serviceId: "ups-inverter" } },
+  { name: "Home Automation", emoji: "🏠", to: "/services/$serviceId", params: { serviceId: "home-automation" } },
+  { name: "Smart Film & Glass (PDLC)", emoji: "🪟", to: "/services/$serviceId", params: { serviceId: "smart-film-glass" } },
+  { name: "Electrical Work", emoji: "⚡", to: "/services/$serviceId", params: { serviceId: "electrical-work" } },
 ] as any;
 
 const mostBooked = [

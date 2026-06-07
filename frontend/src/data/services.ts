@@ -5,18 +5,24 @@ import {
   Code, 
   Smartphone, 
   Printer,
-  Video
+  Video,
+  Fingerprint,
+  DoorOpen,
+  BatteryCharging,
+  Home,
+  Laptop,
+  Zap
 } from "lucide-react";
 
 export const servicesData = [
   {
-    name: "Business & Digital Services",
+    name: "Security & Surveillance",
     items: [
       { 
         id: "cctv-surveillance",
         title: "CCTV & Surveillance", 
         details: "Complete Enterprise Security Solutions", 
-        price: "₹18,000+", 
+        price: "Custom Quote", 
         rating: 4.9, 
         reviews: "8.5M",
         image: "/services/cctv.png",
@@ -29,16 +35,168 @@ export const servicesData = [
           "1 Year Free Maintenance & Support"
         ],
         costBreakdown: [
-          { label: "Hardware & Cameras", value: "₹12,000" },
-          { label: "Installation & Cabling", value: "₹4,000" },
-          { label: "DVR/NVR Setup", value: "₹2,000" }
+          { label: "Hardware & Cameras", value: "Quote on Request" },
+          { label: "Installation & Cabling", value: "Quote on Request" },
+          { label: "DVR/NVR Setup", value: "Quote on Request" }
         ]
       },
+      { 
+        id: "biometric-system",
+        title: "Biometric System", 
+        details: "Fingerprint & Retina Access", 
+        price: "Custom Quote", 
+        rating: 4.8, 
+        reviews: "4.2M",
+        image: "/services/cctv.png", // Reusing image placeholder
+        Icon: Fingerprint,
+        description: "Advanced biometric authentication systems for secure facility access and employee time tracking. From fingerprint scanners to facial recognition, we deploy enterprise-grade identity management.",
+        features: [
+          "Fingerprint & Facial Recognition",
+          "Real-time Attendance Tracking",
+          "Cloud Software Integration",
+          "Anti-spoofing Technology"
+        ],
+        costBreakdown: [
+          { label: "Biometric Scanners", value: "Quote on Request" },
+          { label: "Software License", value: "Quote on Request" },
+          { label: "Installation & Training", value: "Quote on Request" }
+        ]
+      },
+      { 
+        id: "access-control",
+        title: "Access Control System", 
+        details: "RFID & Smart Lock Solutions", 
+        price: "Custom Quote", 
+        rating: 4.9, 
+        reviews: "5.1M",
+        image: "/services/cctv.png",
+        Icon: DoorOpen,
+        description: "Restrict and monitor entry to sensitive areas with our smart access control systems. We install electromagnetic locks, RFID card readers, and centralized lockdown management systems.",
+        features: [
+          "RFID & Smart Card Readers",
+          "Electromagnetic Door Locks",
+          "Centralized Access Management",
+          "Emergency Lockdown Integration"
+        ],
+        costBreakdown: [
+          { label: "Hardware & Controllers", value: "Quote on Request" },
+          { label: "RFID Cards/Tags", value: "Quote on Request" },
+          { label: "Installation", value: "Quote on Request" }
+        ]
+      }
+    ]
+  },
+  {
+    name: "Smart Home & Automation",
+    items: [
+      { 
+        id: "home-automation",
+        title: "Home Automation", 
+        details: "Smart Lighting & Climate Control", 
+        price: "Custom Quote", 
+        rating: 4.8, 
+        reviews: "2.1M",
+        image: "/services/cctv.png",
+        Icon: Home,
+        description: "Transform your living space with intelligent home automation. Control lighting, temperature, curtains, and entertainment systems directly from your smartphone or voice assistant.",
+        features: [
+          "Voice Assistant Integration",
+          "Smart Lighting & Moods",
+          "Automated Curtains & Blinds",
+          "Energy Consumption Analytics"
+        ],
+        costBreakdown: [
+          { label: "Smart Hub & Sensors", value: "Quote on Request" },
+          { label: "Smart Switches", value: "Quote on Request" },
+          { label: "Configuration", value: "Quote on Request" }
+        ]
+      },
+      { 
+        id: "smart-film-glass",
+        title: "Smart Film & Glass (PDLC)", 
+        details: "Privacy On-Demand", 
+        price: "Custom Quote", 
+        rating: 4.7, 
+        reviews: "900K",
+        image: "/services/cctv.png",
+        Icon: Laptop,
+        description: "Switchable PDLC (Polymer Dispersed Liquid Crystal) smart glass and film installations. Transition any glass surface from transparent to opaque instantly for ultimate privacy.",
+        features: [
+          "Instant Privacy Control",
+          "UV & Heat Rejection",
+          "Remote & App Controlled",
+          "Retrofit Film Available"
+        ],
+        costBreakdown: [
+          { label: "PDLC Film/Glass per sq.ft", value: "Quote on Request" },
+          { label: "Transformers & Wiring", value: "Quote on Request" },
+          { label: "Application & Setup", value: "Quote on Request" }
+        ]
+      }
+    ]
+  },
+  {
+    name: "Power Solutions",
+    items: [
+      { 
+        id: "ups-inverter",
+        title: "UPS and Invertor", 
+        details: "Uninterruptible Power Supply", 
+        price: "Custom Quote", 
+        rating: 4.9, 
+        reviews: "3.4M",
+        image: "/services/cctv.png",
+        Icon: BatteryCharging,
+        description: "Ensure zero downtime for your critical systems with enterprise-grade UPS and pure sine-wave inverter installations. Perfect for server rooms, offices, and heavy-duty appliances.",
+        features: [
+          "Zero Transfer Time",
+          "Pure Sine Wave Output",
+          "Heavy-duty Tubular Batteries",
+          "Load Capacity Analysis"
+        ],
+        costBreakdown: [
+          { label: "UPS/Inverter Unit", value: "Quote on Request" },
+          { label: "Battery Bank", value: "Quote on Request" },
+          { label: "Load Separation Wiring", value: "Quote on Request" }
+        ]
+      }
+    ]
+  },
+  {
+    name: "Maintenance & Repairs",
+    items: [
+      { 
+        id: "electrical-work",
+        title: "Electrical Work", 
+        details: "Wiring, Panels & Repairs", 
+        price: "Custom Quote", 
+        rating: 4.8, 
+        reviews: "6.7M",
+        image: "/services/cctv.png",
+        Icon: Zap,
+        description: "Professional electrical services for commercial and residential properties. From fresh wiring and panel upgrades to short-circuit diagnostics and safety audits.",
+        features: [
+          "Certified Electricians",
+          "Safety & Load Audits",
+          "Panel Board Installations",
+          "24/7 Emergency Repairs"
+        ],
+        costBreakdown: [
+          { label: "Inspection Fee", value: "Quote on Request" },
+          { label: "Wiring & Consumables", value: "Quote on Request" },
+          { label: "Labor Charges", value: "Quote on Request" }
+        ]
+      }
+    ]
+  },
+  {
+    name: "Business & Digital Services",
+    items: [
       { 
         id: "digital-marketing",
         title: "Digital Marketing", 
         details: "SEO, Social Ads, Lead Generation", 
-        price: "₹25,000 / Month", 
+        price: "Custom Quote", 
         rating: 4.9, 
         reviews: "3.2M",
         image: "/services/digital-marketing.png",
@@ -51,16 +209,16 @@ export const servicesData = [
           "Weekly Performance Reports"
         ],
         costBreakdown: [
-          { label: "Ad Campaign Setup", value: "₹10,000" },
-          { label: "SEO & Content", value: "₹10,000" },
-          { label: "Management Fee", value: "₹5,000" }
+          { label: "Ad Campaign Setup", value: "Quote on Request" },
+          { label: "SEO & Content", value: "Quote on Request" },
+          { label: "Management Fee", value: "Quote on Request" }
         ]
       },
       { 
         id: "telemarketing",
         title: "Telemarketing", 
         details: "B2B/B2C Outbound Campaigns", 
-        price: "₹15,000 / Month", 
+        price: "Custom Quote", 
         rating: 4.8, 
         reviews: "1.8M",
         image: "/services/telemarketing.png",
@@ -73,16 +231,16 @@ export const servicesData = [
           "Call Recording & Audits"
         ],
         costBreakdown: [
-          { label: "Dedicated Caller", value: "₹10,000" },
-          { label: "Telecom Infrastructure", value: "₹2,500" },
-          { label: "Scripting & QA", value: "₹2,500" }
+          { label: "Dedicated Caller", value: "Quote on Request" },
+          { label: "Telecom Infrastructure", value: "Quote on Request" },
+          { label: "Scripting & QA", value: "Quote on Request" }
         ]
       },
       { 
         id: "graphic-design",
         title: "Graphic Design", 
         details: "Branding & Social Assets", 
-        price: "₹5,000 / Package", 
+        price: "Custom Quote", 
         rating: 4.9, 
         reviews: "4.5M",
         image: "/services/graphic-design.png",
@@ -95,16 +253,16 @@ export const servicesData = [
           "Social Media Ready Assets"
         ],
         costBreakdown: [
-          { label: "Concept Creation", value: "₹2,000" },
-          { label: "Design Execution", value: "₹2,000" },
-          { label: "Source File Delivery", value: "₹1,000" }
+          { label: "Concept Creation", value: "Quote on Request" },
+          { label: "Design Execution", value: "Quote on Request" },
+          { label: "Source File Delivery", value: "Quote on Request" }
         ]
       },
       { 
         id: "web-development",
         title: "Web Development", 
         details: "Responsive Custom Build", 
-        price: "₹35,000+", 
+        price: "Custom Quote", 
         rating: 4.9, 
         reviews: "2.1M",
         image: "/services/web-development.png",
@@ -117,16 +275,16 @@ export const servicesData = [
           "1 Year Free Hosting & SSL"
         ],
         costBreakdown: [
-          { label: "Design & Prototyping", value: "₹10,000" },
-          { label: "Frontend & Backend Dev", value: "₹20,000" },
-          { label: "Deployment & Setup", value: "₹5,000" }
+          { label: "Design & Prototyping", value: "Quote on Request" },
+          { label: "Frontend & Backend Dev", value: "Quote on Request" },
+          { label: "Deployment & Setup", value: "Quote on Request" }
         ]
       },
       { 
         id: "app-development",
         title: "App Development", 
         details: "iOS & Android Development", 
-        price: "₹1,50,000+", 
+        price: "Custom Quote", 
         rating: 4.9, 
         reviews: "900K",
         image: "/services/app-development.png",
@@ -139,16 +297,16 @@ export const servicesData = [
           "App Store & Play Store Publishing"
         ],
         costBreakdown: [
-          { label: "UI/UX & Architecture", value: "₹40,000" },
-          { label: "App Development", value: "₹80,000" },
-          { label: "Testing & Deployment", value: "₹30,000" }
+          { label: "UI/UX & Architecture", value: "Quote on Request" },
+          { label: "App Development", value: "Quote on Request" },
+          { label: "Testing & Deployment", value: "Quote on Request" }
         ]
       },
       { 
         id: "printer-stationery",
         title: "Printer/Stationery", 
         details: "Custom Corporate Printing", 
-        price: "Quote per volume", 
+        price: "Custom Quote", 
         rating: 4.8, 
         reviews: "1.2M",
         image: "/services/printer-stationery.png",
@@ -161,12 +319,12 @@ export const servicesData = [
           "Free Pan-India Delivery"
         ],
         costBreakdown: [
-          { label: "Design Setup", value: "Custom" },
-          { label: "Material Cost", value: "Custom" },
-          { label: "Printing Volume", value: "Custom" }
+          { label: "Design Setup", value: "Quote on Request" },
+          { label: "Material Cost", value: "Quote on Request" },
+          { label: "Printing Volume", value: "Quote on Request" }
         ]
-      },
-    ],
+      }
+    ]
   }
 ];
 
