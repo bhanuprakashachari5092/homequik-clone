@@ -70,6 +70,15 @@ const mostBooked = [
     reviews: "6.7M",
     img: "/services/electrical-work.png",
     hash: "#maintenance-&-repairs"
+  },
+  {
+    id: "renovation-interiors",
+    title: "Renovation & Interiors",
+    desc: "Premium Interiors & Painting",
+    rating: 4.9,
+    reviews: "2.1M",
+    img: "/services/home-interior.png",
+    hash: "#renovation-&-interiors"
   }
 ];
 
