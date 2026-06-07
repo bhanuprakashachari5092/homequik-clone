@@ -7,6 +7,7 @@ import { Star, CheckCircle, ArrowLeft, ShieldCheck, Clock } from "lucide-react";
 import { CCTVSurveillanceDetails } from "@/components/CCTVSurveillanceDetails";
 import { HomeAutomationDetails } from "@/components/HomeAutomationDetails";
 import { SmartFilmGlassDetails } from "@/components/SmartFilmGlassDetails";
+import { ElectricalWorkDetails } from "@/components/ElectricalWorkDetails";
 
 export const Route = createFileRoute("/services_/$serviceId")({
   loader: ({ params }) => {
@@ -49,6 +50,10 @@ function ServiceDetailsPage() {
 
   if (service.id === "smart-film-glass") {
     return <SiteLayout><SmartFilmGlassDetails /></SiteLayout>;
+  }
+
+  if (service.id === "electrical-work") {
+    return <SiteLayout><ElectricalWorkDetails /></SiteLayout>;
   }
 
   return (
