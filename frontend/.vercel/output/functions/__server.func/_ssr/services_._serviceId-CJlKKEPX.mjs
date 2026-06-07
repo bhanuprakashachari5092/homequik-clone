@@ -1,7 +1,7 @@
 import { j as jsxRuntimeExports, r as reactExports } from "../_libs/react.mjs";
 import { L as Link } from "../_libs/tanstack__react-router.mjs";
-import { S as SiteLayout } from "./SiteLayout-BUJuJ5ob.mjs";
-import { R as Route, u as useCart } from "./router-DsDLhHvP.mjs";
+import { S as SiteLayout } from "./SiteLayout-MpFvt-My.mjs";
+import { R as Route, u as useCart } from "./router-DIDKZd1X.mjs";
 import { t as toast } from "../_libs/sonner.mjs";
 import "../_libs/firebase.mjs";
 import "../_libs/firebase__analytics.mjs";
@@ -9,7 +9,7 @@ import "../_libs/firebase__auth.mjs";
 import "../_libs/firebase__app.mjs";
 import "../_libs/firebase__logger.mjs";
 import "../_libs/firebase__firestore.mjs";
-import { s as ArrowLeft, o as Star, k as ShieldCheck, j as Clock, t as CircleCheckBig, f as Phone, u as CircleCheck, V as Video, v as HardDrive, w as Settings, W as Wrench, x as Monitor, y as Activity, z as TriangleAlert, h as Lock, H as House, Z as Zap, E as Layers, G as Lightbulb, I as Target, P as Paintbrush, J as Briefcase } from "../_libs/lucide-react.mjs";
+import { s as ArrowLeft, o as Star, k as ShieldCheck, j as Clock, t as CircleCheckBig, f as Phone, u as CircleCheck, V as Video, v as HardDrive, w as Settings, W as Wrench, x as Monitor, y as Activity, z as TriangleAlert, h as Lock, H as House, Z as Zap, E as Layers, G as Lightbulb, I as Target, P as Paintbrush, J as Briefcase, K as SquareDashed, q as Sparkles, N as LayoutTemplate, O as Info, Q as CircleAlert } from "../_libs/lucide-react.mjs";
 import "../_libs/tanstack__router-core.mjs";
 import "../_libs/tanstack__history.mjs";
 import "../_libs/cookie-es.mjs";
@@ -1460,6 +1460,308 @@ ${itemList}`;
     ] })
   ] });
 }
+function HomeInteriorDetails() {
+  const WHATSAPP_NUMBER = "919141052539";
+  const [selectedItems, setSelectedItems] = reactExports.useState([]);
+  const toggleSelection = (serviceName) => {
+    setSelectedItems(
+      (prev) => prev.includes(serviceName) ? prev.filter((item) => item !== serviceName) : [...prev, serviceName]
+    );
+  };
+  const handleWhatsApp = (serviceName) => {
+    let text = "";
+    if (serviceName) {
+      text = `Hello HomeQuik, I would like to book or inquire about: *${serviceName}* (Home Interior & Painting)`;
+    } else if (selectedItems.length > 0) {
+      const itemList = selectedItems.map((item) => `- ${item}`).join("\n");
+      text = `Hello HomeQuik, I would like to book or inquire about the following services (Home Interior & Painting):
+
+${itemList}`;
+    } else {
+      text = `Hello HomeQuik, I need a Premium Home Makeover Consultation.`;
+    }
+    window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(text)}`, "_blank");
+  };
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-background min-h-screen pb-24", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("header", { className: "bg-foreground text-background py-10 px-6", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mx-auto max-w-5xl", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs(Link, { to: "/services", className: "inline-flex items-center text-sm font-medium text-background/70 hover:text-background transition-colors mb-6", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(ArrowLeft, { className: "mr-2 h-4 w-4" }),
+        " Back to Services"
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col md:flex-row md:items-end justify-between gap-6", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-brand font-bold tracking-widest uppercase text-sm mb-2", children: "vendor99" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("h1", { className: "text-3xl md:text-5xl font-bold", children: [
+            "PREMIUM HOME INTERIOR",
+            /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+            "& PAINTING SOLUTIONS"
+          ] })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          "button",
+          {
+            onClick: () => handleWhatsApp("Interior Consultation"),
+            className: "bg-brand text-white px-6 py-3 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-brand-dark transition-colors",
+            children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(Phone, { className: "h-5 w-5" }),
+              "Consult via WhatsApp"
+            ]
+          }
+        )
+      ] })
+    ] }) }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("section", { className: "border-b border-border bg-card", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mx-auto max-w-5xl grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-border", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-6 flex items-start gap-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-emerald-100 dark:bg-emerald-900/30 p-3 rounded-full text-emerald-600 dark:text-emerald-400", children: /* @__PURE__ */ jsxRuntimeExports.jsx(SquareDashed, { className: "h-6 w-6" }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "font-bold text-foreground", children: "Premium Masking" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-muted-foreground mt-1", children: "Full asset masking, heavy surface protective wrapping, and careful furniture shifting protocols." })
+        ] })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-6 flex items-start gap-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-blue-100 dark:bg-blue-900/30 p-3 rounded-full text-blue-600 dark:text-blue-400", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Sparkles, { className: "h-6 w-6" }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "font-bold text-foreground", children: "Spotless Handover" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-muted-foreground mt-1", children: "Comprehensive space cleanup, daily debris clearing, and reset of assets to their original layout lines." })
+        ] })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-6 flex items-start gap-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-amber-100 dark:bg-amber-900/30 p-3 rounded-full text-amber-600 dark:text-amber-400", children: /* @__PURE__ */ jsxRuntimeExports.jsx(ShieldCheck, { className: "h-6 w-6" }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "font-bold text-foreground", children: "₹10K Cover Guarantee" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-muted-foreground mt-1", children: "Automated accidental damage platform insurance protection active for all digital bookings." })
+        ] })
+      ] })
+    ] }) }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mx-auto max-w-5xl px-6 py-12 space-y-12", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-3 mb-6", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-brand text-white p-2 rounded-lg", children: /* @__PURE__ */ jsxRuntimeExports.jsx(LayoutTemplate, { className: "h-5 w-5" }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-2xl font-bold", children: "1. Wall Makeovers, Panels & Mouldings" })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center gap-3 mb-4", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "bg-amber-100 text-amber-800 text-xs px-2 py-1 rounded font-bold", children: "★ 4.9 Top-Rated Interior Experts" }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-muted-foreground mb-6", children: "Premium architectural accent conversions. Billed via precise on-site mapping iterations." }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-blue-50 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/30 rounded-2xl p-6 shadow-sm flex gap-4 mb-6", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Info, { className: "h-6 w-6 text-blue-500 shrink-0" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "font-bold text-blue-900 dark:text-blue-400 flex items-center gap-2", children: "📐 Expert Pre-Consultation Rule:" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-sm text-blue-800 dark:text-blue-500 mt-2", children: [
+              "Spaces require a flat ",
+              /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "₹499" }),
+              " design mapping visit. This layout audit fee is credited and balanced directly inside your final consolidated project bill once material execution is authorized."
+            ] })
+          ] })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-4", children: [
+          {
+            name: "At-Home Expert Space Consultation & Laser Survey",
+            desc: "Complete spatial color coordination, panel placement measurements, material catalog display, and formal commercial quoting loop.",
+            price: "₹499",
+            btnText: "BOOK"
+          },
+          {
+            name: "Premium Accent Wall Panel & Moulding Transformations",
+            desc: "Turnkey high-end structural paneling setups, classical wall trims, or geometric profile louvers. (Applicable exclusively for custom project values exceeding a baseline minimum of ₹25,000).",
+            price: "On Survey",
+            btnText: "GET QUOTE"
+          }
+        ].map((item, i) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-card border border-border rounded-2xl p-6 flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-sm", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-bold", children: item.name }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-muted-foreground mt-2", children: item.desc })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-6 md:border-l border-border md:pl-6", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-right", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-muted-foreground uppercase font-bold", children: "Package Rate" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xl font-bold whitespace-nowrap", children: item.price })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                onClick: () => toggleSelection(item.name),
+                className: `px-6 py-2.5 rounded-lg font-bold transition-colors min-w-[120px] ${selectedItems.includes(item.name) ? "bg-brand text-white" : "bg-foreground text-background hover:bg-foreground/90"}`,
+                children: selectedItems.includes(item.name) ? "SELECTED ✓" : item.btnText
+              }
+            )
+          ] })
+        ] }, i)) })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-3 mb-6", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-brand text-white p-2 rounded-lg", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Paintbrush, { className: "h-5 w-5" }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-2xl font-bold", children: "2. Target Area & Individual Room Painting" })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-muted-foreground mb-6", children: "Fixed transparent rates covering localized residential wall refreshing." }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-card border border-border rounded-2xl overflow-hidden shadow-sm", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 md:grid-cols-[2fr_150px_120px_120px] gap-4 p-4 bg-secondary/50 border-b border-border text-xs font-bold text-muted-foreground uppercase tracking-wider hidden md:grid", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: "Target Zone" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: "Timeline" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-right", children: "Starting Rate" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-center", children: "Action" })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "divide-y divide-border", children: [
+            { zone: "Single Wall Accent Treatment", time: "9 Standard hours", price: "₹2,499" },
+            { zone: "Two or More Accent Walls Combo", time: "2 Full business days", price: "₹3,999" },
+            { zone: "Complete Standard Bedroom Suite", time: "2 Full business days", price: "₹5,499" },
+            { zone: "Living & Dining Hall Master Upgrade", time: "2 Full business days", price: "₹9,499" },
+            { zone: "Modular Kitchen Coating Overhaul", time: "2 Full business days", price: "₹3,499" },
+            { zone: "Bathroom Anti-Moisture Wall Coating", time: "9 Standard hours", price: "₹2,999" }
+          ].map((item, i) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 md:grid-cols-[2fr_150px_120px_120px] gap-4 p-6 items-center", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "font-bold text-foreground", children: item.zone }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-muted-foreground", children: item.time }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xl font-bold md:text-right whitespace-nowrap", children: item.price }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:text-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                onClick: () => toggleSelection(`Painting: ${item.zone}`),
+                className: `px-6 py-2 rounded-lg font-bold transition w-full md:w-auto ${selectedItems.includes(`Painting: ${item.zone}`) ? "bg-brand text-white" : "bg-brand/10 text-brand hover:bg-brand hover:text-white"}`,
+                children: selectedItems.includes(`Painting: ${item.zone}`) ? "ADDED ✓" : "ADD"
+              }
+            ) })
+          ] }, i)) })
+        ] })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-3 mb-6", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-brand text-white p-2 rounded-lg", children: /* @__PURE__ */ jsxRuntimeExports.jsx(House, { className: "h-5 w-5" }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-2xl font-bold", children: "3. Turnkey Apartment Multi-Coat Packages" })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-muted-foreground mb-6", children: "Comprehensive multi-room solutions calculated precisely across furnished and raw environments." }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-card border border-border rounded-2xl overflow-hidden shadow-sm", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 md:grid-cols-[1fr_150px_120px_120px_120px] gap-4 p-4 bg-secondary/50 border-b border-border text-xs font-bold text-muted-foreground uppercase tracking-wider hidden md:grid", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: "Configuration" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: "Execution Window" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: "Unfurnished" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: "Furnished" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-center", children: "Action" })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "divide-y divide-border", children: [
+            { size: "1 BHK Apartment Package", time: "3 business days", unfurnished: "₹9,499", furnished: "₹9,999" },
+            { size: "2 BHK Apartment Package", time: "3 to 4 business days", unfurnished: "₹12,999", furnished: "₹13,499" },
+            { size: "3 BHK Apartment Package", time: "4 to 5 business days", unfurnished: "₹16,999", furnished: "₹16,149" }
+          ].map((pack, i) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 md:grid-cols-[1fr_150px_120px_120px_120px] gap-4 p-6 items-center", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "font-bold text-foreground", children: pack.size }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm text-muted-foreground", children: pack.time }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-sm font-medium", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "md:hidden text-muted-foreground", children: "Unfurnished: " }),
+              pack.unfurnished
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-sm font-medium", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "md:hidden text-muted-foreground", children: "Furnished: " }),
+              pack.furnished
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:text-center mt-2 md:mt-0", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                onClick: () => toggleSelection(`Turnkey: ${pack.size}`),
+                className: `px-4 py-2 rounded-lg font-bold transition w-full ${selectedItems.includes(`Turnkey: ${pack.size}`) ? "bg-brand text-white" : "bg-foreground text-background hover:bg-foreground/90"}`,
+                children: selectedItems.includes(`Turnkey: ${pack.size}`) ? "SELECTED ✓" : "SELECT"
+              }
+            ) })
+          ] }, i)) })
+        ] })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-3 mb-6", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-brand text-white p-2 rounded-lg", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Sparkles, { className: "h-5 w-5" }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-2xl font-bold", children: "4. Specialty Infrastructure Care & Handover Sweeps" })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-muted-foreground mb-6", children: "Extended finish options and specialized industrial deep cleaning to conclude renovations." }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid sm:grid-cols-2 gap-6", children: [
+          { title: "Wood Polish / Built-in Wardrobe Painting", desc: "Surface leveling and grain enrichment layers.", time: "3 Hours execution", price: "₹1,999", btnText: "ADD" },
+          { title: "Main Entry Door High-Gloss Enamel", desc: "Weatherproofing and double-coat perimeter sealing.", time: "9 Hours execution", price: "₹2,499", btnText: "ADD" },
+          { title: "Full Furnished House Deep Cleaning", desc: "Industrial vacuuming, window track cleaning, and chemical stain stripping.", time: "Turnkey sweep", price: "₹3,499", btnText: "ADD" },
+          { title: "Intense Deep Bathroom Acid Scrubbing", desc: "Covers 2 legacy bathrooms. Scale removal and mirror buffing.", time: "3 Hours execution", price: "₹1,016 Package", btnText: "BUNDLE" }
+        ].map((spec, i) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-card border border-border rounded-xl p-6 shadow-sm flex flex-col justify-between", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-start gap-4 mb-2", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "font-bold text-foreground leading-tight", children: spec.title }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-lg font-bold text-brand whitespace-nowrap", children: spec.price })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-muted-foreground", children: spec.desc }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-xs font-semibold mt-4 text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 inline-block px-2 py-1 rounded", children: [
+              "⏱ ",
+              spec.time
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              onClick: () => toggleSelection(`Specialty: ${spec.title}`),
+              className: `mt-6 w-full border border-border px-4 py-2 rounded-lg font-bold transition ${selectedItems.includes(`Specialty: ${spec.title}`) ? "bg-brand text-white border-brand" : "bg-secondary hover:bg-foreground hover:text-background text-foreground"}`,
+              children: selectedItems.includes(`Specialty: ${spec.title}`) ? "Selected ✓" : spec.btnText
+            }
+          )
+        ] }, i)) })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "bg-secondary/30 rounded-3xl p-8 border border-border", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-3 mb-6", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(CircleAlert, { className: "h-6 w-6 text-foreground" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-2xl font-bold text-foreground", children: "PROJECT OPERATIONAL RULES & POLICIES" })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("ul", { className: "space-y-4 text-sm text-muted-foreground", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: "flex gap-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "shrink-0 font-bold text-foreground", children: "•" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { className: "text-foreground", children: "Installment Schedule:" }),
+              " Structural renovations follow a verified dual payment milestone loop: 35% upfront balance due at blueprint lock, and the 65% remaining balance processed post-handover customer validation."
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: "flex gap-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "shrink-0 font-bold text-foreground", children: "•" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { className: "text-foreground", children: "Late Cancellation Clawback:" }),
+              " Mobilization cancellations requested under less than a 24-hour window from the target scheduling slot trigger an automated ₹1,000 cancellation charge."
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: "flex gap-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "shrink-0 font-bold text-foreground", children: "•" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { className: "text-foreground", children: "Inventory Management Safeguards:" }),
+              " Painting crews handle all hardware masking, furniture shifting assistance, and baseline wrapping protection. Heavy structural built-in adjustments must be flagged post-consultation survey loop."
+            ] })
+          ] })
+        ] })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "fixed bottom-6 right-6 z-50 flex flex-col items-end gap-2", children: [
+        selectedItems.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-white dark:bg-card border border-border shadow-lg p-3 rounded-xl text-xs mb-2 animate-bounce flex items-center gap-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "relative flex h-3 w-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "relative inline-flex rounded-full h-3 w-3 bg-emerald-500" })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Ready to Conceptualize a Premium Home Makeover?" })
+        ] }),
+        selectedItems.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          "button",
+          {
+            onClick: () => handleWhatsApp(),
+            className: "bg-brand hover:bg-brand-dark text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3 font-bold transition-transform hover:scale-105",
+            children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-white text-brand rounded-full h-6 w-6 flex items-center justify-center text-xs", children: selectedItems.length }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-left", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-normal opacity-90", children: "Send Request" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: "Proceed to WhatsApp ➔" })
+              ] })
+            ]
+          }
+        ) : /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          "button",
+          {
+            onClick: () => handleWhatsApp("General Inquiry: Premium Home Makeover"),
+            className: "bg-[#25D366] hover:bg-[#1ebd5c] text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3 font-bold transition-transform hover:scale-105",
+            children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(Phone, { className: "h-6 w-6" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-left", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-normal opacity-90", children: "Skip traditional delayed agency consultations" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: "🟢 Consult via WhatsApp" })
+              ] })
+            ]
+          }
+        )
+      ] })
+    ] })
+  ] });
+}
 function ServiceDetailsPage() {
   const {
     service
@@ -1490,6 +1792,9 @@ function ServiceDetailsPage() {
   }
   if (service.id === "painting") {
     return /* @__PURE__ */ jsxRuntimeExports.jsx(SiteLayout, { children: /* @__PURE__ */ jsxRuntimeExports.jsx(PaintingDetails, {}) });
+  }
+  if (service.id === "home-interior") {
+    return /* @__PURE__ */ jsxRuntimeExports.jsx(SiteLayout, { children: /* @__PURE__ */ jsxRuntimeExports.jsx(HomeInteriorDetails, {}) });
   }
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(SiteLayout, { children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("section", { className: "bg-secondary/30 border-b border-border", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mx-auto max-w-7xl px-6 py-10 lg:py-16", children: [
