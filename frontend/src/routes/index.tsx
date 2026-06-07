@@ -61,18 +61,9 @@ const mostBooked = [
     hash: "#smart-home-&-automation"
   },
   {
-    id: "power-solutions",
-    title: "Power Solutions",
-    desc: "Enterprise UPS & Inverter setups",
-    rating: 4.9,
-    reviews: "3.4M",
-    img: "/services/ups-inverter.png",
-    hash: "#power-solutions"
-  },
-  {
     id: "maintenance-repairs",
     title: "Maintenance & Repairs",
-    desc: "Electrical Wiring & Diagnostics",
+    desc: "Electrical, UPS & Inverter",
     rating: 4.8,
     reviews: "6.7M",
     img: "/services/electrical-work.png",

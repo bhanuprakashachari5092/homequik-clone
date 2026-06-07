@@ -136,33 +136,6 @@ export const servicesData = [
     ]
   },
   {
-    name: "Power Solutions",
-    items: [
-      { 
-        id: "ups-inverter",
-        title: "UPS and Invertor", 
-        details: "Uninterruptible Power Supply", 
-        price: "Custom Quote", 
-        rating: 4.9, 
-        reviews: "3.4M",
-        image: "/services/ups-inverter.png",
-        Icon: BatteryCharging,
-        description: "Ensure zero downtime for your critical systems with enterprise-grade UPS and pure sine-wave inverter installations. Perfect for server rooms, offices, and heavy-duty appliances.",
-        features: [
-          "Zero Transfer Time",
-          "Pure Sine Wave Output",
-          "Heavy-duty Tubular Batteries",
-          "Load Capacity Analysis"
-        ],
-        costBreakdown: [
-          { label: "UPS/Inverter Unit", value: "Quote on Request" },
-          { label: "Battery Bank", value: "Quote on Request" },
-          { label: "Load Separation Wiring", value: "Quote on Request" }
-        ]
-      }
-    ]
-  },
-  {
     name: "Maintenance & Repairs",
     items: [
       { 
@@ -185,6 +158,28 @@ export const servicesData = [
           { label: "Inspection Fee", value: "Quote on Request" },
           { label: "Wiring & Consumables", value: "Quote on Request" },
           { label: "Labor Charges", value: "Quote on Request" }
+        ]
+      },
+      { 
+        id: "ups-inverter",
+        title: "UPS and Invertor", 
+        details: "Uninterruptible Power Supply", 
+        price: "Custom Quote", 
+        rating: 4.9, 
+        reviews: "3.4M",
+        image: "/services/ups-inverter.png",
+        Icon: BatteryCharging,
+        description: "Ensure zero downtime for your critical systems with enterprise-grade UPS and pure sine-wave inverter installations. Perfect for server rooms, offices, and heavy-duty appliances.",
+        features: [
+          "Zero Transfer Time",
+          "Pure Sine Wave Output",
+          "Heavy-duty Tubular Batteries",
+          "Load Capacity Analysis"
+        ],
+        costBreakdown: [
+          { label: "UPS/Inverter Unit", value: "Quote on Request" },
+          { label: "Battery Bank", value: "Quote on Request" },
+          { label: "Load Separation Wiring", value: "Quote on Request" }
         ]
       }
     ]
