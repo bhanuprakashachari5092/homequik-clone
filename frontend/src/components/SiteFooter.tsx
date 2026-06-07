@@ -41,39 +41,39 @@ const columns = [
 
 export function SiteFooter() {
   return (
-    <footer className="mt-20 border-t border-border bg-secondary/40">
-      <div className="mx-auto max-w-7xl px-6 py-14">
+    <footer className="mt-20 border-t border-border bg-[#0a0a0a] text-white">
+      <div className="mx-auto max-w-7xl px-6 py-16">
         <div className="grid gap-10 md:grid-cols-5">
           <div className="md:col-span-1">
-            <div className="flex items-center gap-2">
-              <span className="grid h-9 w-9 place-items-center rounded-lg bg-brand text-white font-bold">
+            <div className="flex items-center gap-3 group">
+              <span className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-brand to-brand-dark text-white font-bold group-hover:scale-105 transition-transform">
                 HQ
               </span>
-              <span className="text-base font-bold">HomeQuik</span>
+              <span className="text-xl font-extrabold tracking-tight">HomeQuik</span>
             </div>
-            <p className="mt-3 text-sm text-muted-foreground">Expert home services, on demand.</p>
-            <div className="mt-4 flex gap-3 text-muted-foreground">
-              <a href="#" aria-label="Instagram" className="hover:text-brand">
-                <Instagram className="h-4 w-4" />
+            <p className="mt-4 text-sm text-gray-400">Premium B2B & Home tech services, on demand.</p>
+            <div className="mt-6 flex gap-4 text-gray-400">
+              <a href="#" aria-label="Instagram" className="hover:text-brand transition-colors">
+                <Instagram className="h-5 w-5" />
               </a>
-              <a href="#" aria-label="Facebook" className="hover:text-brand">
-                <Facebook className="h-4 w-4" />
+              <a href="#" aria-label="Facebook" className="hover:text-brand transition-colors">
+                <Facebook className="h-5 w-5" />
               </a>
-              <a href="#" aria-label="Twitter" className="hover:text-brand">
-                <Twitter className="h-4 w-4" />
+              <a href="#" aria-label="Twitter" className="hover:text-brand transition-colors">
+                <Twitter className="h-5 w-5" />
               </a>
-              <a href="#" aria-label="YouTube" className="hover:text-brand">
-                <Youtube className="h-4 w-4" />
+              <a href="#" aria-label="YouTube" className="hover:text-brand transition-colors">
+                <Youtube className="h-5 w-5" />
               </a>
             </div>
           </div>
           {columns.map((col) => (
             <div key={col.title}>
-              <h4 className="text-sm font-semibold">{col.title}</h4>
-              <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
+              <h4 className="text-sm font-bold tracking-wider uppercase text-gray-100">{col.title}</h4>
+              <ul className="mt-4 space-y-3 text-sm text-gray-400">
                 {col.links.map(([label, href]) => (
                   <li key={label}>
-                    <Link to={href} className="hover:text-brand">
+                    <Link to={href} className="hover:text-brand transition-colors">
                       {label}
                     </Link>
                   </li>
@@ -83,20 +83,20 @@ export function SiteFooter() {
           ))}
         </div>
 
-        <div className="mt-12 flex flex-col items-start gap-4 border-t border-border pt-8 md:flex-row md:items-center md:justify-between">
-          <p className="text-xs text-muted-foreground">
+        <div className="mt-16 flex flex-col items-start gap-4 border-t border-white/10 pt-8 md:flex-row md:items-center md:justify-between">
+          <p className="text-xs text-gray-500 font-medium">
             © {new Date().getFullYear()} HomeQuik Services Pvt. Ltd. All rights reserved.
           </p>
-          <div className="flex gap-3">
+          <div className="flex gap-4">
             <a
               href="#"
-              className="inline-flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-xs hover:border-foreground/40"
+              className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/5 px-4 py-2.5 text-xs font-semibold hover:bg-white/10 transition-colors"
             >
               <Apple className="h-4 w-4" /> App Store
             </a>
             <a
               href="#"
-              className="inline-flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-xs hover:border-foreground/40"
+              className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/5 px-4 py-2.5 text-xs font-semibold hover:bg-white/10 transition-colors"
             >
               <Smartphone className="h-4 w-4" /> Google Play
             </a>

@@ -33,13 +33,13 @@ export function SiteHeader() {
     .slice(0, 10);
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur-md">
+    <header className="sticky top-0 z-50 glass border-b border-white/20 shadow-sm transition-all duration-300">
       <div className="mx-auto flex h-16 max-w-7xl items-center gap-6 px-4 sm:px-6">
-        <Link to="/" className="flex items-center gap-2">
-          <span className="grid h-9 w-9 place-items-center rounded-lg bg-brand text-white font-bold">
+        <Link to="/" className="flex items-center gap-3 group">
+          <span className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-brand to-brand-dark shadow-md text-white font-bold group-hover:scale-105 transition-transform">
             HQ
           </span>
-          <span className="hidden sm:block text-base font-bold tracking-tight">HomeQuik</span>
+          <span className="hidden sm:block text-xl font-extrabold tracking-tight">HomeQuik</span>
         </Link>
 
         <button 
