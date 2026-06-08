@@ -1,22 +1,14 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { SiteLayout } from "@/components/SiteLayout";
-import { Search, Star, ShieldCheck, Clock, Sparkles, ArrowRight, MapPin } from "lucide-react";
+import { Search, Star, ShieldCheck, Clock, Sparkles, ArrowRight, MapPin, PlayCircle } from "lucide-react";
 import { useLocation } from "@/context/LocationContext";
+import { motion } from "framer-motion";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "HomeQuik | Expert B2B tech & business services" },
-      {
-        name: "description",
-        content:
-          "Book trusted professionals for Digital Marketing, Web Development, CCTV, App Development and more. Verified experts, enterprise-grade solutions, upfront pricing.",
-      },
-      { property: "og:title", content: "HomeQuik — Tech services on demand" },
-      {
-        property: "og:description",
-        content: "Expert tech professionals at your service.",
-      },
+      { title: "Vendor99 | Premium Tech & Business Services" },
+      { name: "description", content: "Expert tech professionals at your service." },
     ],
   }),
   component: Home,
@@ -83,240 +75,257 @@ const mostBooked = [
 ];
 
 const benefits = [
-  {
-    icon: ShieldCheck,
-    title: "Verified professionals",
-    desc: "Background-checked, highly trained tech experts.",
-  },
+  { icon: ShieldCheck, title: "Verified professionals", desc: "Background-checked, highly trained tech experts." },
   { icon: Star, title: "Upfront pricing", desc: "Transparent rates. No hidden fees or surprises." },
   { icon: Clock, title: "Dedicated support", desc: "Dedicated account managers for your projects." },
   { icon: Sparkles, title: "Enterprise Grade", desc: "Secure, scalable, and reliable tech solutions." },
 ] as const;
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: { staggerChildren: 0.1 }
+  }
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 30 },
+  show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } }
+};
 
 function Home() {
   const { location } = useLocation();
 
   return (
     <SiteLayout>
-      {/* Hero */}
-      <section className="relative overflow-hidden premium-gradient border-b border-border">
-        {/* Abstract floating background elements */}
-        <div className="absolute top-0 right-0 -mr-20 -mt-20 h-96 w-96 rounded-full bg-brand-soft blur-3xl opacity-50 animate-float" />
-        <div className="absolute bottom-0 left-0 -ml-20 -mb-20 h-80 w-80 rounded-full bg-brand/5 blur-3xl opacity-70 animate-float" style={{ animationDelay: '2s' }} />
-        
-        <div className="relative mx-auto grid max-w-7xl gap-12 px-6 py-16 md:grid-cols-2 md:py-24">
-          <div className="z-10">
-            <p className="inline-flex items-center gap-2 rounded-full glass px-4 py-1.5 text-xs font-semibold text-foreground shadow-sm">
-              <MapPin className="h-3.5 w-3.5 text-brand" /> Now serving {location}
-            </p>
-            <h1 className="mt-6 text-5xl font-extrabold leading-tight tracking-tight md:text-7xl">
-              Tech & Business services, <br/><span className="text-gradient">on demand.</span>
+      {/* Hero Section */}
+      <section className="relative overflow-hidden bg-background pt-20 pb-32">
+        {/* Floating gradient shapes */}
+        <div className="absolute top-[-10%] right-[-5%] w-[600px] h-[600px] rounded-full bg-gradient-to-br from-primary/20 to-secondary/20 blur-[100px] opacity-70 animate-pulse" />
+        <div className="absolute bottom-[-10%] left-[-10%] w-[500px] h-[500px] rounded-full bg-gradient-to-tr from-accent/20 to-primary/20 blur-[100px] opacity-60 animate-pulse" style={{ animationDelay: "2s" }} />
+
+        <div className="relative mx-auto max-w-7xl px-6 lg:px-8">
+          <motion.div 
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, ease: "easeOut" }}
+            className="text-center max-w-4xl mx-auto"
+          >
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: 0.2 }}
+              className="inline-flex items-center gap-2 rounded-full border border-border/50 bg-white/50 backdrop-blur-md px-4 py-1.5 text-sm font-semibold text-foreground shadow-sm mb-8"
+            >
+              <Sparkles className="h-4 w-4 text-primary" /> Premium Services in {location}
+            </motion.div>
+            
+            <h1 className="text-5xl font-extrabold tracking-tight sm:text-7xl text-foreground">
+              Modern tech services, <br />
+              <span className="text-gradient">delivered perfectly.</span>
             </h1>
-            <p className="mt-6 max-w-lg text-lg text-muted-foreground font-medium">
-              Expert professionals for IT, Marketing, Security, and App Development — delivered with enterprise standards.
+            
+            <p className="mt-8 text-xl text-muted-foreground leading-relaxed max-w-2xl mx-auto font-medium">
+              Book verified experts for Digital Marketing, App Development, and Smart Home solutions. Enterprise standards, upfront pricing.
             </p>
 
-            <div className="mt-10 rounded-3xl glass p-3 shadow-lg">
-              <div className="flex items-center gap-3 rounded-2xl bg-white/60 dark:bg-black/60 px-4 py-3 shadow-sm border border-white/20">
-                <Search className="h-5 w-5 text-muted-foreground" />
-                <input
-                  placeholder="Search 'Digital Marketing', 'Web Development', 'CCTV'..."
-                  className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground font-medium"
-                />
-                <button className="rounded-xl bg-gradient-to-r from-brand to-brand-dark px-6 py-2.5 text-sm font-bold text-white shadow-md hover:shadow-lg hover:scale-105 transition-all">
-                  Search
-                </button>
-              </div>
-              <div className="mt-4 flex flex-wrap gap-2 px-2">
-                {["Digital Marketing", "Web Development", "Graphic Design", "CCTV"].map((t) => (
-                  <span
-                    key={t}
-                    className="rounded-full border border-border bg-background/50 backdrop-blur-sm px-4 py-1.5 text-xs font-medium text-foreground hover:bg-brand/10 hover:text-brand transition-colors cursor-pointer"
-                  >
-                    {t}
-                  </span>
-                ))}
-              </div>
-            </div>
-
-            <div className="mt-10 flex items-center gap-6 text-sm text-foreground font-semibold">
-              <div className="flex items-center gap-2">
-                <div className="flex -space-x-1">
-                  <Star className="h-5 w-5 fill-brand text-brand" />
-                  <Star className="h-5 w-5 fill-brand text-brand" />
-                  <Star className="h-5 w-5 fill-brand text-brand" />
-                  <Star className="h-5 w-5 fill-brand text-brand" />
-                  <Star className="h-5 w-5 fill-brand text-brand" />
+            {/* Interactive Search Bar */}
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+              className="mt-12 mx-auto max-w-2xl"
+            >
+              <div className="glass rounded-full p-2 flex items-center shadow-premium border border-white/40">
+                <div className="pl-6 pr-4">
+                  <Search className="h-6 w-6 text-muted-foreground" />
                 </div>
-                <span>4.8 avg rating</span>
+                <input
+                  type="text"
+                  placeholder="What do you need help with today?"
+                  className="flex-1 bg-transparent border-none outline-none text-lg text-foreground placeholder:text-muted-foreground"
+                />
+                <motion.button 
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="bg-gradient-premium text-white px-8 py-4 rounded-full font-bold text-lg shadow-lg hover:shadow-xl transition-all"
+                >
+                  Search
+                </motion.button>
               </div>
-              <div className="text-muted-foreground">|</div>
-              <div>12M+ happy customers</div>
-            </div>
-          </div>
+            </motion.div>
 
-          {/* Floating category card */}
-          <div className="relative hidden md:flex items-center justify-center z-10">
-            <div className="relative grid grid-cols-2 gap-5 w-full max-w-md">
-              {categories.slice(0, 4).map((c: { name: string; emoji: string; to: string; params: any }, i: number) => (
+            {/* Trust indicators */}
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.6 }}
+              className="mt-16 flex justify-center items-center gap-8 text-sm font-semibold text-muted-foreground"
+            >
+              <div className="flex items-center gap-2"><ShieldCheck className="h-5 w-5 text-success" /> Verified Experts</div>
+              <div className="flex items-center gap-2"><Star className="h-5 w-5 text-warning" /> 4.9/5 Average Rating</div>
+              <div className="flex items-center gap-2"><Clock className="h-5 w-5 text-primary" /> 24/7 Support</div>
+            </motion.div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Categories Grid */}
+      <section className="bg-white py-24">
+        <div className="mx-auto max-w-7xl px-6 lg:px-8">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="flex items-end justify-between mb-16"
+          >
+            <div>
+              <h2 className="text-4xl font-extrabold tracking-tight">Explore Categories</h2>
+              <p className="mt-4 text-lg text-muted-foreground">Find the perfect professional for your needs.</p>
+            </div>
+          </motion.div>
+
+          <motion.div 
+            variants={containerVariants}
+            initial="hidden"
+            whileInView="show"
+            viewport={{ once: true, margin: "-50px" }}
+            className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6"
+          >
+            {categories.map((c: any) => (
+              <motion.div key={c.name} variants={itemVariants}>
                 <Link
-                  key={c.name}
                   to={c.to}
                   params={c.params}
-                  className={`glass rounded-3xl p-6 shadow-card hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 group ${i % 2 ? "mt-10" : ""}`}
+                  className="group flex flex-col items-center justify-center p-8 rounded-3xl border border-border/50 bg-background hover:bg-white hover:border-primary/20 shadow-sm hover:shadow-premium transition-all duration-300 h-full"
                 >
-                  <div className="text-4xl group-hover:scale-110 transition-transform origin-bottom-left">{c.emoji}</div>
-                  <div className="mt-4 text-sm font-bold leading-tight">{c.name}</div>
-                  <div className="mt-3 text-xs font-bold text-brand flex items-center gap-1 opacity-80 group-hover:opacity-100">
-                    Book now <span className="group-hover:translate-x-1 transition-transform">→</span>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Categories grid */}
-      <section className="mx-auto max-w-7xl px-6 py-16">
-        <div className="mb-10 flex items-end justify-between">
-          <h2 className="text-3xl font-extrabold md:text-4xl tracking-tight">What are you looking for?</h2>
-          <Link
-            to="/services"
-            className="hidden text-sm font-bold text-brand hover:text-brand-dark transition-colors md:inline-flex items-center"
-          >
-            Explore all categories <ArrowRight className="ml-1 h-4 w-4" />
-          </Link>
-        </div>
-        <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-4">
-          {categories.map((c: any) => (
-            <Link
-              key={c.name}
-              to={c.to}
-              params={c.params}
-              className="group glass rounded-2xl p-6 text-left hover:border-brand/50 hover:shadow-hover hover:-translate-y-1 transition-all duration-300"
-            >
-              <div className="text-4xl group-hover:scale-110 transition-transform origin-bottom-left">{c.emoji}</div>
-              <div className="mt-4 text-base font-bold leading-snug text-foreground">{c.name}</div>
-            </Link>
-          ))}
-        </div>
-      </section>
-
-      {/* Most booked */}
-      <section className="bg-gradient-to-b from-secondary/30 to-background py-20 border-y border-border/50">
-        <div className="mx-auto max-w-7xl px-6">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-extrabold md:text-4xl tracking-tight">Most booked services</h2>
-            <p className="mt-3 text-muted-foreground font-medium text-lg">Top rated selections across {location}</p>
-          </div>
-          <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
-            {mostBooked.map((s) => (
-              <a
-                key={s.id}
-                href={`/services${s.hash}`}
-                className="group relative overflow-hidden rounded-3xl border border-white/20 glass shadow-card hover:-translate-y-2 hover:shadow-hover hover:border-brand/40 transition-all duration-500 ease-out flex flex-col"
-              >
-                <div className="absolute inset-0 bg-gradient-to-t from-brand/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-10 pointer-events-none" />
-                <div className="aspect-[4/3] overflow-hidden relative">
-                  <img
-                    src={s.img}
-                    alt={s.title}
-                    loading="lazy"
-                    className="h-full w-full object-cover group-hover:scale-110 transition-transform duration-700 ease-in-out"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent z-10 opacity-60"></div>
-                </div>
-                <div className="p-6 relative z-20 bg-background/80 backdrop-blur-xl flex-1 flex flex-col justify-between border-t border-white/10">
-                  <div>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground mb-3">
-                      <div className="flex items-center bg-white dark:bg-black px-2 py-1 rounded-full shadow-sm">
-                        <Star className="h-3.5 w-3.5 fill-brand text-brand mr-1" />
-                        <span className="font-bold text-foreground">{s.rating}</span>
-                      </div>
-                      <span className="font-medium">({s.reviews})</span>
-                    </div>
-                    <h3 className="text-xl font-bold tracking-tight">{s.title}</h3>
-                    <p className="mt-2 text-sm text-muted-foreground line-clamp-2">{s.desc}</p>
-                  </div>
-                  <div className="mt-6 flex items-center justify-between border-t border-border/50 pt-4">
-                    <span className="text-sm font-bold text-foreground">Custom Quotes</span>
-                    <span className="text-sm font-bold text-brand flex items-center group-hover:translate-x-1 transition-transform">
-                      View Details <ArrowRight className="ml-1.5 h-4 w-4" />
-                    </span>
-                  </div>
-                </div>
-              </a>
-            ))}
-          </div>
-          <div className="mt-16 flex justify-center">
-            <Link
-              to="/services"
-              className="inline-flex items-center justify-center rounded-2xl bg-gradient-to-r from-brand to-brand-dark px-10 py-4 text-base font-bold text-white shadow-xl hover:shadow-2xl transition-all hover:-translate-y-1 hover:scale-105"
-            >
-              Explore Full Catalog <ArrowRight className="ml-2 h-5 w-5" />
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* Why us */}
-      <section className="mx-auto max-w-7xl px-6 py-20">
-        <div className="mb-12 text-center">
-          <h2 className="text-2xl font-bold md:text-3xl">The HomeQuik promise</h2>
-          <p className="mt-3 text-muted-foreground">Why businesses trust us with their growth</p>
-        </div>
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-          {benefits.map((b) => (
-            <div key={b.title} className="rounded-2xl border border-border bg-card p-6 shadow-card">
-              <div className="grid h-12 w-12 place-items-center rounded-xl bg-brand-soft">
-                <b.icon className="h-6 w-6 text-brand" />
-              </div>
-              <h3 className="mt-5 text-base font-semibold">{b.title}</h3>
-              <p className="mt-2 text-sm text-muted-foreground">{b.desc}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* App banner */}
-      <section className="mx-auto max-w-7xl px-6 pb-20">
-        <div className="overflow-hidden rounded-3xl bg-foreground text-background">
-          <div className="grid items-center gap-8 p-10 md:grid-cols-2 md:p-14">
-            <div>
-              <h2 className="text-3xl font-bold md:text-4xl">Get the HomeQuik app</h2>
-              <p className="mt-3 text-background/70">
-                Faster bookings, exclusive offers, live tracking and chat with your professional.
-              </p>
-              <div className="mt-6 flex flex-wrap gap-3">
-                <a
-                  href="#"
-                  className="rounded-lg bg-background px-5 py-3 text-sm font-semibold text-foreground hover:opacity-90"
-                >
-                  ↓ App Store
-                </a>
-                <a
-                  href="#"
-                  className="rounded-lg bg-background px-5 py-3 text-sm font-semibold text-foreground hover:opacity-90"
-                >
-                  ↓ Google Play
-                </a>
-              </div>
-            </div>
-            <div className="relative hidden h-64 md:block">
-              <div className="absolute inset-0 grid grid-cols-3 gap-3 opacity-90">
-                {categories.slice(0, 6).map((c: { name: string; emoji: string }, i: number) => (
-                  <div
-                    key={c.name}
-                    className="rounded-xl bg-background/10 p-4 backdrop-blur-sm animate-float"
-                    style={{ animationDelay: `${i * 0.3}s` }}
+                  <motion.div 
+                    whileHover={{ scale: 1.1, rotate: 5 }}
+                    className="h-16 w-16 rounded-2xl bg-primary/5 flex items-center justify-center text-3xl mb-6 group-hover:bg-primary/10 transition-colors"
                   >
-                    <div className="text-2xl">{c.emoji}</div>
-                    <div className="mt-2 text-xs">{c.name.split(" ")[0]}</div>
+                    {c.emoji}
+                  </motion.div>
+                  <span className="text-sm font-bold text-center leading-tight text-foreground">{c.name}</span>
+                </Link>
+              </motion.div>
+            ))}
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Most Booked */}
+      <section className="bg-muted/30 py-32 border-y border-border/50">
+        <div className="mx-auto max-w-7xl px-6 lg:px-8">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center mb-20"
+          >
+            <h2 className="text-4xl font-extrabold tracking-tight">Premium Experiences</h2>
+            <p className="mt-4 text-xl text-muted-foreground font-medium">Curated services that our clients love.</p>
+          </motion.div>
+
+          <motion.div 
+            variants={containerVariants}
+            initial="hidden"
+            whileInView="show"
+            viewport={{ once: true }}
+            className="grid md:grid-cols-2 lg:grid-cols-3 gap-10"
+          >
+            {mostBooked.slice(0, 3).map((s) => (
+              <motion.div key={s.id} variants={itemVariants}>
+                <a
+                  href={`/services${s.hash}`}
+                  className="group block rounded-[2rem] overflow-hidden bg-white border border-border/50 shadow-card hover:shadow-premium transition-all duration-500 hover:-translate-y-2 h-full flex flex-col"
+                >
+                  <div className="aspect-[4/3] overflow-hidden relative">
+                    <img
+                      src={s.img}
+                      alt={s.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-80" />
+                    <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-md px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-sm">
+                      <Star className="h-4 w-4 fill-warning text-warning" />
+                      <span className="text-xs font-bold">{s.rating}</span>
+                    </div>
+                  </div>
+                  <div className="p-8 flex-1 flex flex-col">
+                    <h3 className="text-2xl font-bold mb-2">{s.title}</h3>
+                    <p className="text-muted-foreground font-medium mb-8 flex-1">{s.desc}</p>
+                    <div className="flex items-center justify-between mt-auto">
+                      <span className="font-bold text-primary">Explore details</span>
+                      <motion.div 
+                        className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-colors"
+                      >
+                        <ArrowRight className="h-5 w-5" />
+                      </motion.div>
+                    </div>
+                  </div>
+                </a>
+              </motion.div>
+            ))}
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Why Us */}
+      <section className="bg-white py-32">
+        <div className="mx-auto max-w-7xl px-6 lg:px-8">
+          <div className="grid lg:grid-cols-2 gap-20 items-center">
+            <motion.div 
+              initial={{ opacity: 0, x: -50 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.8 }}
+            >
+              <h2 className="text-4xl md:text-5xl font-extrabold tracking-tight leading-tight">
+                Designed for modern <br /> <span className="text-gradient">businesses & homes.</span>
+              </h2>
+              <p className="mt-6 text-xl text-muted-foreground leading-relaxed">
+                We've rebuilt the service experience from the ground up to provide enterprise-grade reliability, upfront pricing, and seamless booking.
+              </p>
+              
+              <div className="mt-12 grid sm:grid-cols-2 gap-8">
+                {benefits.map((b) => (
+                  <div key={b.title} className="flex gap-4">
+                    <div className="flex-shrink-0 mt-1">
+                      <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center">
+                        <b.icon className="h-6 w-6 text-primary" />
+                      </div>
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-lg">{b.title}</h4>
+                      <p className="mt-1 text-muted-foreground text-sm leading-relaxed">{b.desc}</p>
+                    </div>
                   </div>
                 ))}
               </div>
-            </div>
+            </motion.div>
+
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9 }}
+              whileInView={{ opacity: 1, scale: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.8 }}
+              className="relative rounded-[3rem] overflow-hidden shadow-premium"
+            >
+              <img src="/services/home-automation.png" alt="Premium Service" className="w-full h-[600px] object-cover" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+              <div className="absolute bottom-10 left-10 right-10 glass-dark rounded-3xl p-6 border border-white/20">
+                <div className="flex items-center gap-4">
+                  <div className="h-14 w-14 rounded-full bg-white flex items-center justify-center">
+                    <PlayCircle className="h-8 w-8 text-primary" />
+                  </div>
+                  <div className="text-white">
+                    <h5 className="font-bold text-lg">See how it works</h5>
+                    <p className="text-sm opacity-80">Watch our 2-minute product tour</p>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
           </div>
         </div>
       </section>

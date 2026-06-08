@@ -288,6 +288,9 @@ function getApp(name2 = DEFAULT_ENTRY_NAME) {
   }
   return app;
 }
+function getApps() {
+  return Array.from(_apps.values());
+}
 function registerVersion(libraryKeyOrName, version2, variant) {
   let library = PLATFORM_LOG_STRING[libraryKeyOrName] ?? libraryKeyOrName;
   if (variant) {
@@ -593,6 +596,7 @@ export {
   _registerComponent as _,
   _getProvider as a,
   _isFirebaseServerApp as b,
+  getApps as c,
   getApp as g,
   initializeApp as i,
   registerVersion as r

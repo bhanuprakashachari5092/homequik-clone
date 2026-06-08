@@ -5,7 +5,7 @@ import { Droplets, Check } from "lucide-react";
 export const Route = createFileRoute("/native")({
   head: () => ({
     meta: [
-      { title: "Native by HomeQuik — Smart water purifiers" },
+      { title: "Native by Vendor99 — Smart water purifiers" },
       {
         name: "description",
         content:

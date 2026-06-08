@@ -21,12 +21,12 @@ export function HomeAutomationDetails() {
   const handleWhatsApp = (serviceName?: string) => {
     let text = "";
     if (serviceName) {
-      text = `Hello HomeQuik, I would like to book or inquire about: *${serviceName}* (Home Automation)`;
+      text = `Hello Vendor99, I would like to book or inquire about: *${serviceName}* (Home Automation)`;
     } else if (selectedItems.length > 0) {
       const itemList = selectedItems.map(item => `- ${item}`).join('\n');
-      text = `Hello HomeQuik, I would like to book or inquire about the following services (Home Automation):\n\n${itemList}`;
+      text = `Hello Vendor99, I would like to book or inquire about the following services (Home Automation):\n\n${itemList}`;
     } else {
-      text = `Hello HomeQuik, I need a Certified Automation Engineer.`;
+      text = `Hello Vendor99, I need a Certified Automation Engineer.`;
     }
     window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(text)}`, '_blank');
   };

@@ -4,11 +4,11 @@ import { SiteLayout } from "@/components/SiteLayout";
 export const Route = createFileRoute("/about")({
   head: () => ({
     meta: [
-      { title: "About — HomeQuik" },
+      { title: "About — Vendor99" },
       {
         name: "description",
         content:
-          "HomeQuik connects businesses with trained, background-checked tech professionals.",
+          "Vendor99 connects businesses with trained, background-checked tech professionals.",
       },
     ],
   }),

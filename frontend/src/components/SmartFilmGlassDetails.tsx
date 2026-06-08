@@ -21,12 +21,12 @@ export function SmartFilmGlassDetails() {
   const handleWhatsApp = (serviceName?: string) => {
     let text = "";
     if (serviceName) {
-      text = `Hello HomeQuik, I would like to book or inquire about: *${serviceName}* (Smart Film & PDLC Glass)`;
+      text = `Hello Vendor99, I would like to book or inquire about: *${serviceName}* (Smart Film & PDLC Glass)`;
     } else if (selectedItems.length > 0) {
       const itemList = selectedItems.map(item => `- ${item}`).join('\n');
-      text = `Hello HomeQuik, I would like to book or inquire about the following services (Smart Film & PDLC Glass):\n\n${itemList}`;
+      text = `Hello Vendor99, I would like to book or inquire about the following services (Smart Film & PDLC Glass):\n\n${itemList}`;
     } else {
-      text = `Hello HomeQuik, I need a consultation for a Premium Smart Film or Glass Installation.`;
+      text = `Hello Vendor99, I need a consultation for a Premium Smart Film or Glass Installation.`;
     }
     window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(text)}`, '_blank');
   };

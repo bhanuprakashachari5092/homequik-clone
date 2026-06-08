@@ -21,12 +21,12 @@ export function ElectricalWorkDetails() {
   const handleWhatsApp = (serviceName?: string) => {
     let text = "";
     if (serviceName) {
-      text = `Hello HomeQuik, I would like to book or inquire about: *${serviceName}* (Electrical Work)`;
+      text = `Hello Vendor99, I would like to book or inquire about: *${serviceName}* (Electrical Work)`;
     } else if (selectedItems.length > 0) {
       const itemList = selectedItems.map(item => `- ${item}`).join('\n');
-      text = `Hello HomeQuik, I would like to book or inquire about the following services (Electrical Work):\n\n${itemList}`;
+      text = `Hello Vendor99, I would like to book or inquire about the following services (Electrical Work):\n\n${itemList}`;
     } else {
-      text = `Hello HomeQuik, I need an On-Demand Certified Electrician.`;
+      text = `Hello Vendor99, I need an On-Demand Certified Electrician.`;
     }
     window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(text)}`, '_blank');
   };

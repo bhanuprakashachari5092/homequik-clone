@@ -1,7 +1,8 @@
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { SiteLayout } from "@/components/SiteLayout";
 import { useState } from "react";
-import { Mail, Lock, Phone, Loader2 } from "lucide-react";
+import { Mail, Lock, Phone, Loader2, CheckCircle2 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { auth, db } from "@/lib/firebase";
 import { 
   createUserWithEmailAndPassword, 
@@ -13,7 +14,7 @@ import { doc, setDoc } from "firebase/firestore";
 export const Route = createFileRoute("/login")({
   head: () => ({
     meta: [
-      { title: "Login or Sign up — HomeQuik" },
+      { title: "Login or Sign up — Vendor99" },
       { name: "description", content: "Login to book trusted professionals." },
     ],
   }),
@@ -63,25 +64,53 @@ function Login() {
 
   return (
     <SiteLayout>
-      <section className="bg-gradient-to-br from-brand-soft via-background to-background min-h-[calc(100vh-64px)]">
-        <div className="mx-auto grid max-w-6xl gap-12 px-6 py-16 lg:grid-cols-2 lg:py-24">
-          <div className="hidden lg:flex flex-col justify-center">
-            <h2 className="text-4xl font-bold leading-tight">
-              Welcome to <span className="text-brand">HomeQuik</span>
+      <section className="relative overflow-hidden bg-background min-h-[calc(100vh-64px)] flex items-center">
+        <div className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] rounded-full bg-brand/10 blur-[120px] opacity-70 pointer-events-none animate-pulse" />
+        <div className="absolute bottom-[-20%] right-[-10%] w-[600px] h-[600px] rounded-full bg-secondary/10 blur-[120px] opacity-70 pointer-events-none animate-pulse" style={{ animationDelay: "2s" }} />
+        
+        <div className="mx-auto grid max-w-7xl gap-16 px-6 py-16 lg:grid-cols-2 lg:py-24 relative z-10 w-full">
+          <motion.div 
+            initial={{ opacity: 0, x: -30 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.6 }}
+            className="hidden lg:flex flex-col justify-center"
+          >
+            <h2 className="text-5xl font-extrabold leading-tight tracking-tight">
+              Unlock premium <br/><span className="text-gradient">Tech Services.</span>
             </h2>
-            <p className="mt-4 text-muted-foreground">
-              Book trained professionals for B2B Tech Services — Digital Marketing, App Development, CCTV and more.
+            <p className="mt-6 text-lg text-muted-foreground font-medium max-w-md leading-relaxed">
+              Join thousands of businesses who trust Vendor99 for their enterprise-grade Tech, IT, and Maintenance needs.
             </p>
-            <ul className="mt-8 space-y-3 text-sm">
-              <li>✓ Verified, background-checked pros</li>
-              <li>✓ Upfront pricing — no surprises</li>
-              <li>✓ Dedicated Account Managers</li>
-              <li>✓ Service guarantee on every project</li>
+            <ul className="mt-10 space-y-5">
+              {[
+                "Verified, background-checked professionals",
+                "Upfront pricing with no hidden fees",
+                "Dedicated Account Managers",
+                "Service guarantee on every project"
+              ].map((text, i) => (
+                <motion.li 
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 + i * 0.1 }}
+                  key={i} 
+                  className="flex items-center gap-3 text-base font-medium text-foreground"
+                >
+                  <div className="h-6 w-6 rounded-full bg-success/20 flex items-center justify-center shrink-0">
+                    <CheckCircle2 className="h-4 w-4 text-success" />
+                  </div>
+                  {text}
+                </motion.li>
+              ))}
             </ul>
-          </div>
+          </motion.div>
 
-          <div className="mx-auto w-full max-w-md rounded-2xl border border-border bg-card p-8 shadow-card">
-            <div className="flex rounded-lg bg-secondary p-1 text-sm">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.5 }}
+            className="mx-auto w-full max-w-md rounded-[2.5rem] border border-white/40 glass bg-white/70 p-10 shadow-premium"
+          >
+            <div className="flex rounded-xl bg-secondary/50 p-1.5 text-sm font-bold border border-border/50">
               {(["login", "register"] as const).map((m) => (
                 <button
                   key={m}
@@ -89,10 +118,10 @@ function Login() {
                     setMode(m);
                     setError("");
                   }}
-                  className={`flex-1 rounded-md py-2 transition ${
+                  className={`flex-1 rounded-lg py-2.5 transition-all ${
                     mode === m
-                      ? "bg-background text-foreground shadow-card"
-                      : "text-muted-foreground"
+                      ? "bg-white text-brand shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
                   {m === "login" ? "Login" : "Sign up"}
@@ -100,10 +129,10 @@ function Login() {
               ))}
             </div>
 
-            <h1 className="mt-6 text-2xl font-bold">
-              {mode === "login" ? "Welcome back" : "Create your account"}
+            <h1 className="mt-8 text-3xl font-extrabold tracking-tight">
+              {mode === "login" ? "Welcome back" : "Create account"}
             </h1>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <p className="mt-2 text-base text-muted-foreground font-medium">
               {mode === "login"
                 ? "Sign in to manage your bookings."
                 : "It takes less than a minute."}
@@ -115,79 +144,88 @@ function Login() {
               </div>
             )}
 
-            <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
-              {mode === "register" && (
-                <>
-                  <div>
-                    <label className="text-xs text-muted-foreground">Full name</label>
-                    <input
-                      required
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm outline-none focus:border-brand"
-                      placeholder="Your name"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs text-muted-foreground">Contact Number</label>
-                    <div className="relative mt-1">
-                      <Phone className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <form className="mt-8 space-y-5" onSubmit={handleSubmit}>
+              <AnimatePresence mode="popLayout">
+                {mode === "register" && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, height: "auto", scale: 1 }}
+                    exit={{ opacity: 0, height: 0, scale: 0.95 }}
+                    className="space-y-5 overflow-hidden"
+                  >
+                    <div>
+                      <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider ml-1">Full name</label>
                       <input
                         required
-                        type="tel"
-                        value={phone}
-                        onChange={(e) => setPhone(e.target.value)}
-                        className="w-full rounded-lg border border-border bg-background py-2.5 pl-9 pr-3 text-sm outline-none focus:border-brand"
-                        placeholder="+91 90000 00000"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        className="mt-1.5 w-full rounded-2xl border border-border/50 bg-white/50 backdrop-blur-sm px-4 py-3.5 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all font-medium"
+                        placeholder="Your name"
                       />
                     </div>
-                  </div>
-                </>
-              )}
+                    <div>
+                      <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider ml-1">Contact Number</label>
+                      <div className="relative mt-1.5">
+                        <Phone className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                        <input
+                          required
+                          type="tel"
+                          value={phone}
+                          onChange={(e) => setPhone(e.target.value)}
+                          className="w-full rounded-2xl border border-border/50 bg-white/50 backdrop-blur-sm py-3.5 pl-11 pr-4 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all font-medium"
+                          placeholder="+91 90000 00000"
+                        />
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
               <div>
-                <label className="text-xs text-muted-foreground">Email address</label>
-                <div className="relative mt-1">
-                  <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider ml-1">Email address</label>
+                <div className="relative mt-1.5">
+                  <Mail className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                   <input
                     required
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full rounded-lg border border-border bg-background py-2.5 pl-9 pr-3 text-sm outline-none focus:border-brand"
+                    className="w-full rounded-2xl border border-border/50 bg-white/50 backdrop-blur-sm py-3.5 pl-11 pr-4 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all font-medium"
                     placeholder="you@company.com"
                   />
                 </div>
               </div>
               <div>
-                <label className="text-xs text-muted-foreground">Password</label>
-                <div className="relative mt-1">
-                  <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider ml-1">Password</label>
+                <div className="relative mt-1.5">
+                  <Lock className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                   <input
                     required
                     type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full rounded-lg border border-border bg-background py-2.5 pl-9 pr-3 text-sm outline-none focus:border-brand"
+                    className="w-full rounded-2xl border border-border/50 bg-white/50 backdrop-blur-sm py-3.5 pl-11 pr-4 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all font-medium"
                     placeholder="••••••••"
                   />
                 </div>
               </div>
 
-              <button
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
                 type="submit"
                 disabled={loading}
-                className="w-full flex justify-center items-center rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-dark disabled:opacity-70"
+                className="mt-2 w-full flex justify-center items-center rounded-2xl bg-gradient-premium px-4 py-4 text-base font-bold text-white shadow-lg hover:shadow-xl transition-all disabled:opacity-70 disabled:cursor-not-allowed"
               >
                 {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : (mode === "login" ? "Login" : "Create account")}
-              </button>
+              </motion.button>
             </form>
 
-            <p className="mt-6 text-center text-xs text-muted-foreground">
+            <p className="mt-8 text-center text-xs font-medium text-muted-foreground">
               By continuing you agree to our{" "}
-              <Link to="/" className="underline">Terms</Link> &{" "}
-              <Link to="/" className="underline">Privacy</Link>.
+              <Link to="/" className="text-foreground font-bold hover:underline">Terms</Link> &{" "}
+              <Link to="/" className="text-foreground font-bold hover:underline">Privacy</Link>.
             </p>
-          </div>
+          </motion.div>
         </div>
       </section>
     </SiteLayout>

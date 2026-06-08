@@ -21,12 +21,12 @@ export function PaintingDetails() {
   const handleWhatsApp = (serviceName?: string) => {
     let text = "";
     if (serviceName) {
-      text = `Hello HomeQuik, I would like to book or inquire about: *${serviceName}* (Painting Services)`;
+      text = `Hello Vendor99, I would like to book or inquire about: *${serviceName}* (Painting Services)`;
     } else if (selectedItems.length > 0) {
       const itemList = selectedItems.map(item => `- ${item}`).join('\n');
-      text = `Hello HomeQuik, I would like to book or inquire about the following services (Painting Services):\n\n${itemList}`;
+      text = `Hello Vendor99, I would like to book or inquire about the following services (Painting Services):\n\n${itemList}`;
     } else {
-      text = `Hello HomeQuik, I need an On-Demand Certified Painter.`;
+      text = `Hello Vendor99, I need an On-Demand Certified Painter.`;
     }
     window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(text)}`, '_blank');
   };
@@ -41,7 +41,7 @@ export function PaintingDetails() {
           </Link>
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
             <div>
-              <p className="text-brand font-bold tracking-widest uppercase text-sm mb-2">HomeQuik Painting</p>
+              <p className="text-brand font-bold tracking-widest uppercase text-sm mb-2">Vendor99 Painting</p>
               <h1 className="text-3xl md:text-5xl font-bold">PROFESSIONAL PAINTING<br/>SERVICES (2026)</h1>
             </div>
             <button 

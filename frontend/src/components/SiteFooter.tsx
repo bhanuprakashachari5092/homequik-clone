@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { Instagram, Facebook, Twitter, Youtube, Apple, Smartphone } from "lucide-react";
+import { motion } from "framer-motion";
 
 const columns = [
   {
@@ -41,39 +42,44 @@ const columns = [
 
 export function SiteFooter() {
   return (
-    <footer className="mt-20 border-t border-border bg-[#0a0a0a] text-white">
-      <div className="mx-auto max-w-7xl px-6 py-16">
+    <motion.footer 
+      initial={{ opacity: 0, y: 40 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: "-100px" }}
+      transition={{ duration: 0.7 }}
+      className="mt-24 border-t border-white/10 bg-ink text-white overflow-hidden relative"
+    >
+      <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-brand to-transparent opacity-50" />
+      <div className="mx-auto max-w-7xl px-6 py-20">
         <div className="grid gap-10 md:grid-cols-5">
           <div className="md:col-span-1">
-            <div className="flex items-center gap-3 group">
-              <span className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-brand to-brand-dark text-white font-bold group-hover:scale-105 transition-transform">
-                HQ
-              </span>
-              <span className="text-xl font-extrabold tracking-tight">HomeQuik</span>
+            <div className="flex items-center gap-2 group">
+              <img src="/logo.png" alt="Vendor99 Logo" className="h-14 md:h-20 w-auto animate-float group-hover:scale-110 transition-all duration-500 bg-white rounded-xl px-3 py-2 shadow-lg" />
             </div>
-            <p className="mt-4 text-sm text-gray-400">Premium B2B & Home tech services, on demand.</p>
-            <div className="mt-6 flex gap-4 text-gray-400">
-              <a href="#" aria-label="Instagram" className="hover:text-brand transition-colors">
-                <Instagram className="h-5 w-5" />
-              </a>
-              <a href="#" aria-label="Facebook" className="hover:text-brand transition-colors">
-                <Facebook className="h-5 w-5" />
-              </a>
-              <a href="#" aria-label="Twitter" className="hover:text-brand transition-colors">
-                <Twitter className="h-5 w-5" />
-              </a>
-              <a href="#" aria-label="YouTube" className="hover:text-brand transition-colors">
-                <Youtube className="h-5 w-5" />
-              </a>
+            <p className="mt-6 text-sm text-slate-400 leading-relaxed max-w-xs">
+              Premium B2B & Home tech services, on demand. Empowering modern living.
+            </p>
+            <div className="mt-8 flex gap-4 text-slate-400">
+              {[Instagram, Facebook, Twitter, Youtube].map((Icon, i) => (
+                <motion.a 
+                  key={i}
+                  href="#" 
+                  whileHover={{ scale: 1.2, y: -2 }}
+                  whileTap={{ scale: 0.9 }}
+                  className="hover:text-white transition-colors"
+                >
+                  <Icon className="h-5 w-5" />
+                </motion.a>
+              ))}
             </div>
           </div>
           {columns.map((col) => (
             <div key={col.title}>
-              <h4 className="text-sm font-bold tracking-wider uppercase text-gray-100">{col.title}</h4>
-              <ul className="mt-4 space-y-3 text-sm text-gray-400">
+              <h4 className="text-xs font-bold tracking-widest uppercase text-white/50">{col.title}</h4>
+              <ul className="mt-6 space-y-4 text-sm text-slate-300">
                 {col.links.map(([label, href]) => (
                   <li key={label}>
-                    <Link to={href} className="hover:text-brand transition-colors">
+                    <Link to={href} className="hover:text-brand hover:translate-x-1 inline-block transition-all">
                       {label}
                     </Link>
                   </li>
@@ -83,26 +89,30 @@ export function SiteFooter() {
           ))}
         </div>
 
-        <div className="mt-16 flex flex-col items-start gap-4 border-t border-white/10 pt-8 md:flex-row md:items-center md:justify-between">
-          <p className="text-xs text-gray-500 font-medium">
-            © {new Date().getFullYear()} HomeQuik Services Pvt. Ltd. All rights reserved.
+        <div className="mt-20 flex flex-col items-start gap-6 border-t border-white/10 pt-8 md:flex-row md:items-center md:justify-between">
+          <p className="text-sm text-slate-500 font-medium">
+            © {new Date().getFullYear()} Vendor99 Services Pvt. Ltd. All rights reserved.
           </p>
           <div className="flex gap-4">
-            <a
+            <motion.a
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
               href="#"
-              className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/5 px-4 py-2.5 text-xs font-semibold hover:bg-white/10 transition-colors"
+              className="inline-flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-semibold hover:bg-white/10 transition-colors"
             >
-              <Apple className="h-4 w-4" /> App Store
-            </a>
-            <a
+              <Apple className="h-5 w-5" /> App Store
+            </motion.a>
+            <motion.a
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
               href="#"
-              className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/5 px-4 py-2.5 text-xs font-semibold hover:bg-white/10 transition-colors"
+              className="inline-flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-semibold hover:bg-white/10 transition-colors"
             >
-              <Smartphone className="h-4 w-4" /> Google Play
-            </a>
+              <Smartphone className="h-5 w-5" /> Google Play
+            </motion.a>
           </div>
         </div>
       </div>
-    </footer>
+    </motion.footer>
   );
 }
