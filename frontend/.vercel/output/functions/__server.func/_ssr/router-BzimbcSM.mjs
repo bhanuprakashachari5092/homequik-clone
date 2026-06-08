@@ -55,7 +55,7 @@ import "../_libs/long.mjs";
 import "../_libs/protobufjs__codegen.mjs";
 import "../_libs/protobufjs__fetch.mjs";
 import "../_libs/protobufjs__path.mjs";
-const appCss = "/assets/styles-Dvb4ueVW.css";
+const appCss = "/assets/styles-CJZQCNZE.css";
 const firebaseConfig = {
   apiKey: "AIzaSyC8yfL_9YR9ZvfO9ID6MKfn3eqCpZdhy-8",
   authDomain: "vendor99-clone.firebaseapp.com",
@@ -275,7 +275,7 @@ function ErrorComponent({ error, reset }) {
     ] })
   ] }) });
 }
-const Route$8 = createRootRouteWithContext()({
+const Route$6 = createRootRouteWithContext()({
   head: () => ({
     meta: [
       { charSet: "utf-8" },
@@ -324,23 +324,11 @@ function RootShell({ children }) {
   ] });
 }
 function RootComponent() {
-  const { queryClient } = Route$8.useRouteContext();
+  const { queryClient } = Route$6.useRouteContext();
   return /* @__PURE__ */ jsxRuntimeExports.jsx(QueryClientProvider, { client: queryClient, children: /* @__PURE__ */ jsxRuntimeExports.jsx(LocationProvider, { children: /* @__PURE__ */ jsxRuntimeExports.jsx(AuthProvider, { children: /* @__PURE__ */ jsxRuntimeExports.jsx(CartProvider, { children: /* @__PURE__ */ jsxRuntimeExports.jsx(Outlet, {}) }) }) }) });
 }
-const $$splitComponentImporter$7 = () => import("./native-lOz63LUT.mjs");
-const Route$7 = createFileRoute("/native")({
-  head: () => ({
-    meta: [{
-      title: "Native by Vendor99 — Smart water purifiers"
-    }, {
-      name: "description",
-      content: "Smart water purifiers, locks and security cameras from Native. Designed for Indian homes."
-    }]
-  }),
-  component: lazyRouteComponent($$splitComponentImporter$7, "component")
-});
-const $$splitComponentImporter$6 = () => import("./login-DImMEQs5.mjs");
-const Route$6 = createFileRoute("/login")({
+const $$splitComponentImporter$5 = () => import("./login-C1PkG1Ye.mjs");
+const Route$5 = createFileRoute("/login")({
   head: () => ({
     meta: [{
       title: "Login or Sign up — Vendor99"
@@ -349,21 +337,9 @@ const Route$6 = createFileRoute("/login")({
       content: "Login to book trusted professionals."
     }]
   }),
-  component: lazyRouteComponent($$splitComponentImporter$6, "component")
-});
-const $$splitComponentImporter$5 = () => import("./insta-help-DMVMvbDT.mjs");
-const Route$5 = createFileRoute("/insta-help")({
-  head: () => ({
-    meta: [{
-      title: "Insta Help — Quick fixes in under 15 minutes"
-    }, {
-      name: "description",
-      content: "Get a verified pro at your door in 15 minutes for small fixes around the house."
-    }]
-  }),
   component: lazyRouteComponent($$splitComponentImporter$5, "component")
 });
-const $$splitComponentImporter$4 = () => import("./cart-DQ87q5Fn.mjs");
+const $$splitComponentImporter$4 = () => import("./cart-DE4_ZjzK.mjs");
 const Route$4 = createFileRoute("/cart")({
   head: () => ({
     meta: [{
@@ -372,7 +348,7 @@ const Route$4 = createFileRoute("/cart")({
   }),
   component: lazyRouteComponent($$splitComponentImporter$4, "component")
 });
-const $$splitComponentImporter$3 = () => import("./about-D3fNHmKd.mjs");
+const $$splitComponentImporter$3 = () => import("./about-BN-b_99u.mjs");
 const Route$3 = createFileRoute("/about")({
   head: () => ({
     meta: [{
@@ -384,7 +360,7 @@ const Route$3 = createFileRoute("/about")({
   }),
   component: lazyRouteComponent($$splitComponentImporter$3, "component")
 });
-const $$splitComponentImporter$2 = () => import("./index-BSWasYwn.mjs");
+const $$splitComponentImporter$2 = () => import("./index-iMsdFRHX.mjs");
 const Route$2 = createFileRoute("/")({
   head: () => ({
     meta: [{
@@ -396,7 +372,7 @@ const Route$2 = createFileRoute("/")({
   }),
   component: lazyRouteComponent($$splitComponentImporter$2, "component")
 });
-const $$splitComponentImporter$1 = () => import("./services.index-BmoX1K8m.mjs");
+const $$splitComponentImporter$1 = () => import("./services.index-CPoqUC68.mjs");
 const Route$1 = createFileRoute("/services/")({
   head: () => ({
     meta: [{
@@ -772,7 +748,7 @@ function getServiceById(id) {
   }
   return null;
 }
-const $$splitComponentImporter = () => import("./services_._serviceId-D98xYvkC.mjs");
+const $$splitComponentImporter = () => import("./services_._serviceId-DBQggZ4v.mjs");
 const Route = createFileRoute("/services_/$serviceId")({
   loader: ({
     params
@@ -797,57 +773,45 @@ const Route = createFileRoute("/services_/$serviceId")({
   }),
   component: lazyRouteComponent($$splitComponentImporter, "component")
 });
-const NativeRoute = Route$7.update({
-  id: "/native",
-  path: "/native",
-  getParentRoute: () => Route$8
-});
-const LoginRoute = Route$6.update({
+const LoginRoute = Route$5.update({
   id: "/login",
   path: "/login",
-  getParentRoute: () => Route$8
-});
-const InstaHelpRoute = Route$5.update({
-  id: "/insta-help",
-  path: "/insta-help",
-  getParentRoute: () => Route$8
+  getParentRoute: () => Route$6
 });
 const CartRoute = Route$4.update({
   id: "/cart",
   path: "/cart",
-  getParentRoute: () => Route$8
+  getParentRoute: () => Route$6
 });
 const AboutRoute = Route$3.update({
   id: "/about",
   path: "/about",
-  getParentRoute: () => Route$8
+  getParentRoute: () => Route$6
 });
 const IndexRoute = Route$2.update({
   id: "/",
   path: "/",
-  getParentRoute: () => Route$8
+  getParentRoute: () => Route$6
 });
 const ServicesIndexRoute = Route$1.update({
   id: "/services/",
   path: "/services/",
-  getParentRoute: () => Route$8
+  getParentRoute: () => Route$6
 });
 const ServicesServiceIdRoute = Route.update({
   id: "/services_/$serviceId",
   path: "/services/$serviceId",
-  getParentRoute: () => Route$8
+  getParentRoute: () => Route$6
 });
 const rootRouteChildren = {
   IndexRoute,
   AboutRoute,
   CartRoute,
-  InstaHelpRoute,
   LoginRoute,
-  NativeRoute,
   ServicesServiceIdRoute,
   ServicesIndexRoute
 };
-const routeTree = Route$8._addFileChildren(rootRouteChildren)._addFileTypes();
+const routeTree = Route$6._addFileChildren(rootRouteChildren)._addFileTypes();
 const getRouter = () => {
   const queryClient = new QueryClient();
   const router2 = createRouter({

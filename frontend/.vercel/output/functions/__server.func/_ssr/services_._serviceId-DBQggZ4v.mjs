@@ -1,7 +1,7 @@
 import { j as jsxRuntimeExports, r as reactExports } from "../_libs/react.mjs";
 import { L as Link } from "../_libs/tanstack__react-router.mjs";
-import { S as SiteLayout } from "./SiteLayout-CdWwcAj0.mjs";
-import { R as Route, u as useCart } from "./router-CJ2-GpdV.mjs";
+import { S as SiteLayout } from "./SiteLayout-BccD82lv.mjs";
+import { R as Route, u as useCart } from "./router-BzimbcSM.mjs";
 import { t as toast } from "../_libs/sonner.mjs";
 import "../_libs/firebase.mjs";
 import "../_libs/firebase__analytics.mjs";
@@ -9,7 +9,7 @@ import "../_libs/firebase__auth.mjs";
 import "../_libs/firebase__app.mjs";
 import "../_libs/firebase__logger.mjs";
 import "../_libs/firebase__firestore.mjs";
-import { s as ArrowLeft, q as Star, l as ShieldCheck, k as Clock, t as CircleCheckBig, g as Phone, f as CircleCheck, u as Settings, v as SquareCheckBig, w as Square, V as Video, x as Server, p as Search, y as Cable, i as Lock, H as House, Z as Zap, z as Monitor, E as Layers, G as Lightbulb, I as Activity, J as TriangleAlert, K as Target, P as Paintbrush, N as Briefcase, O as SquareDashed, o as Sparkles, Q as LayoutTemplate, R as Info, U as CircleAlert } from "../_libs/lucide-react.mjs";
+import { q as ArrowLeft, n as Star, m as ShieldCheck, o as Clock, r as CircleCheckBig, V as Video, l as Search, s as Settings, W as Wrench, t as ShoppingCart, u as Server, v as SquareCheckBig, w as Square, d as CircleCheck, x as Shield, e as Phone, y as Award, g as Lock, H as House, Z as Zap, z as Monitor, E as Layers, G as Lightbulb, I as Activity, J as TriangleAlert, K as Target, P as Paintbrush, N as Briefcase, O as SquareDashed, k as Sparkles, Q as LayoutTemplate, R as Info, U as CircleAlert } from "../_libs/lucide-react.mjs";
 import { m as motion, A as AnimatePresence } from "../_libs/framer-motion.mjs";
 import "../_libs/tanstack__router-core.mjs";
 import "../_libs/tanstack__history.mjs";
@@ -132,22 +132,23 @@ const accessories = [
   { name: "Adapters & Cables", price: "₹50 - ₹700", image: "/cctv_cables.png" },
   { name: "RJ45 to BNC", price: "₹150 - ₹450", image: "/cctv_connectors.png" }
 ];
-const serviceOptions = [
-  { id: "cam-repair", label: "CAMERA Repair/Service", image: "/acc_camera_extender.png" },
-  { id: "nvr-repair", label: "NVR Repair/Service", image: "/acc_rack.png" },
-  { id: "dvr-repair", label: "DVR Repair/Service", image: "/acc_rack.png" },
-  { id: "hdd-replace", label: "Hardisk Replacement", image: "/acc_pvc_box.png" },
-  { id: "psu-repair", label: "Power Supply Unit", image: "/acc_dc_connector.png" },
-  { id: "poe-switch", label: "Poe Switch Setup/Repair", image: "/cctv_router.png" },
-  { id: "connector", label: "Connector Replacement", image: "/acc_bnc.png" },
-  { id: "wiring", label: "Cable/Wiring Service", image: "/cctv_cables.png" },
-  { id: "mobile-view", label: "Online Mobile View Setup", image: "/cctv_monitor.png" },
-  { id: "shifting", label: "Shifting System", image: "/acc_misc.png" },
-  { id: "uninstall", label: "Uninstall Full Set-up", image: "/acc_wall_clamp.png" },
-  { id: "other", label: "Other Service", image: "/cctv_cables.png" }
+const repairServices = [
+  { id: "cam-repair", label: "CAMERA", image: "/acc_camera_extender.png" },
+  { id: "nvr-repair", label: "NVR", image: "/acc_rack.png" },
+  { id: "dvr-repair", label: "DVR", image: "/acc_rack.png" },
+  { id: "hdd-replace", label: "Hardisk", image: "/acc_pvc_box.png" },
+  { id: "psu-repair", label: "Power supply", image: "/acc_dc_connector.png" },
+  { id: "poe-switch", label: "Poe switch", image: "/cctv_router.png" },
+  { id: "connector", label: "Connector", image: "/acc_bnc.png" },
+  { id: "wiring", label: "Cable", image: "/cctv_cables.png" },
+  { id: "mobile-view", label: "Online mobile view", image: "/cctv_monitor.png" },
+  { id: "shifting", label: "Shifting set-up", image: "/acc_misc.png" },
+  { id: "uninstall", label: "Uninstall complete set-up", image: "/acc_wall_clamp.png" },
+  { id: "other", label: "Other", image: "/cctv_cables.png" }
 ];
 function CCTVSurveillanceDetails() {
   const WHATSAPP_NUMBER = "919141052539";
+  const [activeTab, setActiveTab] = reactExports.useState("installation");
   const [selectedItems, setSelectedItems] = reactExports.useState([]);
   const [searchAccessory, setSearchAccessory] = reactExports.useState("");
   const toggleSelection = (serviceName) => {
@@ -155,269 +156,388 @@ function CCTVSurveillanceDetails() {
       (prev) => prev.includes(serviceName) ? prev.filter((item) => item !== serviceName) : [...prev, serviceName]
     );
   };
-  const handleWhatsApp = (serviceName) => {
+  const handleWhatsApp = (customText) => {
     let text = "";
-    if (serviceName) {
-      text = `Hello Vendor99, I would like to book or inquire about: *${serviceName}* (CCTV & Surveillance)`;
+    if (customText) {
+      text = `Hello Vendor99, I would like to inquire about: *${customText}* (CCTV & Surveillance)`;
     } else if (selectedItems.length > 0) {
       const itemList = selectedItems.map((item) => `- ${item}`).join("\n");
-      text = `Hello Vendor99, I would like to book or inquire about the following services (CCTV & Surveillance):
+      text = `Hello Vendor99, I would like to book the following (CCTV & Surveillance):
 
 ${itemList}`;
     } else {
-      text = `Hello Vendor99, I need a Certified Technician for CCTV & Surveillance.`;
+      text = `Hello Vendor99, I need a CCTV & Surveillance service.`;
     }
     window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(text)}`, "_blank");
   };
   const filteredAccessories = accessories.filter((a) => a.name.toLowerCase().includes(searchAccessory.toLowerCase()));
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-background min-h-screen pb-32 font-sans", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("header", { className: "bg-foreground text-background py-16 px-6 relative overflow-hidden", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute top-[-50%] right-[-10%] w-[500px] h-[500px] rounded-full bg-brand/20 blur-[100px] opacity-60 pointer-events-none" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mx-auto max-w-6xl relative z-10", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs(Link, { to: "/services", className: "inline-flex items-center text-sm font-bold text-background/70 hover:text-white transition-colors mb-8 bg-white/10 px-4 py-2 rounded-xl backdrop-blur-sm", children: [
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-[#f0f4f8] min-h-screen pb-32 font-sans", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("header", { className: "bg-white py-4 px-6 md:px-12 flex items-center justify-between shadow-sm border-b border-border/50 sticky top-0 z-40", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-6", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(Link, { to: "/services", className: "inline-flex items-center text-sm font-bold text-muted-foreground hover:text-foreground transition-colors", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(ArrowLeft, { className: "mr-2 h-4 w-4" }),
-          " Back to Services"
+          " Back"
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col md:flex-row md:items-end justify-between gap-8", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs(motion.div, { initial: { opacity: 0, y: 20 }, animate: { opacity: 1, y: 0 }, children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-brand font-extrabold tracking-widest uppercase text-sm mb-3", children: "Vendor99 Security Systems" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("h1", { className: "text-4xl md:text-6xl font-extrabold tracking-tight", children: [
-              "Smart Home & CCTV",
-              /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
-              "Professional Services"
-            ] })
-          ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-10 w-10 bg-slate-800 rounded-full flex items-center justify-center text-white shadow-md", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Video, { className: "h-5 w-5" }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { className: "font-extrabold text-lg md:text-xl text-slate-800 tracking-tight leading-none", children: "CCTV" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-muted-foreground font-bold tracking-widest uppercase mt-0.5", children: "INSTALLATION PRO" })
+          ] })
+        ] })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-6", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "hidden md:flex flex-col text-right", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-muted-foreground font-medium", children: "Select Location" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-1 font-bold text-sm", children: [
+            "Bengaluru ",
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-brand ml-1", children: "▼" })
+          ] })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "hidden md:block relative w-64", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Search, { className: "absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "text", placeholder: "Search...", className: "w-full bg-secondary/50 border border-border rounded-full py-2 pl-9 pr-4 text-sm font-medium outline-none focus:border-brand transition-colors" })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "hidden lg:flex items-center gap-6 text-sm font-bold text-slate-700", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setActiveTab("installation"), className: "hover:text-brand transition-colors", children: "Installation" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setActiveTab("repair"), className: "hover:text-brand transition-colors", children: "Repair" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setActiveTab("buy"), className: "hover:text-brand transition-colors", children: "Cameras" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setActiveTab("accessories"), className: "hover:text-brand transition-colors", children: "Accessories" })
+        ] })
+      ] })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mx-auto max-w-7xl px-4 sm:px-6 md:px-8 py-8 md:py-12", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-[#1e293b] rounded-[2rem] p-8 md:p-12 mb-8 shadow-xl", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-center text-2xl md:text-3xl font-extrabold text-white mb-8 tracking-tight", children: "Explore Category: CCTV" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 lg:grid-cols-4 gap-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs(
-            motion.button,
+            "button",
             {
-              whileHover: { scale: 1.05 },
-              whileTap: { scale: 0.95 },
-              onClick: () => handleWhatsApp("CCTV Consultation"),
-              className: "bg-brand text-white px-8 py-4 rounded-2xl font-bold flex items-center justify-center gap-3 hover:bg-brand-dark transition-all shadow-xl hover:shadow-brand/20",
+              onClick: () => setActiveTab("installation"),
+              className: `flex flex-col items-center justify-center gap-2 py-4 px-2 rounded-2xl font-extrabold text-sm md:text-base transition-all ${activeTab === "installation" ? "bg-white text-slate-800 shadow-[0_0_20px_rgba(255,255,255,0.2)] scale-105" : "bg-white/10 text-white hover:bg-white/20"}`,
               children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx(Phone, { className: "h-5 w-5 fill-current" }),
-                "Chat on WhatsApp"
+                /* @__PURE__ */ jsxRuntimeExports.jsx(Settings, { className: `h-6 w-6 md:h-8 md:w-8 ${activeTab === "installation" ? "text-brand" : "text-white/70"}` }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-center leading-tight", children: [
+                  "Book Only",
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+                  "Installation"
+                ] })
+              ]
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "button",
+            {
+              onClick: () => setActiveTab("repair"),
+              className: `flex flex-col items-center justify-center gap-2 py-4 px-2 rounded-2xl font-extrabold text-sm md:text-base transition-all ${activeTab === "repair" ? "bg-white text-slate-800 shadow-[0_0_20px_rgba(255,255,255,0.2)] scale-105" : "bg-white/10 text-white hover:bg-white/20"}`,
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(Wrench, { className: `h-6 w-6 md:h-8 md:w-8 ${activeTab === "repair" ? "text-brand" : "text-white/70"}` }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-center leading-tight", children: [
+                  "Book Repair",
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+                  "& Service"
+                ] })
+              ]
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "button",
+            {
+              onClick: () => setActiveTab("buy"),
+              className: `flex flex-col items-center justify-center gap-2 py-4 px-2 rounded-2xl font-extrabold text-sm md:text-base transition-all ${activeTab === "buy" ? "bg-white text-slate-800 shadow-[0_0_20px_rgba(255,255,255,0.2)] scale-105" : "bg-white/10 text-white hover:bg-white/20"}`,
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(ShoppingCart, { className: `h-6 w-6 md:h-8 md:w-8 ${activeTab === "buy" ? "text-brand" : "text-white/70"}` }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-center leading-tight", children: [
+                  "Camera",
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+                  "Pricelist"
+                ] })
+              ]
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "button",
+            {
+              onClick: () => setActiveTab("accessories"),
+              className: `flex flex-col items-center justify-center gap-2 py-4 px-2 rounded-2xl font-extrabold text-sm md:text-base transition-all ${activeTab === "accessories" ? "bg-white text-slate-800 shadow-[0_0_20px_rgba(255,255,255,0.2)] scale-105" : "bg-white/10 text-white hover:bg-white/20"}`,
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(Server, { className: `h-6 w-6 md:h-8 md:w-8 ${activeTab === "accessories" ? "text-brand" : "text-white/70"}` }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-center leading-tight", children: [
+                  "Accessories",
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+                  "& Parts"
+                ] })
               ]
             }
           )
         ] })
-      ] })
-    ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("section", { className: "border-b border-border/50 bg-white", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mx-auto max-w-6xl grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-border/50", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-8 flex items-center gap-5 hover:bg-secondary/20 transition-colors", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-emerald-100 p-4 rounded-2xl text-emerald-600 shadow-sm", children: /* @__PURE__ */ jsxRuntimeExports.jsx(CircleCheck, { className: "h-7 w-7" }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "font-extrabold text-foreground text-lg", children: "Verified Experts" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-medium text-muted-foreground mt-1", children: "100% background-checked." })
-        ] })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-8 flex items-center gap-5 hover:bg-secondary/20 transition-colors", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-blue-100 p-4 rounded-2xl text-blue-600 shadow-sm", children: /* @__PURE__ */ jsxRuntimeExports.jsx(ShieldCheck, { className: "h-7 w-7" }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "font-extrabold text-foreground text-lg", children: "Protection Insurance" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-medium text-muted-foreground mt-1", children: "Up to ₹10,000 coverage." })
-        ] })
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-8 flex items-center gap-5 hover:bg-secondary/20 transition-colors", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-amber-100 p-4 rounded-2xl text-amber-600 shadow-sm", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Clock, { className: "h-7 w-7" }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "font-extrabold text-foreground text-lg", children: "On-Time Guarantee" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-medium text-muted-foreground mt-1", children: "Prompt deployment always." })
-        ] })
-      ] })
-    ] }) }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mx-auto max-w-6xl px-6 py-16 space-y-20", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-4 mb-8", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-gradient-premium text-white p-3 rounded-2xl shadow-md", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Settings, { className: "h-6 w-6" }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-3xl font-extrabold tracking-tight", children: "Book A Service" })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-white border border-border/50 rounded-[2.5rem] shadow-premium overflow-hidden", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-secondary/50 p-6 border-b border-border/50", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "font-extrabold text-lg text-foreground", children: "Select Services for Home Security" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-muted-foreground font-medium text-sm mt-1", children: "Choose the type of service you need" })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-8", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4", children: serviceOptions.map((opt) => {
-            const isSelected = selectedItems.includes(opt.label);
-            return /* @__PURE__ */ jsxRuntimeExports.jsxs(
-              motion.div,
-              {
-                whileHover: { scale: 1.02 },
-                whileTap: { scale: 0.98 },
-                onClick: () => toggleSelection(opt.label),
-                className: `cursor-pointer rounded-2xl p-4 flex items-center justify-between border-2 transition-all ${isSelected ? "border-brand bg-brand/5 shadow-sm" : "border-border/50 bg-white hover:border-brand/30"}`,
-                children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-3", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `h-12 w-12 p-1.5 rounded-xl overflow-hidden ${isSelected ? "bg-brand/10" : "bg-secondary"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsx("img", { src: opt.image, alt: opt.label, className: "h-full w-full object-cover mix-blend-multiply" }) }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `font-bold text-sm ${isSelected ? "text-brand" : "text-foreground"}`, children: opt.label })
-                  ] }),
-                  isSelected ? /* @__PURE__ */ jsxRuntimeExports.jsx(SquareCheckBig, { className: "h-5 w-5 text-brand" }) : /* @__PURE__ */ jsxRuntimeExports.jsx(Square, { className: "h-5 w-5 text-muted-foreground opacity-50" })
-                ]
-              },
-              opt.id
-            );
-          }) }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-red-50 p-6 text-center border-t border-red-100", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-red-900 font-extrabold text-xl", children: "Minimum Visit Charge: ₹499" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-red-800/80 text-xs font-bold mt-2 max-w-xl mx-auto uppercase tracking-wide", children: "*Includes basic diagnostic. Extra charges for spare parts, transport, and multiple visits apply." })
-          ] })
-        ] })
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-4 mb-8", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-foreground text-background p-3 rounded-2xl shadow-md", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Video, { className: "h-6 w-6" }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-3xl font-extrabold tracking-tight", children: "Security Cameras Catalog" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-muted-foreground font-medium mt-1", children: "PRICE LIST - (New Prices Applied)" })
-          ] })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6", children: cameraPriceList.map((cam, i) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
-          motion.div,
-          {
-            initial: { opacity: 0, y: 20 },
-            whileInView: { opacity: 1, y: 0 },
-            viewport: { once: true },
-            transition: { delay: i * 0.1 },
-            className: "bg-white border border-border/50 rounded-[2rem] p-6 shadow-card hover:shadow-premium transition-all flex flex-col",
-            children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start gap-4 mb-6", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-secondary/50 p-4 rounded-2xl shrink-0", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Video, { className: "h-8 w-8 text-foreground" }) }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "font-extrabold text-lg leading-tight text-foreground", children: cam.series }),
-                  cam.features && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs font-bold text-primary mt-2 uppercase tracking-wide", children: cam.features })
-                ] })
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-secondary/30 rounded-2xl p-5 flex-1 border border-border/50", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center mb-4 pb-2 border-b border-border/50", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-bold text-muted-foreground uppercase tracking-widest", children: "Variant" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-bold text-muted-foreground uppercase tracking-widest", children: "Web Price" })
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-4", children: cam.items.map((item, j) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center group", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-sm group-hover:text-primary transition-colors", children: item.name }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "font-extrabold text-base", children: [
-                    "₹",
-                    item.price,
-                    "/-"
-                  ] })
-                ] }, j)) })
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "button",
-                {
-                  onClick: () => handleWhatsApp(`Inquiry for Camera: ${cam.series}`),
-                  className: "mt-6 w-full py-3 rounded-xl bg-foreground text-background font-bold hover:bg-foreground/90 transition-colors",
-                  children: "Request Quote"
-                }
-              )
-            ]
-          },
-          i
-        )) })
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-4 mb-8", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-gradient-premium text-white p-3 rounded-2xl shadow-md", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Server, { className: "h-6 w-6" }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-3xl font-extrabold tracking-tight", children: "CCTV Accessories & Spare Parts" })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-white border border-border/50 rounded-[2.5rem] shadow-card overflow-hidden", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-6 border-b border-border/50 flex flex-col md:flex-row items-center justify-between gap-4 bg-secondary/30", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative w-full md:w-96", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(Search, { className: "absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "input",
-              {
-                type: "text",
-                placeholder: "Search categories...",
-                value: searchAccessory,
-                onChange: (e) => setSearchAccessory(e.target.value),
-                className: "w-full bg-white border border-border/50 rounded-xl py-3 pl-12 pr-4 text-sm font-medium outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
-              }
-            )
-          ] }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-8", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6", children: /* @__PURE__ */ jsxRuntimeExports.jsx(AnimatePresence, { children: filteredAccessories.map((acc, i) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 lg:grid-cols-12 gap-8", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "lg:col-span-8 space-y-8", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(AnimatePresence, { mode: "wait", children: [
+          activeTab === "installation" && /* @__PURE__ */ jsxRuntimeExports.jsxs(
             motion.div,
             {
-              layout: true,
-              initial: { opacity: 0, scale: 0.9 },
-              animate: { opacity: 1, scale: 1 },
-              exit: { opacity: 0, scale: 0.9 },
-              className: "bg-white border border-border/50 rounded-2xl p-5 hover:border-primary/50 hover:shadow-card transition-all flex flex-col items-center text-center cursor-pointer group",
-              onClick: () => toggleSelection(`Accessory: ${acc.name}`),
+              initial: { opacity: 0, y: 20 },
+              animate: { opacity: 1, y: 0 },
+              exit: { opacity: 0, y: -20 },
+              className: "bg-white rounded-[2rem] border border-border shadow-md overflow-hidden",
               children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-28 w-full bg-secondary/30 rounded-xl flex items-center justify-center mb-4 group-hover:scale-105 transition-transform duration-300 overflow-hidden", children: /* @__PURE__ */ jsxRuntimeExports.jsx("img", { src: acc.image, alt: acc.name, className: "h-full w-full object-cover mix-blend-multiply" }) }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "font-bold text-sm leading-snug mb-2", children: acc.name }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-extrabold text-brand mt-auto", children: acc.price }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: `mt-4 w-full py-2 rounded-xl text-xs font-bold transition-colors ${selectedItems.includes(`Accessory: ${acc.name}`) ? "bg-brand text-white" : "bg-foreground text-background group-hover:bg-brand group-hover:text-white"}`, children: selectedItems.includes(`Accessory: ${acc.name}`) ? "ADDED ✓" : "Shop Now" })
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-[#2c3e50] p-6 text-white", children: /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-xl font-bold", children: "Book Only Installation" }) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-8 space-y-8", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "bg-[#e2e8f0] p-3 rounded-t-xl font-bold text-slate-700", children: "Installation Service" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "border border-t-0 border-[#e2e8f0] rounded-b-xl p-4 flex justify-between items-center bg-white hover:bg-slate-50 transition-colors cursor-pointer", onClick: () => toggleSelection("Installation: CAMERA [₹499/-]"), children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-3", children: [
+                      selectedItems.includes("Installation: CAMERA [₹499/-]") ? /* @__PURE__ */ jsxRuntimeExports.jsx(SquareCheckBig, { className: "text-brand h-5 w-5" }) : /* @__PURE__ */ jsxRuntimeExports.jsx(Square, { className: "text-muted-foreground h-5 w-5 opacity-50" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-bold text-slate-800", children: "CAMERA [₹499/-]" })
+                    ] }) })
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "bg-[#3b82f6] text-white p-3 rounded-t-xl font-bold", children: "NVR and DVR" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border border-t-0 border-[#e2e8f0] rounded-b-xl p-4 grid grid-cols-1 md:grid-cols-3 gap-4 bg-white", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-3 cursor-pointer hover:text-brand", onClick: () => toggleSelection("NVR/DVR: 4chl [₹1000/-]"), children: [
+                        selectedItems.includes("NVR/DVR: 4chl [₹1000/-]") ? /* @__PURE__ */ jsxRuntimeExports.jsx(SquareCheckBig, { className: "text-brand h-5 w-5" }) : /* @__PURE__ */ jsxRuntimeExports.jsx(Square, { className: "text-muted-foreground h-5 w-5 opacity-50" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-bold text-slate-800", children: "4chl- [₹1000/-]" })
+                      ] }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-3 cursor-pointer hover:text-brand", onClick: () => toggleSelection("NVR/DVR: 8chl [₹2000/-]"), children: [
+                        selectedItems.includes("NVR/DVR: 8chl [₹2000/-]") ? /* @__PURE__ */ jsxRuntimeExports.jsx(SquareCheckBig, { className: "text-brand h-5 w-5" }) : /* @__PURE__ */ jsxRuntimeExports.jsx(Square, { className: "text-muted-foreground h-5 w-5 opacity-50" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-bold text-slate-800", children: "8chl- [₹2000/-]" })
+                      ] }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-3 cursor-pointer hover:text-brand", onClick: () => toggleSelection("NVR/DVR: 16chl [₹4000/-]"), children: [
+                        selectedItems.includes("NVR/DVR: 16chl [₹4000/-]") ? /* @__PURE__ */ jsxRuntimeExports.jsx(SquareCheckBig, { className: "text-brand h-5 w-5" }) : /* @__PURE__ */ jsxRuntimeExports.jsx(Square, { className: "text-muted-foreground h-5 w-5 opacity-50" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-bold text-slate-800", children: "16chl- [₹4000/-]" })
+                      ] })
+                    ] })
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "bg-[#334155] text-white p-3 rounded-t-xl font-bold", children: "Cabling" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border border-t-0 border-[#e2e8f0] rounded-b-xl p-4 grid grid-cols-1 md:grid-cols-3 gap-4 bg-white", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-3 cursor-pointer hover:text-brand", onClick: () => toggleSelection("Cabling: Open cabling [₹20/-]"), children: [
+                        selectedItems.includes("Cabling: Open cabling [₹20/-]") ? /* @__PURE__ */ jsxRuntimeExports.jsx(SquareCheckBig, { className: "text-brand h-5 w-5" }) : /* @__PURE__ */ jsxRuntimeExports.jsx(Square, { className: "text-muted-foreground h-5 w-5 opacity-50" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-bold text-slate-800", children: "Open cabling [₹20/-]" })
+                      ] }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-3 cursor-pointer hover:text-brand", onClick: () => toggleSelection("Cabling: Pipe cabling [₹40/-]"), children: [
+                        selectedItems.includes("Cabling: Pipe cabling [₹40/-]") ? /* @__PURE__ */ jsxRuntimeExports.jsx(SquareCheckBig, { className: "text-brand h-5 w-5" }) : /* @__PURE__ */ jsxRuntimeExports.jsx(Square, { className: "text-muted-foreground h-5 w-5 opacity-50" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-bold text-slate-800", children: "Pipe cabling [₹40/-]" })
+                      ] }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-3 cursor-pointer hover:text-brand", onClick: () => toggleSelection("Cabling: Internal cabling [₹40/-]"), children: [
+                        selectedItems.includes("Cabling: Internal cabling [₹40/-]") ? /* @__PURE__ */ jsxRuntimeExports.jsx(SquareCheckBig, { className: "text-brand h-5 w-5" }) : /* @__PURE__ */ jsxRuntimeExports.jsx(Square, { className: "text-muted-foreground h-5 w-5 opacity-50" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-bold text-slate-800", children: "Internal cabling [₹40/-]" })
+                      ] })
+                    ] })
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "bg-[#1e293b] text-white p-3 rounded-t-xl font-bold", children: "Rack installation" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border border-t-0 border-[#e2e8f0] rounded-b-xl p-4 grid grid-cols-1 md:grid-cols-3 gap-4 bg-white", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-3 cursor-pointer hover:text-brand", onClick: () => toggleSelection("Rack: Small [₹300/-]"), children: [
+                        selectedItems.includes("Rack: Small [₹300/-]") ? /* @__PURE__ */ jsxRuntimeExports.jsx(SquareCheckBig, { className: "text-brand h-5 w-5" }) : /* @__PURE__ */ jsxRuntimeExports.jsx(Square, { className: "text-muted-foreground h-5 w-5 opacity-50" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-bold text-slate-800", children: "Small [₹300/-]" })
+                      ] }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-3 cursor-pointer hover:text-brand", onClick: () => toggleSelection("Rack: Medium [₹700/-]"), children: [
+                        selectedItems.includes("Rack: Medium [₹700/-]") ? /* @__PURE__ */ jsxRuntimeExports.jsx(SquareCheckBig, { className: "text-brand h-5 w-5" }) : /* @__PURE__ */ jsxRuntimeExports.jsx(Square, { className: "text-muted-foreground h-5 w-5 opacity-50" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-bold text-slate-800", children: "Medium [₹700/-]" })
+                      ] }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-3 cursor-pointer hover:text-brand", onClick: () => toggleSelection("Rack: Big [₹3000/-]"), children: [
+                        selectedItems.includes("Rack: Big [₹3000/-]") ? /* @__PURE__ */ jsxRuntimeExports.jsx(SquareCheckBig, { className: "text-brand h-5 w-5" }) : /* @__PURE__ */ jsxRuntimeExports.jsx(Square, { className: "text-muted-foreground h-5 w-5 opacity-50" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-bold text-slate-800", children: "Big [₹3000/-]" })
+                      ] })
+                    ] })
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "pt-4 text-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => handleWhatsApp(), className: "bg-[#3b82f6] hover:bg-[#2563eb] text-white font-bold py-3 px-8 rounded-xl transition-colors shadow-md", children: "Proceed to Booking" }) })
+                ] })
               ]
             },
-            acc.name
-          )) }) }) })
-        ] })
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-4 mb-8", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-brand text-white p-3 rounded-2xl shadow-md", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Cable, { className: "h-6 w-6" }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-3xl font-extrabold tracking-tight", children: "Premium Infrastructure Cabling" })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid sm:grid-cols-2 lg:grid-cols-4 gap-6", children: [
-          { type: "Open Layout Cabling", desc: "Direct industrial clips", price: "₹25 / m" },
-          { type: "Heavy-Duty Piping Protected", desc: "Secured inside solid PVC conduits", price: "₹40 / m" },
-          { type: "Polished Wall Casing", desc: "Clean rectangular profile casings", price: "₹50 / m" },
-          { type: "Concealed Internal Piping", desc: "In-spring flexible deployment", price: "₹50 / m" }
-        ].map((cab, i) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-white border border-border/50 rounded-[2rem] p-6 shadow-sm flex flex-col justify-between hover:shadow-card transition-shadow", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "font-bold text-lg text-foreground leading-tight", children: cab.type }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-medium text-muted-foreground mt-2", children: cab.desc })
+            "installation"
+          ),
+          activeTab === "repair" && /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            motion.div,
+            {
+              initial: { opacity: 0, y: 20 },
+              animate: { opacity: 1, y: 0 },
+              exit: { opacity: 0, y: -20 },
+              className: "bg-white rounded-[2rem] border border-border shadow-md overflow-hidden",
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-[#2c3e50] p-6 text-white", children: /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-xl font-bold", children: "Repair and service" }) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-8 space-y-4", children: [
+                  repairServices.map((service, idx) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                    "div",
+                    {
+                      onClick: () => toggleSelection(`Repair: ${service.label}`),
+                      className: `flex justify-between items-center p-4 border rounded-xl cursor-pointer transition-colors ${selectedItems.includes(`Repair: ${service.label}`) ? "border-brand bg-brand/5" : "border-border/50 hover:bg-slate-50"}`,
+                      children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-3", children: [
+                          selectedItems.includes(`Repair: ${service.label}`) ? /* @__PURE__ */ jsxRuntimeExports.jsx(SquareCheckBig, { className: "text-brand h-5 w-5" }) : /* @__PURE__ */ jsxRuntimeExports.jsx(Square, { className: "text-muted-foreground h-5 w-5 opacity-50" }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-bold text-slate-800", children: service.label })
+                        ] }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-bold text-muted-foreground", children: "Price/-" })
+                      ]
+                    },
+                    idx
+                  )),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-6 pt-6 border-t border-border", children: /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-bold text-slate-700 leading-relaxed", children: "Visit charges will be ₹499/- agein if any spare parts and transport charges multiple visit we be charged extra ***" }) }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "pt-6 text-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => handleWhatsApp(), className: "bg-[#3b82f6] hover:bg-[#2563eb] w-full text-white font-bold py-4 px-8 rounded-xl transition-colors shadow-md text-lg", children: "Proceed to Booking" }) })
+                ] })
+              ]
+            },
+            "repair"
+          ),
+          activeTab === "buy" && /* @__PURE__ */ jsxRuntimeExports.jsx(
+            motion.div,
+            {
+              initial: { opacity: 0, y: 20 },
+              animate: { opacity: 1, y: 0 },
+              exit: { opacity: 0, y: -20 },
+              children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-[#f8fafc] rounded-[2rem] border border-border shadow-md overflow-hidden mb-8", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-8 text-center border-b border-border bg-white", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-center gap-3 mb-2", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(ShieldCheck, { className: "text-[#3b82f6] h-8 w-8" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-2xl font-black text-slate-800", children: "Vendor99 Security Systems" })
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-xl font-extrabold uppercase mt-4 mb-2", children: "PRICE LIST - SECURITY CAMERAS (New Prices Applied)" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-muted-foreground font-medium", children: "Ensure you apply your newly calculated prices (shown in bold) based on the current base prices and margin. (Note: These final prices are for your website/catalog)" })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-8", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 md:grid-cols-2 gap-6", children: cameraPriceList.map((cam, i) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-white border border-[#e2e8f0] rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-slate-50 p-4 border-b border-[#e2e8f0] flex gap-4", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-12 w-12 bg-white rounded-full flex items-center justify-center shadow-sm shrink-0", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Video, { className: "text-slate-500 h-6 w-6" }) }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "font-extrabold text-slate-800 text-sm", children: cam.series }),
+                        cam.features && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] text-muted-foreground mt-1 font-bold leading-tight", children: cam.features })
+                      ] })
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 bg-white", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex justify-end mb-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-bold text-slate-500", children: "Your Web Price:" }) }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: cam.items.map((item, j) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center pb-2 border-b border-slate-100 last:border-0 last:pb-0", children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-semibold text-slate-700", children: item.name }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "font-extrabold text-slate-800", children: [
+                          "₹ ",
+                          item.price,
+                          "/-"
+                        ] })
+                      ] }, j)) }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        "button",
+                        {
+                          onClick: () => handleWhatsApp(`Inquiry: ${cam.series}`),
+                          className: "w-full mt-4 bg-slate-800 hover:bg-slate-700 text-white font-bold py-2 rounded-lg text-sm transition-colors",
+                          children: "Request Quote"
+                        }
+                      )
+                    ] })
+                  ] }, i)) }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-8 bg-white border border-[#e2e8f0] rounded-2xl p-6 shadow-sm flex flex-col md:flex-row justify-between items-center gap-6", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "font-extrabold text-slate-800 mb-2", children: "ADDITIONAL PRODUCTS (Request for Quote)" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-xs font-medium text-slate-600 leading-relaxed max-w-sm", children: [
+                        "• 4G Vandal Dome • 5MP IP AI Camera • Fisheye Camera",
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+                        "• 8MP IP Hisilicon • LPR Camera • Sony Series Camera",
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-muted-foreground", children: "(Price Will Update Customer on Required)" })
+                      ] })
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-center md:text-right", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "font-extrabold text-slate-800 mb-2", children: "OUR COMMITMENT & SUPPORT" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-xs font-medium text-slate-600 leading-relaxed", children: [
+                        "• Proper 1 Year Warranty • Technical Online Support",
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+                        "• Additional Warranty on Bulk Buying • Proper Firmware and Tool Guidance"
+                      ] })
+                    ] })
+                  ] })
+                ] })
+              ] })
+            },
+            "buy"
+          ),
+          activeTab === "accessories" && /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            motion.div,
+            {
+              initial: { opacity: 0, y: 20 },
+              animate: { opacity: 1, y: 0 },
+              exit: { opacity: 0, y: -20 },
+              className: "bg-white rounded-[2rem] border border-border shadow-md overflow-hidden p-8",
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-2xl font-extrabold text-slate-800", children: "Accessories & Spare Parts" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-medium text-muted-foreground mt-1", children: "High-quality components for your security setup" })
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative w-full md:w-72", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(Search, { className: "absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "input",
+                      {
+                        type: "text",
+                        placeholder: "Search parts...",
+                        value: searchAccessory,
+                        onChange: (e) => setSearchAccessory(e.target.value),
+                        className: "w-full bg-slate-50 border border-slate-200 rounded-xl py-3 pl-12 pr-4 text-sm font-medium outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition-all"
+                      }
+                    )
+                  ] })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6", children: filteredAccessories.map((acc, i) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border border-slate-200 rounded-2xl p-5 flex flex-col items-center text-center hover:shadow-lg hover:border-brand/30 transition-all cursor-pointer bg-white group", onClick: () => toggleSelection(`Accessory: ${acc.name}`), children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-28 w-28 mb-4 bg-slate-50 rounded-xl overflow-hidden flex items-center justify-center p-3 group-hover:scale-105 transition-transform duration-300", children: /* @__PURE__ */ jsxRuntimeExports.jsx("img", { src: acc.image, alt: acc.name, className: "max-h-full max-w-full object-contain mix-blend-multiply" }) }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "font-bold text-sm text-slate-800 mb-2 leading-snug", children: acc.name }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-black text-brand mt-auto mb-4", children: acc.price }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: `w-full py-2.5 rounded-xl text-sm font-bold transition-all ${selectedItems.includes(`Accessory: ${acc.name}`) ? "bg-brand text-white shadow-md" : "bg-slate-100 text-slate-700 group-hover:bg-brand group-hover:text-white"}`, children: selectedItems.includes(`Accessory: ${acc.name}`) ? "✓ Added" : "Add to Selection" })
+                ] }, i)) })
+              ]
+            },
+            "accessories"
+          )
+        ] }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "lg:col-span-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "sticky top-28 space-y-6", children: [
+          selectedItems.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs(motion.div, { initial: { opacity: 0, scale: 0.95 }, animate: { opacity: 1, scale: 1 }, className: "bg-brand text-white rounded-[2rem] p-6 shadow-lg", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("h3", { className: "font-extrabold text-lg mb-4 flex items-center gap-2", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(ShoppingCart, { className: "h-5 w-5" }),
+              " Your Selection (",
+              selectedItems.length,
+              ")"
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-h-60 overflow-y-auto pr-2 space-y-2 mb-4 custom-scrollbar", children: selectedItems.map((item, i) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-sm bg-white/10 rounded-lg p-2.5 flex justify-between items-start gap-2", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-medium", children: item }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => toggleSelection(item), className: "text-white/60 hover:text-white shrink-0", children: "×" })
+            ] }, i)) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => handleWhatsApp(), className: "w-full bg-white text-brand font-bold py-3 rounded-xl hover:bg-slate-50 transition-colors shadow-md", children: "Send Request on WhatsApp" })
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-6", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-2xl font-extrabold text-brand block mb-4", children: cab.price }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "button",
-              {
-                onClick: () => toggleSelection(`Cabling: ${cab.type}`),
-                className: `w-full py-3 rounded-xl font-bold transition-all ${selectedItems.includes(`Cabling: ${cab.type}`) ? "bg-brand text-white shadow-md" : "bg-secondary text-foreground hover:bg-foreground hover:text-background"}`,
-                children: selectedItems.includes(`Cabling: ${cab.type}`) ? "Selected ✓" : "Add Service"
-              }
-            )
-          ] })
-        ] }, i)) })
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(AnimatePresence, { children: /* @__PURE__ */ jsxRuntimeExports.jsx("section", { className: "fixed bottom-8 right-8 z-50", children: selectedItems.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs(
-        motion.button,
-        {
-          initial: { opacity: 0, y: 50, scale: 0.9 },
-          animate: { opacity: 1, y: 0, scale: 1 },
-          exit: { opacity: 0, y: 50, scale: 0.9 },
-          whileHover: { scale: 1.05 },
-          whileTap: { scale: 0.95 },
-          onClick: () => handleWhatsApp(),
-          className: "bg-brand text-white px-8 py-5 rounded-full shadow-premium flex items-center gap-4 font-bold",
-          children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-white text-brand rounded-full h-8 w-8 flex items-center justify-center text-sm font-extrabold", children: selectedItems.length }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-left", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-medium opacity-90 uppercase tracking-wider", children: "Send Request" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-lg", children: "Checkout via WhatsApp ➔" })
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-white rounded-[2rem] border border-border shadow-md p-6 lg:p-8", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("ul", { className: "space-y-4", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: "flex items-start gap-3", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(CircleCheck, { className: "text-slate-800 h-5 w-5 shrink-0 mt-0.5" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-bold text-slate-700", children: "Proper 1 Year Warranty" })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: "flex items-start gap-3", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(Shield, { className: "text-slate-800 h-5 w-5 shrink-0 mt-0.5" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-bold text-slate-700", children: "Additional Warranty on Bulk Buying" })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: "flex items-start gap-3", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(Phone, { className: "text-slate-800 h-5 w-5 shrink-0 mt-0.5" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-bold text-slate-700", children: "Technical Online Support" })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: "flex items-start gap-3", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(Award, { className: "text-slate-800 h-5 w-5 shrink-0 mt-0.5" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-bold text-slate-700", children: "Proper Firmware and Tool Guidance" })
+              ] })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-8 pt-6 border-t border-border space-y-3", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center bg-slate-50 p-3 rounded-lg border border-slate-100", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-bold text-slate-600", children: "GST" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-extrabold text-slate-800", children: "GST 18% Extra" })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center bg-slate-50 p-3 rounded-lg border border-slate-100", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-bold text-slate-600", children: "Freight" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-extrabold text-slate-800", children: "Freight Extra" })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center bg-slate-50 p-3 rounded-lg border border-slate-100", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-bold text-slate-600", children: "Porter" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-extrabold text-slate-800", children: "Porter Charges Extra" })
+              ] })
             ] })
-          ]
-        }
-      ) : /* @__PURE__ */ jsxRuntimeExports.jsxs(
-        motion.button,
-        {
-          initial: { opacity: 0, y: 50, scale: 0.9 },
-          animate: { opacity: 1, y: 0, scale: 1 },
-          exit: { opacity: 0, y: 50, scale: 0.9 },
-          whileHover: { scale: 1.05 },
-          whileTap: { scale: 0.95 },
-          onClick: () => handleWhatsApp("General Inquiry: Need a Certified Technician"),
-          className: "bg-[#25D366] text-white px-8 py-5 rounded-full shadow-premium flex items-center gap-4 font-bold",
-          children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(Phone, { className: "h-6 w-6" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-left", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-medium opacity-90 uppercase tracking-wider", children: "Need Help?" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-lg", children: "Chat via WhatsApp" })
-            ] })
-          ]
-        }
-      ) }) })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-[#2c3e50] text-white rounded-2xl p-4 text-center text-xs", children: /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-medium text-white/80", children: "Copyright © CCTV Installation Pro. 2022" }) })
+        ] }) })
+      ] })
     ] })
   ] });
 }

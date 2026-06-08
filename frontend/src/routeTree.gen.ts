@@ -9,28 +9,16 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as NativeRouteImport } from './routes/native'
 import { Route as LoginRouteImport } from './routes/login'
-import { Route as InstaHelpRouteImport } from './routes/insta-help'
 import { Route as CartRouteImport } from './routes/cart'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ServicesIndexRouteImport } from './routes/services.index'
 import { Route as ServicesServiceIdRouteImport } from './routes/services_.$serviceId'
 
-const NativeRoute = NativeRouteImport.update({
-  id: '/native',
-  path: '/native',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const InstaHelpRoute = InstaHelpRouteImport.update({
-  id: '/insta-help',
-  path: '/insta-help',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CartRoute = CartRouteImport.update({
@@ -63,9 +51,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/cart': typeof CartRoute
-  '/insta-help': typeof InstaHelpRoute
   '/login': typeof LoginRoute
-  '/native': typeof NativeRoute
   '/services/$serviceId': typeof ServicesServiceIdRoute
   '/services/': typeof ServicesIndexRoute
 }
@@ -73,9 +59,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/cart': typeof CartRoute
-  '/insta-help': typeof InstaHelpRoute
   '/login': typeof LoginRoute
-  '/native': typeof NativeRoute
   '/services/$serviceId': typeof ServicesServiceIdRoute
   '/services': typeof ServicesIndexRoute
 }
@@ -84,9 +68,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/cart': typeof CartRoute
-  '/insta-help': typeof InstaHelpRoute
   '/login': typeof LoginRoute
-  '/native': typeof NativeRoute
   '/services_/$serviceId': typeof ServicesServiceIdRoute
   '/services/': typeof ServicesIndexRoute
 }
@@ -96,29 +78,17 @@ export interface FileRouteTypes {
     | '/'
     | '/about'
     | '/cart'
-    | '/insta-help'
     | '/login'
-    | '/native'
     | '/services/$serviceId'
     | '/services/'
   fileRoutesByTo: FileRoutesByTo
-  to:
-    | '/'
-    | '/about'
-    | '/cart'
-    | '/insta-help'
-    | '/login'
-    | '/native'
-    | '/services/$serviceId'
-    | '/services'
+  to: '/' | '/about' | '/cart' | '/login' | '/services/$serviceId' | '/services'
   id:
     | '__root__'
     | '/'
     | '/about'
     | '/cart'
-    | '/insta-help'
     | '/login'
-    | '/native'
     | '/services_/$serviceId'
     | '/services/'
   fileRoutesById: FileRoutesById
@@ -127,34 +97,18 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AboutRoute: typeof AboutRoute
   CartRoute: typeof CartRoute
-  InstaHelpRoute: typeof InstaHelpRoute
   LoginRoute: typeof LoginRoute
-  NativeRoute: typeof NativeRoute
   ServicesServiceIdRoute: typeof ServicesServiceIdRoute
   ServicesIndexRoute: typeof ServicesIndexRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/native': {
-      id: '/native'
-      path: '/native'
-      fullPath: '/native'
-      preLoaderRoute: typeof NativeRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/login': {
       id: '/login'
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/insta-help': {
-      id: '/insta-help'
-      path: '/insta-help'
-      fullPath: '/insta-help'
-      preLoaderRoute: typeof InstaHelpRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/cart': {
@@ -199,9 +153,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
   CartRoute: CartRoute,
-  InstaHelpRoute: InstaHelpRoute,
   LoginRoute: LoginRoute,
-  NativeRoute: NativeRoute,
   ServicesServiceIdRoute: ServicesServiceIdRoute,
   ServicesIndexRoute: ServicesIndexRoute,
 }

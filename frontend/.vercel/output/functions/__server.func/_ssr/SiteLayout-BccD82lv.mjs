@@ -1,12 +1,10 @@
 import { j as jsxRuntimeExports, r as reactExports } from "../_libs/react.mjs";
 import { L as Link } from "../_libs/tanstack__react-router.mjs";
-import { b as useAuth, u as useCart, c as useLocation } from "./router-CJ2-GpdV.mjs";
+import { b as useAuth, u as useCart, c as useLocation } from "./router-BzimbcSM.mjs";
 import { m as motion, A as AnimatePresence } from "../_libs/framer-motion.mjs";
-import { W as MapPin, p as Search, m as ShoppingBag, X as User, Y as Instagram, _ as Facebook, $ as Twitter, a0 as Youtube, a1 as Apple, S as Smartphone } from "../_libs/lucide-react.mjs";
+import { X as MapPin, l as Search, i as ShoppingBag, Y as User, _ as Instagram, $ as Facebook, a0 as Twitter, a1 as Youtube, a2 as Apple, S as Smartphone } from "../_libs/lucide-react.mjs";
 const nav = [
   { to: "/services", label: "Services" },
-  { to: "/native", label: "Native" },
-  { to: "/insta-help", label: "Insta Help" },
   { to: "/about", label: "About" }
 ];
 const allServices = [
@@ -100,17 +98,27 @@ function SiteHeader() {
             }
           ) })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("nav", { className: "ml-auto hidden md:flex items-center gap-2", children: nav.map((n) => /* @__PURE__ */ jsxRuntimeExports.jsx(
-          Link,
-          {
-            to: n.to,
-            activeProps: { className: "text-brand bg-brand-soft font-semibold" },
-            inactiveProps: { className: "text-foreground/70 hover:bg-secondary/50" },
-            className: "px-4 py-2 text-sm font-medium transition-all rounded-full",
-            children: n.label
-          },
-          n.to
-        )) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("nav", { className: "ml-auto hidden md:flex items-center gap-2", children: [
+          nav.map((n) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+            Link,
+            {
+              to: n.to,
+              activeProps: { className: "text-brand bg-brand-soft font-semibold" },
+              inactiveProps: { className: "text-foreground/70 hover:bg-secondary/50" },
+              className: "px-4 py-2 text-sm font-medium transition-all rounded-full",
+              children: n.label
+            },
+            n.to
+          )),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            Link,
+            {
+              to: "/admin",
+              className: "ml-2 px-4 py-2 text-sm font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 transition-colors rounded-full border border-slate-200",
+              children: "Admin Login"
+            }
+          )
+        ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-3", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(motion.div, { whileHover: { scale: 1.1 }, whileTap: { scale: 0.9 }, children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
             Link,

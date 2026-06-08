@@ -8,8 +8,6 @@ import { motion, AnimatePresence } from "framer-motion";
 
 const nav = [
   { to: "/services", label: "Services" },
-  { to: "/native", label: "Native" },
-  { to: "/insta-help", label: "Insta Help" },
   { to: "/about", label: "About" },
 ] as const;
 
@@ -121,6 +119,12 @@ export function SiteHeader() {
               {n.label}
             </Link>
           ))}
+          <Link
+            to="/admin"
+            className="ml-2 px-4 py-2 text-sm font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 transition-colors rounded-full border border-slate-200"
+          >
+            Admin Login
+          </Link>
         </nav>
 
         <div className="flex items-center gap-3">
