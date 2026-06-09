@@ -5,50 +5,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useCart } from "@/context/CartContext";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
-import { createServerFn } from "@tanstack/react-start";
-
-const sendBookingEmail = createServerFn({ method: "POST" }).handler(async ({ data: payload }: { data: {
-  userName: string;
-  userEmail: string;
-  services: { title: string; quantity: number }[];
-} }) => {
-  try {
-    const nodemailer = await import("nodemailer");
-    const transporter = nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        user: "tekzio2026@gmail.com",
-        pass: process.env.EMAIL_PASSWORD, // Must be set in .env
-      },
-    });
-
-    const servicesList = payload.services
-      .map((s) => `<li>${s.title} (x${s.quantity})</li>`)
-      .join("");
-
-    const mailOptions = {
-      from: '"Vendor99 Automations" <tekzio2026@gmail.com>',
-      to: "tekzio2026@gmail.com",
-      subject: `New Booking Request from ${payload.userName}`,
-      html: `
-        <h2>New Booking Confirmed!</h2>
-        <p><strong>Customer Name:</strong> ${payload.userName}</p>
-        <p><strong>Customer Email:</strong> ${payload.userEmail}</p>
-        <h3>Services Requested:</h3>
-        <ul>
-          ${servicesList}
-        </ul>
-        <p>Please contact the customer to finalize the contract.</p>
-      `,
-    };
-
-    await transporter.sendMail(mailOptions);
-    return { success: true };
-  } catch (error: any) {
-    console.error("Email send error:", error);
-    throw new Error("Failed to send email automation: " + error.message);
-  }
-});
+import { db } from "@/lib/firebase";
+import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { useState } from "react";
 
 export const Route = createFileRoute("/cart")({
   head: () => ({
@@ -61,6 +20,7 @@ function CartPage() {
   const { items, removeFromCart, checkout, isCheckingOut, totalItems } = useCart();
   const { user } = useAuth();
   const router = useRouter();
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   const handleCheckout = async () => {
     if (!user) {
@@ -70,43 +30,34 @@ function CartPage() {
     }
     
     try {
-      await checkout();
-      
-      // WhatsApp Automation
+      // Create Firestore document
       const userName = user.displayName || user.email || "Customer";
-      const waMessage = `Hello Vendor99! I would like to confirm my booking:
+      
+      const bookingData = {
+        customerName: userName,
+        customerEmail: user.email,
+        customerPhone: user.phoneNumber || "", // Fallback if no phone number
+        services: items.map(i => ({ title: i.title, quantity: i.quantity, price: i.price })),
+        totalItems,
+        createdAt: serverTimestamp(),
+        status: "pending",
+      };
 
-*User Details:*
-Name: ${userName}
-Email: ${user.email}
+      await addDoc(collection(db, "bookings"), bookingData);
 
-*Services Booked:*
-${items.map(i => `- ${i.title} (x${i.quantity})`).join('\n')}
+      // Clear the cart
+      await checkout();
 
-Total Services: ${totalItems}
-
-Please contact me to finalize.`;
-      const waUrl = `https://wa.me/919141052539?text=${encodeURIComponent(waMessage)}`;
-      window.open(waUrl, '_blank');
-
-      // Email Automation (Silent background call)
-      try {
-        await sendBookingEmail({
-          data: {
-            userName,
-            userEmail: user.email || "No Email",
-            services: items.map(i => ({ title: i.title, quantity: i.quantity }))
-          }
-        });
-      } catch (emailErr) {
-        console.error("Email automation failed (Check App Password in .env):", emailErr);
-      }
-
-      toast.success("Booking confirmed! Details sent to WhatsApp and Email.");
-      router.navigate({ to: "/" });
+      // Show success modal
+      setShowSuccessModal(true);
     } catch (err: any) {
       toast.error(err.message || "Failed to complete checkout.");
     }
+  };
+
+  const closeSuccessModal = () => {
+    setShowSuccessModal(false);
+    router.navigate({ to: "/" });
   };
 
   return (
@@ -217,6 +168,40 @@ Please contact me to finalize.`;
           </div>
         )}
       </section>
+
+      {/* Success Modal */}
+      <AnimatePresence>
+        {showSuccessModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl relative overflow-hidden text-center"
+            >
+              <div className="absolute top-0 left-0 w-full h-2 bg-gradient-premium" />
+              <div className="mx-auto w-20 h-20 bg-success/10 rounded-full flex items-center justify-center mb-6">
+                <CheckCircle2 className="w-10 h-10 text-success" />
+              </div>
+              <h2 className="text-3xl font-extrabold mb-4 tracking-tight">Booking Confirmed!</h2>
+              <p className="text-muted-foreground mb-8 text-lg leading-relaxed">
+                Thank you for your booking. We have sent a confirmation message to your WhatsApp and our AI representative will call you shortly!
+              </p>
+              <button
+                onClick={closeSuccessModal}
+                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold py-4 rounded-2xl transition-all shadow-lg hover:shadow-xl"
+              >
+                Return to Home
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </SiteLayout>
   );
 }

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { BookingModal } from "@/components/BookingModal";
 import { Link } from "@tanstack/react-router";
 import { 
   ArrowLeft, ShieldCheck, 
@@ -18,17 +19,12 @@ export function HomeInteriorDetails() {
     );
   };
 
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [activeService, setActiveService] = useState<string>("General Inquiry");
+
   const handleWhatsApp = (serviceName?: string) => {
-    let text = "";
-    if (serviceName) {
-      text = `Hello Vendor99, I would like to book or inquire about: *${serviceName}* (Home Interior & Painting)`;
-    } else if (selectedItems.length > 0) {
-      const itemList = selectedItems.map(item => `- ${item}`).join('\n');
-      text = `Hello Vendor99, I would like to book or inquire about the following services (Home Interior & Painting):\n\n${itemList}`;
-    } else {
-      text = `Hello Vendor99, I need a Premium Home Makeover Consultation.`;
-    }
-    window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(text)}`, '_blank');
+    setActiveService(serviceName || "General Inquiry");
+    setIsModalOpen(true);
   };
 
   return (
@@ -48,9 +44,7 @@ export function HomeInteriorDetails() {
               onClick={() => handleWhatsApp("Interior Consultation")}
               className="bg-brand text-white px-6 py-3 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-brand-dark transition-colors"
             >
-              <Phone className="h-5 w-5" />
-              Consult via WhatsApp
-            </button>
+              <Phone className="h-5 w-5" />Send Request</button>
           </div>
         </div>
       </header>
@@ -328,7 +322,7 @@ export function HomeInteriorDetails() {
               </div>
               <div className="text-left">
                 <div className="text-xs font-normal opacity-90">Send Request</div>
-                <div>Proceed to WhatsApp ➔</div>
+                <div>Submit Request ➔</div>
               </div>
             </button>
           ) : (
@@ -339,12 +333,19 @@ export function HomeInteriorDetails() {
               <Phone className="h-6 w-6" />
               <div className="text-left">
                 <div className="text-xs font-normal opacity-90">Skip traditional delayed agency consultations</div>
-                <div>🟢 Consult via WhatsApp</div>
+                <div>🟢 Send Request</div>
               </div>
             </button>
           )}
         </section>
       </div>
-    </div>
+    
+      <BookingModal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+        serviceName={activeService} 
+        selectedItems={selectedItems} 
+      />
+</div>
   );
 }

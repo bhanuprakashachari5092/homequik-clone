@@ -5,6 +5,7 @@ interface LocationContextType {
   location: string;
   isLocating: boolean;
   fetchDynamicLocation: (silent?: boolean) => void;
+  updateLocation: (newLocation: string) => void;
 }
 
 const LocationContext = createContext<LocationContextType | null>(null);
@@ -26,19 +27,32 @@ export const LocationProvider = ({ children }: { children: React.ReactNode }) =>
         if (!silent) toast.dismiss("loc-toast");
         try {
           const res = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${position.coords.latitude}&lon=${position.coords.longitude}`
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${position.coords.latitude}&lon=${position.coords.longitude}`,
+            {
+              headers: {
+                "Accept-Language": "en-US,en;q=0.9",
+              }
+            }
           );
           const data = await res.json();
-          const city =
-            data.address.city ||
-            data.address.town ||
-            data.address.state_district ||
-            "Location Found";
-          setLocation(city);
-          if (!silent) toast.success(`Location set to ${city}`);
+          const addr = data.address || {};
+          const area = addr.suburb || addr.neighbourhood || addr.residential || addr.village;
+          const city = addr.city || addr.town || addr.county || addr.state_district;
+          
+          let displayLoc = "Location Found";
+          if (area && city) {
+            displayLoc = `${area}, ${city}`;
+          } else if (city) {
+            displayLoc = city;
+          } else if (area) {
+            displayLoc = area;
+          }
+
+          setLocation(displayLoc);
+          if (!silent) toast.success(`Location set to ${displayLoc}`);
         } catch (error) {
           console.error("Error fetching location details:", error);
-          if (!silent) toast.error("Failed to get city name.");
+          if (!silent) toast.error("Failed to get city name from coordinates.");
         } finally {
           setIsLocating(false);
         }
@@ -47,11 +61,14 @@ export const LocationProvider = ({ children }: { children: React.ReactNode }) =>
         if (!silent) toast.dismiss("loc-toast");
         if (error.code === error.PERMISSION_DENIED) {
           if (!silent) toast.error("Location permission denied. Please allow it in site settings.");
+        } else if (error.code === error.TIMEOUT) {
+          if (!silent) toast.error("Location request timed out.");
         } else {
-          if (!silent) toast.error("Failed to detect location.");
+          if (!silent) toast.error("Failed to detect location. Please check your device settings.");
         }
         setIsLocating(false);
-      }
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
   };
 
@@ -71,8 +88,13 @@ export const LocationProvider = ({ children }: { children: React.ReactNode }) =>
     }
   }, []);
 
+  const updateLocation = (newLocation: string) => {
+    setLocation(newLocation);
+    toast.success(`Location manually set to ${newLocation}`);
+  };
+
   return (
-    <LocationContext.Provider value={{ location, isLocating, fetchDynamicLocation }}>
+    <LocationContext.Provider value={{ location, isLocating, fetchDynamicLocation, updateLocation }}>
       {children}
     </LocationContext.Provider>
   );

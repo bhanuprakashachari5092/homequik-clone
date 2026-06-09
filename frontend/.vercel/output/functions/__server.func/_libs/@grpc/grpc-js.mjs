@@ -1,15 +1,15 @@
 import require$$1 from "process";
-import require$$1$1 from "tls";
+import require$$0$1 from "tls";
 import require$$0 from "fs";
-import require$$0$1 from "os";
-import require$$0$2 from "net";
-import require$$0$3 from "events";
-import require$$0$7 from "http2";
+import require$$0$2 from "os";
+import require$$0$3 from "net";
+import require$$0$4 from "events";
+import require$$0$6 from "http2";
 import require$$3 from "http";
-import require$$0$6 from "url";
-import require$$1$2 from "dns";
-import require$$3$1 from "zlib";
-import require$$0$4 from "stream";
+import require$$7 from "url";
+import require$$1$1 from "dns";
+import require$$0$7 from "zlib";
+import require$$5 from "stream";
 import { r as requireSrc$1 } from "./proto-loader.mjs";
 import require$$0$5 from "util";
 var src = {};
@@ -571,7 +571,7 @@ function requireChannelCredentials() {
   hasRequiredChannelCredentials = 1;
   Object.defineProperty(channelCredentials, "__esModule", { value: true });
   channelCredentials.ChannelCredentials = void 0;
-  const tls_1 = require$$1$1;
+  const tls_1 = require$$0$1;
   const call_credentials_1 = requireCallCredentials();
   const tls_helpers_1 = requireTlsHelpers();
   function verifyIsBufferOrNull(obj, friendlyName) {
@@ -805,7 +805,7 @@ function requireServiceConfig() {
   serviceConfig.validateRetryThrottling = validateRetryThrottling;
   serviceConfig.validateServiceConfig = validateServiceConfig;
   serviceConfig.extractAndSelectServiceConfig = extractAndSelectServiceConfig;
-  const os = require$$0$1;
+  const os = require$$0$2;
   const constants_1 = requireConstants();
   const load_balancer_1 = requireLoadBalancer();
   const DURATION_REGEX = /^\d+(\.\d{1,9})?s$/;
@@ -1897,7 +1897,7 @@ function requireSubchannelAddress() {
   subchannelAddress.subchannelAddressEqual = subchannelAddressEqual;
   subchannelAddress.subchannelAddressToString = subchannelAddressToString;
   subchannelAddress.stringToSubchannelAddress = stringToSubchannelAddress;
-  const net_1 = require$$0$2;
+  const net_1 = require$$0$3;
   function isTcpSubchannelAddress(address) {
     return "port" in address;
   }
@@ -1966,8 +1966,8 @@ function requireCall() {
   Object.defineProperty(call, "__esModule", { value: true });
   call.ClientDuplexStreamImpl = call.ClientWritableStreamImpl = call.ClientReadableStreamImpl = call.ClientUnaryCallImpl = void 0;
   call.callErrorFromStatus = callErrorFromStatus;
-  const events_1 = require$$0$3;
-  const stream_1 = require$$0$4;
+  const events_1 = require$$0$4;
+  const stream_1 = require$$5;
   const constants_1 = requireConstants();
   function callErrorFromStatus(status, callerStack) {
     const message = `${status.code} ${constants_1.Status[status.code]}: ${status.details}`;
@@ -2970,7 +2970,7 @@ function requireChannelz() {
   channelz.getChannelzHandlers = getChannelzHandlers;
   channelz.getChannelzServiceDefinition = getChannelzServiceDefinition;
   channelz.setup = setup;
-  const net_1 = require$$0$2;
+  const net_1 = require$$0$3;
   const connectivity_state_1 = requireConnectivityState();
   const constants_1 = requireConstants();
   const subchannel_address_1 = requireSubchannelAddress();
@@ -3826,7 +3826,7 @@ function requireResolverDns() {
     exports.DEFAULT_PORT = void 0;
     exports.setup = setup;
     const resolver_1 = requireResolver();
-    const dns = require$$1$2;
+    const dns = require$$1$1;
     const util = require$$0$5;
     const service_config_1 = requireServiceConfig();
     const constants_1 = requireConstants();
@@ -3834,7 +3834,7 @@ function requireResolverDns() {
     const logging2 = requireLogging();
     const constants_2 = requireConstants();
     const uri_parser_1 = requireUriParser();
-    const net_1 = require$$0$2;
+    const net_1 = require$$0$3;
     const backoff_timeout_1 = requireBackoffTimeout();
     const TRACER_NAME = "dns_resolver";
     function trace(text) {
@@ -4082,11 +4082,11 @@ function requireHttp_proxy() {
   const constants_1 = requireConstants();
   const resolver_1 = requireResolver();
   const http = require$$3;
-  const tls = require$$1$1;
+  const tls = require$$0$1;
   const logging2 = requireLogging();
   const subchannel_address_1 = requireSubchannelAddress();
   const uri_parser_1 = requireUriParser();
-  const url_1 = require$$0$6;
+  const url_1 = require$$7;
   const resolver_dns_1 = requireResolverDns();
   const TRACER_NAME = "proxy";
   function trace(text) {
@@ -4364,8 +4364,8 @@ function requireSubchannelCall() {
   hasRequiredSubchannelCall = 1;
   Object.defineProperty(subchannelCall, "__esModule", { value: true });
   subchannelCall.Http2SubchannelCall = void 0;
-  const http2 = require$$0$7;
-  const os = require$$0$1;
+  const http2 = require$$0$6;
+  const os = require$$0$2;
   const constants_1 = requireConstants();
   const metadata_1 = requireMetadata();
   const stream_decoder_1 = requireStreamDecoder();
@@ -4729,8 +4729,8 @@ function requireTransport() {
   hasRequiredTransport = 1;
   Object.defineProperty(transport, "__esModule", { value: true });
   transport.Http2SubchannelConnector = void 0;
-  const http2 = require$$0$7;
-  const tls_1 = require$$1$1;
+  const http2 = require$$0$6;
+  const tls_1 = require$$0$1;
   const channelz_1 = requireChannelz();
   const constants_1 = requireConstants();
   const http_proxy_1 = requireHttp_proxy();
@@ -4738,7 +4738,7 @@ function requireTransport() {
   const resolver_1 = requireResolver();
   const subchannel_address_1 = requireSubchannelAddress();
   const uri_parser_1 = requireUriParser();
-  const net = require$$0$2;
+  const net = require$$0$3;
   const subchannel_call_1 = requireSubchannelCall();
   const call_number_1 = requireCallNumber();
   const TRACER_NAME = "transport";
@@ -5415,7 +5415,7 @@ function requireCompressionFilter() {
   hasRequiredCompressionFilter = 1;
   Object.defineProperty(compressionFilter, "__esModule", { value: true });
   compressionFilter.CompressionFilterFactory = compressionFilter.CompressionFilter = void 0;
-  const zlib = require$$3$1;
+  const zlib = require$$0$7;
   const compression_algorithms_1 = requireCompressionAlgorithms();
   const constants_1 = requireConstants();
   const filter_1 = requireFilter();
@@ -5782,7 +5782,7 @@ function requireLoadBalancingCall() {
   const uri_parser_1 = requireUriParser();
   const logging2 = requireLogging();
   const control_plane_status_1 = requireControlPlaneStatus();
-  const http2 = require$$0$7;
+  const http2 = require$$0$6;
   const TRACER_NAME = "load_balancing_call";
   class LoadBalancingCall {
     constructor(channel2, callConfig, methodName, host, credentials, deadline2, callNumber2) {
@@ -7353,10 +7353,10 @@ function requireServerCall() {
   hasRequiredServerCall = 1;
   Object.defineProperty(serverCall, "__esModule", { value: true });
   serverCall.Http2ServerCallStream = serverCall.ServerDuplexStreamImpl = serverCall.ServerWritableStreamImpl = serverCall.ServerReadableStreamImpl = serverCall.ServerUnaryCallImpl = void 0;
-  const events_1 = require$$0$3;
-  const http2 = require$$0$7;
-  const stream_1 = require$$0$4;
-  const zlib = require$$3$1;
+  const events_1 = require$$0$4;
+  const http2 = require$$0$6;
+  const stream_1 = require$$5;
+  const zlib = require$$0$7;
   const constants_1 = requireConstants();
   const metadata_1 = requireMetadata();
   const stream_decoder_1 = requireStreamDecoder();
@@ -8055,7 +8055,7 @@ function requireServer() {
   hasRequiredServer = 1;
   Object.defineProperty(server, "__esModule", { value: true });
   server.Server = void 0;
-  const http2 = require$$0$7;
+  const http2 = require$$0$6;
   const constants_1 = requireConstants();
   const server_call_1 = requireServerCall();
   const server_credentials_1 = requireServerCredentials();
@@ -9601,7 +9601,7 @@ function requireResolverIp() {
   hasRequiredResolverIp = 1;
   Object.defineProperty(resolverIp, "__esModule", { value: true });
   resolverIp.setup = setup;
-  const net_1 = require$$0$2;
+  const net_1 = require$$0$3;
   const constants_1 = requireConstants();
   const metadata_1 = requireMetadata();
   const resolver_1 = requireResolver();

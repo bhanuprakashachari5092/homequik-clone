@@ -509,20 +509,7 @@ export function CCTVSurveillanceDetails() {
                        </li>
                     </ul>
                     
-                    <div className="mt-8 pt-6 border-t border-border space-y-3">
-                       <div className="flex justify-between items-center bg-slate-50 p-3 rounded-lg border border-slate-100">
-                          <span className="text-sm font-bold text-slate-600">GST</span>
-                          <span className="font-extrabold text-slate-800">GST 18% Extra</span>
-                       </div>
-                       <div className="flex justify-between items-center bg-slate-50 p-3 rounded-lg border border-slate-100">
-                          <span className="text-sm font-bold text-slate-600">Freight</span>
-                          <span className="font-extrabold text-slate-800">Freight Extra</span>
-                       </div>
-                       <div className="flex justify-between items-center bg-slate-50 p-3 rounded-lg border border-slate-100">
-                          <span className="text-sm font-bold text-slate-600">Porter</span>
-                          <span className="font-extrabold text-slate-800">Porter Charges Extra</span>
-                       </div>
-                    </div>
+                    
                  </div>
 
                  {/* Footer Info */}

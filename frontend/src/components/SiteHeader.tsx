@@ -23,7 +23,7 @@ const allServices = [
 export function SiteHeader() {
   const { user, signOut } = useAuth();
   const { totalItems } = useCart();
-  const { location, isLocating, fetchDynamicLocation } = useLocation();
+  const { location, isLocating, fetchDynamicLocation, updateLocation } = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearchFocused, setIsSearchFocused] = useState(false);
 
@@ -54,7 +54,14 @@ export function SiteHeader() {
         <motion.button 
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
-          onClick={() => fetchDynamicLocation(false)}
+          onClick={() => {
+            const newLoc = window.prompt("Please enter your correct location (or leave blank to auto-detect):", location);
+            if (newLoc && newLoc.trim() !== "") {
+               updateLocation(newLoc.trim());
+            } else if (newLoc === "") {
+               fetchDynamicLocation(false);
+            }
+          }}
           disabled={isLocating}
           className="hidden md:flex items-center gap-2 rounded-full border border-border/50 bg-white/50 backdrop-blur-md px-4 py-2 text-sm hover:border-brand/40 hover:shadow-sm transition-all disabled:opacity-50 cursor-pointer shadow-sm"
         >
