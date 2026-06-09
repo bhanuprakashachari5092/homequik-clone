@@ -1,8 +1,8 @@
 import { r as reactExports, j as jsxRuntimeExports } from "../_libs/react.mjs";
-import { d as useLocation$1, L as Link } from "../_libs/tanstack__react-router.mjs";
-import { S as SiteLayout } from "./SiteLayout-Tt6sMPU4.mjs";
-import { u as useCart, c as useLocation, s as servicesData } from "./router-Fi2taqLv.mjs";
-import { t as toast } from "../_libs/sonner.mjs";
+import { d as useLocation$1, e as useNavigate, L as Link } from "../_libs/tanstack__react-router.mjs";
+import { S as SiteLayout } from "./SiteLayout-BaAh-5Ug.mjs";
+import { u as useCart, c as useLocation, s as servicesData } from "./router-Cprs8nsm.mjs";
+import "../_libs/sonner.mjs";
 import "../_libs/firebase.mjs";
 import "../_libs/firebase__analytics.mjs";
 import "../_libs/firebase__auth.mjs";
@@ -10,7 +10,7 @@ import "../_libs/firebase__app.mjs";
 import "../_libs/firebase__logger.mjs";
 import "../_libs/firebase__firestore.mjs";
 import { m as motion, A as AnimatePresence } from "../_libs/framer-motion.mjs";
-import { j as ArrowRight, q as ArrowLeft, n as Star } from "../_libs/lucide-react.mjs";
+import { j as ArrowRight, p as ArrowLeft, m as Star } from "../_libs/lucide-react.mjs";
 import "../_libs/tanstack__router-core.mjs";
 import "../_libs/tanstack__history.mjs";
 import "../_libs/cookie-es.mjs";
@@ -94,6 +94,7 @@ function ServicesPage() {
     location
   } = useLocation();
   const routeLocation = useLocation$1();
+  const navigate = useNavigate();
   const [activeGroup, setActiveGroup] = reactExports.useState(null);
   reactExports.useEffect(() => {
     const currentHash = routeLocation.hash || window.location.hash.replace("#", "");
@@ -106,15 +107,6 @@ function ServicesPage() {
       setActiveGroup(null);
     }
   }, [routeLocation.hash]);
-  const handleAddToCart = (item) => {
-    addToCart({
-      id: item.id,
-      title: item.title,
-      price: item.price,
-      image: item.image
-    });
-    toast.success(`${item.title} added to cart!`);
-  };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(SiteLayout, { children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "relative overflow-hidden premium-gradient border-b border-border/50 bg-background pt-16 pb-24", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute top-0 right-0 -mr-20 -mt-20 h-96 w-96 rounded-full bg-brand-soft blur-[80px] opacity-60 animate-float" }),
@@ -209,7 +201,12 @@ function ServicesPage() {
             scale: 0.95
           }, onClick: (e) => {
             e.preventDefault();
-            handleAddToCart(item);
+            navigate({
+              to: "/services/$serviceId",
+              params: {
+                serviceId: item.id
+              }
+            });
           }, className: "rounded-xl bg-gradient-premium px-6 py-2.5 text-sm font-bold text-white shadow-md hover:shadow-lg transition-all z-10 relative", children: "Book Now" })
         ] }) })
       ] }, item.id)) })

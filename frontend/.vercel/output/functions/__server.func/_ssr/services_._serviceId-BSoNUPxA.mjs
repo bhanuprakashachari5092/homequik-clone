@@ -1,15 +1,16 @@
 import { j as jsxRuntimeExports, r as reactExports } from "../_libs/react.mjs";
-import { L as Link } from "../_libs/tanstack__react-router.mjs";
-import { S as SiteLayout } from "./SiteLayout-Tt6sMPU4.mjs";
-import { R as Route, u as useCart, d as db } from "./router-Fi2taqLv.mjs";
+import { L as Link, e as useNavigate } from "../_libs/tanstack__react-router.mjs";
+import { S as SiteLayout } from "./SiteLayout-BaAh-5Ug.mjs";
+import { R as Route, u as useCart, b as useAuth, d as db } from "./router-Cprs8nsm.mjs";
 import { t as toast } from "../_libs/sonner.mjs";
 import { a as addDoc, c as collection, s as serverTimestamp } from "../_libs/firebase__firestore.mjs";
+import { c } from "../_libs/lottiefiles__dotlottie-react.mjs";
 import "../_libs/firebase.mjs";
 import "../_libs/firebase__analytics.mjs";
 import "../_libs/firebase__auth.mjs";
 import "../_libs/firebase__app.mjs";
 import "../_libs/firebase__logger.mjs";
-import { q as ArrowLeft, n as Star, m as ShieldCheck, o as Clock, r as CircleCheckBig, V as Video, l as Search, s as Settings, W as Wrench, t as ShoppingCart, u as Server, v as SquareCheckBig, w as Square, d as CircleCheck, x as Shield, e as Phone, y as Award, g as Lock, H as House, Z as Zap, z as Monitor, E as Layers, G as Lightbulb, I as Activity, J as TriangleAlert, K as Target, P as Paintbrush, N as Briefcase, O as SquareDashed, k as Sparkles, Q as LayoutTemplate, R as Info, U as CircleAlert, X, Y as User, _ as MapPin, $ as Calendar, a0 as FileText, h as LoaderCircle } from "../_libs/lucide-react.mjs";
+import { p as ArrowLeft, m as Star, l as ShieldCheck, n as Clock, q as CircleCheckBig, V as Video, r as Search, s as Settings, W as Wrench, t as ShoppingCart, u as Server, v as SquareCheckBig, w as Square, d as CircleCheck, x as Shield, e as Phone, y as Award, g as Lock, H as House, Z as Zap, z as Monitor, E as Layers, G as Lightbulb, I as Activity, J as TriangleAlert, K as Target, P as Paintbrush, N as Briefcase, O as SquareDashed, k as Sparkles, Q as LayoutTemplate, R as Info, U as CircleAlert, X, Y as User, _ as MapPin, $ as Calendar, a0 as FileText } from "../_libs/lucide-react.mjs";
 import { m as motion, A as AnimatePresence } from "../_libs/framer-motion.mjs";
 import "../_libs/tanstack__router-core.mjs";
 import "../_libs/tanstack__history.mjs";
@@ -58,8 +59,319 @@ import "../_libs/long.mjs";
 import "../_libs/protobufjs__codegen.mjs";
 import "../_libs/protobufjs__fetch.mjs";
 import "../_libs/protobufjs__path.mjs";
+import "../_libs/lottiefiles__dotlottie-web.mjs";
 import "../_libs/motion-dom.mjs";
 import "../_libs/motion-utils.mjs";
+function BookingModal({ isOpen, onClose, serviceName, selectedItems = [] }) {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [step, setStep] = reactExports.useState("form");
+  const [bookingId, setBookingId] = reactExports.useState("");
+  const [loadingText, setLoadingText] = reactExports.useState("Submitting Booking...");
+  const today = /* @__PURE__ */ new Date();
+  const defaultDate = today.toLocaleDateString("en-CA");
+  const defaultTime = today.toTimeString().split(" ")[0].substring(0, 5);
+  const [formData, setFormData] = reactExports.useState({
+    fullName: "",
+    phone: "",
+    address: "",
+    date: defaultDate,
+    time: defaultTime,
+    notes: ""
+  });
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    console.log("Book button clicked");
+    if (!user) {
+      toast.error("Please login to proceed with booking.");
+      onClose();
+      navigate({ to: "/login" });
+      return;
+    }
+    if (!formData.fullName || !formData.phone || !formData.address || !formData.date || !formData.time) {
+      toast.error("Please fill in all required fields.");
+      return;
+    }
+    setStep("submitting");
+    try {
+      const generatedId = "HQ-" + Math.random().toString(36).substring(2, 8).toUpperCase();
+      setTimeout(() => setLoadingText("Saving Data..."), 1e3);
+      setTimeout(() => setLoadingText("Confirming Booking..."), 2e3);
+      const docRef = await addDoc(collection(db, "bookings"), {
+        bookingId: generatedId,
+        customerName: formData.fullName,
+        customerPhone: formData.phone,
+        customerAddress: formData.address,
+        serviceName,
+        selectedItems,
+        bookingDate: formData.date,
+        bookingTime: formData.time,
+        notes: formData.notes,
+        status: "Pending",
+        createdAt: serverTimestamp()
+      });
+      console.log("SUCCESS:", docRef.id);
+      setBookingId(generatedId);
+      setTimeout(() => {
+        let text = `Hello Vendor99,
+
+*New Booking Request:*
+`;
+        text += `- Service: ${serviceName}
+`;
+        if (selectedItems && selectedItems.length > 0) {
+          text += `- Items: ${selectedItems.join(", ")}
+`;
+        }
+        text += `
+*Customer Details:*
+`;
+        text += `- Name: ${formData.fullName}
+`;
+        text += `- Phone: ${formData.phone}
+`;
+        text += `- Address: ${formData.address}
+`;
+        text += `- Schedule: ${formData.date} at ${formData.time}
+`;
+        if (formData.notes) text += `- Notes: ${formData.notes}
+`;
+        const WHATSAPP_NUMBER = "919141052539";
+        window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(text)}`, "_blank");
+        resetAndClose();
+      }, 3500);
+    } catch (error) {
+      console.error("FIRESTORE ERROR:", error);
+      toast.error("Failed to create booking. Please try again.");
+      setStep("form");
+    }
+  };
+  const resetAndClose = () => {
+    setStep("form");
+    const today2 = /* @__PURE__ */ new Date();
+    setFormData({
+      fullName: "",
+      phone: "",
+      address: "",
+      date: today2.toLocaleDateString("en-CA"),
+      time: today2.toTimeString().split(" ")[0].substring(0, 5),
+      notes: ""
+    });
+    onClose();
+  };
+  if (!isOpen) return null;
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(AnimatePresence, { children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
+    motion.div,
+    {
+      initial: { opacity: 0, scale: 0.9, y: 20 },
+      animate: { opacity: 1, scale: 1, y: 0 },
+      exit: { opacity: 0, scale: 0.9, y: 20 },
+      className: "bg-white rounded-[2rem] shadow-premium w-full max-w-lg overflow-hidden relative",
+      children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gradient-premium p-6 text-white relative", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              onClick: resetAndClose,
+              className: "absolute top-4 right-4 h-8 w-8 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center transition-colors",
+              children: /* @__PURE__ */ jsxRuntimeExports.jsx(X, { className: "h-5 w-5" })
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-2xl font-bold tracking-tight", children: "Book Service" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-white/80 text-sm mt-1", children: serviceName })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-6", children: [
+          step === "form" && /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            motion.form,
+            {
+              initial: { opacity: 0 },
+              animate: { opacity: 1 },
+              onSubmit: handleSubmit,
+              className: "space-y-4",
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(User, { className: "absolute left-3 top-3 h-5 w-5 text-muted-foreground" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("input", { required: true, type: "text", name: "fullName", value: formData.fullName, onChange: handleChange, placeholder: "Full Name", className: "w-full bg-secondary/50 border border-border rounded-xl py-3 pl-10 pr-4 outline-none focus:border-brand focus:ring-1 focus:ring-brand transition-all" })
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(Phone, { className: "absolute left-3 top-3 h-5 w-5 text-muted-foreground" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("input", { required: true, type: "tel", name: "phone", value: formData.phone, onChange: handleChange, placeholder: "Mobile Number", className: "w-full bg-secondary/50 border border-border rounded-xl py-3 pl-10 pr-4 outline-none focus:border-brand focus:ring-1 focus:ring-brand transition-all" })
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(MapPin, { className: "absolute left-3 top-3 h-5 w-5 text-muted-foreground" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("input", { required: true, type: "text", name: "address", value: formData.address, onChange: handleChange, placeholder: "Complete Address", className: "w-full bg-secondary/50 border border-border rounded-xl py-3 pl-10 pr-4 outline-none focus:border-brand focus:ring-1 focus:ring-brand transition-all" })
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-3", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(Calendar, { className: "absolute left-3 top-3 h-5 w-5 text-muted-foreground" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("input", { required: true, type: "date", name: "date", value: formData.date, onChange: handleChange, className: "w-full bg-secondary/50 border border-border rounded-xl py-3 pl-10 pr-4 outline-none focus:border-brand focus:ring-1 focus:ring-brand transition-all text-sm" })
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(Clock, { className: "absolute left-3 top-3 h-5 w-5 text-muted-foreground" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("input", { required: true, type: "time", name: "time", value: formData.time, onChange: handleChange, className: "w-full bg-secondary/50 border border-border rounded-xl py-3 pl-10 pr-4 outline-none focus:border-brand focus:ring-1 focus:ring-brand transition-all text-sm" })
+                    ] })
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(FileText, { className: "absolute left-3 top-3 h-5 w-5 text-muted-foreground" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("textarea", { name: "notes", value: formData.notes, onChange: handleChange, placeholder: "Additional Notes (Optional)", rows: 3, className: "w-full bg-secondary/50 border border-border rounded-xl py-3 pl-10 pr-4 outline-none focus:border-brand focus:ring-1 focus:ring-brand transition-all resize-none" })
+                  ] })
+                ] }),
+                selectedItems.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-brand-soft/30 p-4 rounded-xl border border-brand/20 text-sm", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-bold text-brand", children: "Selected:" }),
+                  " ",
+                  selectedItems.join(", ")
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  motion.button,
+                  {
+                    whileHover: { scale: 1.02 },
+                    whileTap: { scale: 0.98 },
+                    type: "submit",
+                    className: "w-full bg-slate-900 text-white font-bold py-4 rounded-xl hover:bg-slate-800 transition-colors shadow-md mt-4",
+                    children: "Confirm Booking"
+                  }
+                )
+              ]
+            }
+          ),
+          step === "submitting" && /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            motion.div,
+            {
+              initial: { opacity: 0, y: 20 },
+              animate: { opacity: 1, y: 0 },
+              exit: { opacity: 0, scale: 0.9 },
+              className: "flex flex-col items-center justify-center py-16 space-y-8",
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-48 h-48 flex items-center justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  c,
+                  {
+                    src: "https://lottie.host/1b2ec91d-0683-4a1e-abda-07f152d13b78/W48qXw9YtF.lottie",
+                    loop: true,
+                    autoplay: true
+                  }
+                ) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-center space-y-2", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    motion.h3,
+                    {
+                      initial: { opacity: 0, y: 10 },
+                      animate: { opacity: 1, y: 0 },
+                      className: "text-2xl font-black text-slate-800 tracking-tight",
+                      children: loadingText
+                    },
+                    loadingText
+                  ),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-muted-foreground font-medium", children: "Please wait while we secure your slot..." })
+                ] })
+              ]
+            }
+          ),
+          step === "success" && /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            motion.div,
+            {
+              initial: { opacity: 0, scale: 0.95 },
+              animate: { opacity: 1, scale: 1 },
+              className: "flex flex-col items-center justify-center py-8 text-center relative",
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  motion.div,
+                  {
+                    initial: { opacity: 0, scale: 0 },
+                    animate: { opacity: 1, scale: 1 },
+                    transition: { delay: 0.2 },
+                    className: "absolute top-10 w-64 h-64 bg-success/10 blur-[60px] rounded-full -z-10"
+                  }
+                ),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  motion.div,
+                  {
+                    initial: { scale: 0, rotate: -180 },
+                    animate: { scale: 1, rotate: 0 },
+                    transition: { type: "spring", bounce: 0.6, duration: 0.8 },
+                    className: "w-24 h-24 bg-gradient-to-tr from-success to-emerald-600 rounded-[2rem] flex items-center justify-center mb-8 shadow-2xl shadow-success/30 transform rotate-3",
+                    children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      motion.div,
+                      {
+                        initial: { scale: 0 },
+                        animate: { scale: 1 },
+                        transition: { delay: 0.5, type: "spring", bounce: 0.5 },
+                        children: /* @__PURE__ */ jsxRuntimeExports.jsx(CircleCheck, { className: "h-12 w-12 text-white" })
+                      }
+                    )
+                  }
+                ),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  motion.h3,
+                  {
+                    initial: { opacity: 0, y: 10 },
+                    animate: { opacity: 1, y: 0 },
+                    transition: { delay: 0.3 },
+                    className: "text-3xl font-black mb-3 bg-gradient-to-r from-success to-emerald-600 bg-clip-text text-transparent",
+                    children: "Booking Confirmed!"
+                  }
+                ),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  motion.p,
+                  {
+                    initial: { opacity: 0 },
+                    animate: { opacity: 1 },
+                    transition: { delay: 0.4 },
+                    className: "text-slate-600 mb-8 font-medium text-lg px-4",
+                    children: "Your request is secured. Our AI agent will contact you shortly!"
+                  }
+                ),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                  motion.div,
+                  {
+                    initial: { opacity: 0, y: 20 },
+                    animate: { opacity: 1, y: 0 },
+                    transition: { delay: 0.5 },
+                    className: "w-full bg-white/50 backdrop-blur-md border border-slate-200/60 rounded-[2rem] p-6 mb-8 text-left space-y-4 shadow-xl shadow-slate-200/20",
+                    children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center border-b border-slate-100 pb-4", children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-slate-500 font-medium", children: "Tracking ID" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-black text-brand bg-brand/10 px-3 py-1 rounded-lg text-sm tracking-wider", children: bookingId })
+                      ] }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center border-b border-slate-100 pb-4", children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-slate-500 font-medium", children: "Service" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-bold text-slate-800 text-sm max-w-[60%] text-right", children: serviceName })
+                      ] }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center", children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-slate-500 font-medium", children: "Schedule" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "font-bold text-slate-800 text-sm text-right bg-slate-100 px-3 py-1 rounded-lg", children: [
+                          formData.date,
+                          " at ",
+                          formData.time
+                        ] })
+                      ] })
+                    ]
+                  }
+                ),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  motion.button,
+                  {
+                    whileHover: { scale: 1.05, y: -2 },
+                    whileTap: { scale: 0.95 },
+                    initial: { opacity: 0 },
+                    animate: { opacity: 1 },
+                    transition: { delay: 0.7 },
+                    onClick: resetAndClose,
+                    className: "w-full bg-slate-900 text-white font-black text-lg py-5 rounded-2xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.5)] hover:bg-slate-800 transition-all",
+                    children: "Done & Close"
+                  }
+                )
+              ]
+            }
+          )
+        ] })
+      ]
+    }
+  ) }) });
+}
 const cameraPriceList = [
   {
     series: "5MP FULL COLORVU EH55 PCB",
@@ -147,28 +459,32 @@ const repairServices = [
   { id: "other", label: "Other", image: "/cctv_cables.png" }
 ];
 function CCTVSurveillanceDetails() {
-  const WHATSAPP_NUMBER = "919141052539";
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = reactExports.useState("installation");
   const [selectedItems, setSelectedItems] = reactExports.useState([]);
   const [searchAccessory, setSearchAccessory] = reactExports.useState("");
+  const [isModalOpen, setIsModalOpen] = reactExports.useState(false);
+  const [modalItems, setModalItems] = reactExports.useState([]);
   const toggleSelection = (serviceName) => {
     setSelectedItems(
       (prev) => prev.includes(serviceName) ? prev.filter((item) => item !== serviceName) : [...prev, serviceName]
     );
   };
   const handleWhatsApp = (customText) => {
-    let text = "";
-    if (customText) {
-      text = `Hello Vendor99, I would like to inquire about: *${customText}* (CCTV & Surveillance)`;
-    } else if (selectedItems.length > 0) {
-      const itemList = selectedItems.map((item) => `- ${item}`).join("\n");
-      text = `Hello Vendor99, I would like to book the following (CCTV & Surveillance):
-
-${itemList}`;
-    } else {
-      text = `Hello Vendor99, I need a CCTV & Surveillance service.`;
+    if (!user) {
+      toast.error("Please login to proceed with booking.");
+      navigate({ to: "/login" });
+      return;
     }
-    window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(text)}`, "_blank");
+    if (customText) {
+      setModalItems([customText]);
+    } else if (selectedItems.length > 0) {
+      setModalItems(selectedItems);
+    } else {
+      setModalItems(["General CCTV & Surveillance Service"]);
+    }
+    setIsModalOpen(true);
   };
   const filteredAccessories = accessories.filter((a) => a.name.toLowerCase().includes(searchAccessory.toLowerCase()));
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-[#f0f4f8] min-h-screen pb-32 font-sans", children: [
@@ -214,29 +530,23 @@ ${itemList}`;
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-px bg-border flex-1 max-w-[100px]" })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex w-full overflow-hidden relative group", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex w-max animate-marquee-reverse whitespace-nowrap group-hover:[animation-play-state:paused] transition-all duration-300", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-16 px-8", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("img", { src: "/logos/hikvision.png", alt: "HIKVISION", className: "h-8 md:h-12 w-auto object-contain mix-blend-multiply grayscale hover:grayscale-0 transition-all opacity-80 hover:opacity-100" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("img", { src: "/logos/cpplus.png", alt: "CP PLUS", className: "h-10 md:h-16 w-auto object-contain mix-blend-multiply grayscale hover:grayscale-0 transition-all opacity-80 hover:opacity-100" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("img", { src: "/logos/dahua.png", alt: "dahua", className: "h-6 md:h-10 w-auto object-contain mix-blend-multiply grayscale hover:grayscale-0 transition-all opacity-80 hover:opacity-100" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("img", { src: "/logos/secureye.png", alt: "SECUREYE", className: "h-8 md:h-12 w-auto object-contain mix-blend-multiply grayscale hover:grayscale-0 transition-all opacity-80 hover:opacity-100" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("img", { src: "/logos/reboot.png", alt: "REBOOT", className: "h-6 md:h-10 w-auto object-contain mix-blend-multiply grayscale hover:grayscale-0 transition-all opacity-80 hover:opacity-100" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("img", { src: "/logos/homewell.png", alt: "HOMEWELL", className: "h-6 md:h-10 w-auto object-contain mix-blend-multiply grayscale hover:grayscale-0 transition-all opacity-80 hover:opacity-100" })
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-24 md:gap-32 px-12 md:px-16", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-32 md:w-48 flex items-center justify-center mix-blend-multiply", children: /* @__PURE__ */ jsxRuntimeExports.jsx("img", { src: "/logos/hikvision-v2.png", alt: "HIKVISION", className: "w-full h-auto object-contain scale-[1.25] transition-all duration-300 hover:animate-pulse hover:-translate-y-3 hover:scale-[1.35]" }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-32 md:w-48 flex items-center justify-center mix-blend-multiply", children: /* @__PURE__ */ jsxRuntimeExports.jsx("img", { src: "/logos/cpplus-v2.png", alt: "CP PLUS", className: "w-full h-auto object-contain scale-[1.35] transition-all duration-300 hover:animate-pulse hover:-translate-y-3 hover:scale-[1.45]" }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-32 md:w-48 flex items-center justify-center mix-blend-multiply", children: /* @__PURE__ */ jsxRuntimeExports.jsx("img", { src: "/logos/dahua-v2.png", alt: "dahua", className: "w-full h-auto object-contain scale-[1.25] transition-all duration-300 hover:animate-pulse hover:-translate-y-3 hover:scale-[1.35]" }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-32 md:w-48 flex items-center justify-center mix-blend-multiply", children: /* @__PURE__ */ jsxRuntimeExports.jsx("img", { src: "/logos/secureye-v2.png", alt: "SECUREYE", className: "w-full h-auto object-contain scale-[1.1] transition-all duration-300 hover:animate-pulse hover:-translate-y-3 hover:scale-[1.2]" }) })
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-16 px-8", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("img", { src: "/logos/hikvision.png", alt: "HIKVISION", className: "h-8 md:h-12 w-auto object-contain mix-blend-multiply grayscale hover:grayscale-0 transition-all opacity-80 hover:opacity-100" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("img", { src: "/logos/cpplus.png", alt: "CP PLUS", className: "h-10 md:h-16 w-auto object-contain mix-blend-multiply grayscale hover:grayscale-0 transition-all opacity-80 hover:opacity-100" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("img", { src: "/logos/dahua.png", alt: "dahua", className: "h-6 md:h-10 w-auto object-contain mix-blend-multiply grayscale hover:grayscale-0 transition-all opacity-80 hover:opacity-100" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("img", { src: "/logos/secureye.png", alt: "SECUREYE", className: "h-8 md:h-12 w-auto object-contain mix-blend-multiply grayscale hover:grayscale-0 transition-all opacity-80 hover:opacity-100" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("img", { src: "/logos/reboot.png", alt: "REBOOT", className: "h-6 md:h-10 w-auto object-contain mix-blend-multiply grayscale hover:grayscale-0 transition-all opacity-80 hover:opacity-100" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("img", { src: "/logos/homewell.png", alt: "HOMEWELL", className: "h-6 md:h-10 w-auto object-contain mix-blend-multiply grayscale hover:grayscale-0 transition-all opacity-80 hover:opacity-100" })
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-24 md:gap-32 px-12 md:px-16", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-32 md:w-48 flex items-center justify-center mix-blend-multiply", children: /* @__PURE__ */ jsxRuntimeExports.jsx("img", { src: "/logos/hikvision-v2.png", alt: "HIKVISION", className: "w-full h-auto object-contain scale-[1.25] transition-all duration-300 hover:animate-pulse hover:-translate-y-3 hover:scale-[1.35]" }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-32 md:w-48 flex items-center justify-center mix-blend-multiply", children: /* @__PURE__ */ jsxRuntimeExports.jsx("img", { src: "/logos/cpplus-v2.png", alt: "CP PLUS", className: "w-full h-auto object-contain scale-[1.35] transition-all duration-300 hover:animate-pulse hover:-translate-y-3 hover:scale-[1.45]" }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-32 md:w-48 flex items-center justify-center mix-blend-multiply", children: /* @__PURE__ */ jsxRuntimeExports.jsx("img", { src: "/logos/dahua-v2.png", alt: "dahua", className: "w-full h-auto object-contain scale-[1.25] transition-all duration-300 hover:animate-pulse hover:-translate-y-3 hover:scale-[1.35]" }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-32 md:w-48 flex items-center justify-center mix-blend-multiply", children: /* @__PURE__ */ jsxRuntimeExports.jsx("img", { src: "/logos/secureye-v2.png", alt: "SECUREYE", className: "w-full h-auto object-contain scale-[1.1] transition-all duration-300 hover:animate-pulse hover:-translate-y-3 hover:scale-[1.2]" }) })
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-16 px-8", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("img", { src: "/logos/hikvision.png", alt: "HIKVISION", className: "h-8 md:h-12 w-auto object-contain mix-blend-multiply grayscale hover:grayscale-0 transition-all opacity-80 hover:opacity-100" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("img", { src: "/logos/cpplus.png", alt: "CP PLUS", className: "h-10 md:h-16 w-auto object-contain mix-blend-multiply grayscale hover:grayscale-0 transition-all opacity-80 hover:opacity-100" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("img", { src: "/logos/dahua.png", alt: "dahua", className: "h-6 md:h-10 w-auto object-contain mix-blend-multiply grayscale hover:grayscale-0 transition-all opacity-80 hover:opacity-100" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("img", { src: "/logos/secureye.png", alt: "SECUREYE", className: "h-8 md:h-12 w-auto object-contain mix-blend-multiply grayscale hover:grayscale-0 transition-all opacity-80 hover:opacity-100" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("img", { src: "/logos/reboot.png", alt: "REBOOT", className: "h-6 md:h-10 w-auto object-contain mix-blend-multiply grayscale hover:grayscale-0 transition-all opacity-80 hover:opacity-100" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("img", { src: "/logos/homewell.png", alt: "HOMEWELL", className: "h-6 md:h-10 w-auto object-contain mix-blend-multiply grayscale hover:grayscale-0 transition-all opacity-80 hover:opacity-100" })
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-24 md:gap-32 px-12 md:px-16", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-32 md:w-48 flex items-center justify-center mix-blend-multiply", children: /* @__PURE__ */ jsxRuntimeExports.jsx("img", { src: "/logos/hikvision-v2.png", alt: "HIKVISION", className: "w-full h-auto object-contain scale-[1.25] transition-all duration-300 hover:animate-pulse hover:-translate-y-3 hover:scale-[1.35]" }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-32 md:w-48 flex items-center justify-center mix-blend-multiply", children: /* @__PURE__ */ jsxRuntimeExports.jsx("img", { src: "/logos/cpplus-v2.png", alt: "CP PLUS", className: "w-full h-auto object-contain scale-[1.35] transition-all duration-300 hover:animate-pulse hover:-translate-y-3 hover:scale-[1.45]" }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-32 md:w-48 flex items-center justify-center mix-blend-multiply", children: /* @__PURE__ */ jsxRuntimeExports.jsx("img", { src: "/logos/dahua-v2.png", alt: "dahua", className: "w-full h-auto object-contain scale-[1.25] transition-all duration-300 hover:animate-pulse hover:-translate-y-3 hover:scale-[1.35]" }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-32 md:w-48 flex items-center justify-center mix-blend-multiply", children: /* @__PURE__ */ jsxRuntimeExports.jsx("img", { src: "/logos/secureye-v2.png", alt: "SECUREYE", className: "w-full h-auto object-contain scale-[1.1] transition-all duration-300 hover:animate-pulse hover:-translate-y-3 hover:scale-[1.2]" }) })
           ] })
         ] }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute top-0 left-0 w-32 h-full bg-gradient-to-r from-white via-white/80 to-transparent pointer-events-none" }),
@@ -557,312 +867,17 @@ ${itemList}`;
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-[#2c3e50] text-white rounded-2xl p-4 text-center text-xs", children: /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-medium text-white/80", children: "Copyright © CCTV Installation Pro. 2022" }) })
         ] }) })
       ] })
-    ] })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(
+      BookingModal,
+      {
+        isOpen: isModalOpen,
+        onClose: () => setIsModalOpen(false),
+        serviceName: "CCTV & Surveillance",
+        selectedItems: modalItems
+      }
+    )
   ] });
-}
-function BookingModal({ isOpen, onClose, serviceName, selectedItems = [] }) {
-  const [step, setStep] = reactExports.useState("form");
-  const [bookingId, setBookingId] = reactExports.useState("");
-  const [loadingText, setLoadingText] = reactExports.useState("Submitting Booking...");
-  const today = /* @__PURE__ */ new Date();
-  const defaultDate = today.toLocaleDateString("en-CA");
-  const defaultTime = today.toTimeString().split(" ")[0].substring(0, 5);
-  const [formData, setFormData] = reactExports.useState({
-    fullName: "",
-    phone: "",
-    address: "",
-    date: defaultDate,
-    time: defaultTime,
-    notes: ""
-  });
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    console.log("Book button clicked");
-    if (!formData.fullName || !formData.phone || !formData.address || !formData.date || !formData.time) {
-      toast.error("Please fill in all required fields.");
-      return;
-    }
-    setStep("submitting");
-    try {
-      const generatedId = "HQ-" + Math.random().toString(36).substring(2, 8).toUpperCase();
-      setTimeout(() => setLoadingText("Saving Data..."), 1e3);
-      setTimeout(() => setLoadingText("Confirming Booking..."), 2e3);
-      const docRef = await addDoc(collection(db, "bookings"), {
-        bookingId: generatedId,
-        customerName: formData.fullName,
-        customerPhone: formData.phone,
-        customerAddress: formData.address,
-        serviceName,
-        selectedItems,
-        bookingDate: formData.date,
-        bookingTime: formData.time,
-        notes: formData.notes,
-        status: "Pending",
-        createdAt: serverTimestamp()
-      });
-      console.log("SUCCESS:", docRef.id);
-      setBookingId(generatedId);
-      setTimeout(() => {
-        setStep("success");
-      }, 3e3);
-    } catch (error) {
-      console.error("FIRESTORE ERROR:", error);
-      toast.error("Failed to create booking. Please try again.");
-      setStep("form");
-    }
-  };
-  const resetAndClose = () => {
-    setStep("form");
-    const today2 = /* @__PURE__ */ new Date();
-    setFormData({
-      fullName: "",
-      phone: "",
-      address: "",
-      date: today2.toLocaleDateString("en-CA"),
-      time: today2.toTimeString().split(" ")[0].substring(0, 5),
-      notes: ""
-    });
-    onClose();
-  };
-  if (!isOpen) return null;
-  return /* @__PURE__ */ jsxRuntimeExports.jsx(AnimatePresence, { children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
-    motion.div,
-    {
-      initial: { opacity: 0, scale: 0.9, y: 20 },
-      animate: { opacity: 1, scale: 1, y: 0 },
-      exit: { opacity: 0, scale: 0.9, y: 20 },
-      className: "bg-white rounded-[2rem] shadow-premium w-full max-w-lg overflow-hidden relative",
-      children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gradient-premium p-6 text-white relative", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "button",
-            {
-              onClick: resetAndClose,
-              className: "absolute top-4 right-4 h-8 w-8 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center transition-colors",
-              children: /* @__PURE__ */ jsxRuntimeExports.jsx(X, { className: "h-5 w-5" })
-            }
-          ),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-2xl font-bold tracking-tight", children: "Book Service" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-white/80 text-sm mt-1", children: serviceName })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-6", children: [
-          step === "form" && /* @__PURE__ */ jsxRuntimeExports.jsxs(
-            motion.form,
-            {
-              initial: { opacity: 0 },
-              animate: { opacity: 1 },
-              onSubmit: handleSubmit,
-              className: "space-y-4",
-              children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(User, { className: "absolute left-3 top-3 h-5 w-5 text-muted-foreground" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("input", { required: true, type: "text", name: "fullName", value: formData.fullName, onChange: handleChange, placeholder: "Full Name", className: "w-full bg-secondary/50 border border-border rounded-xl py-3 pl-10 pr-4 outline-none focus:border-brand focus:ring-1 focus:ring-brand transition-all" })
-                  ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(Phone, { className: "absolute left-3 top-3 h-5 w-5 text-muted-foreground" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("input", { required: true, type: "tel", name: "phone", value: formData.phone, onChange: handleChange, placeholder: "Mobile Number", className: "w-full bg-secondary/50 border border-border rounded-xl py-3 pl-10 pr-4 outline-none focus:border-brand focus:ring-1 focus:ring-brand transition-all" })
-                  ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(MapPin, { className: "absolute left-3 top-3 h-5 w-5 text-muted-foreground" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("input", { required: true, type: "text", name: "address", value: formData.address, onChange: handleChange, placeholder: "Complete Address", className: "w-full bg-secondary/50 border border-border rounded-xl py-3 pl-10 pr-4 outline-none focus:border-brand focus:ring-1 focus:ring-brand transition-all" })
-                  ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-3", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx(Calendar, { className: "absolute left-3 top-3 h-5 w-5 text-muted-foreground" }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("input", { required: true, type: "date", name: "date", value: formData.date, onChange: handleChange, className: "w-full bg-secondary/50 border border-border rounded-xl py-3 pl-10 pr-4 outline-none focus:border-brand focus:ring-1 focus:ring-brand transition-all text-sm" })
-                    ] }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx(Clock, { className: "absolute left-3 top-3 h-5 w-5 text-muted-foreground" }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("input", { required: true, type: "time", name: "time", value: formData.time, onChange: handleChange, className: "w-full bg-secondary/50 border border-border rounded-xl py-3 pl-10 pr-4 outline-none focus:border-brand focus:ring-1 focus:ring-brand transition-all text-sm" })
-                    ] })
-                  ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(FileText, { className: "absolute left-3 top-3 h-5 w-5 text-muted-foreground" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("textarea", { name: "notes", value: formData.notes, onChange: handleChange, placeholder: "Additional Notes (Optional)", rows: 3, className: "w-full bg-secondary/50 border border-border rounded-xl py-3 pl-10 pr-4 outline-none focus:border-brand focus:ring-1 focus:ring-brand transition-all resize-none" })
-                  ] })
-                ] }),
-                selectedItems.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-brand-soft/30 p-4 rounded-xl border border-brand/20 text-sm", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-bold text-brand", children: "Selected:" }),
-                  " ",
-                  selectedItems.join(", ")
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  motion.button,
-                  {
-                    whileHover: { scale: 1.02 },
-                    whileTap: { scale: 0.98 },
-                    type: "submit",
-                    className: "w-full bg-slate-900 text-white font-bold py-4 rounded-xl hover:bg-slate-800 transition-colors shadow-md mt-4",
-                    children: "Confirm Booking"
-                  }
-                )
-              ]
-            }
-          ),
-          step === "submitting" && /* @__PURE__ */ jsxRuntimeExports.jsxs(
-            motion.div,
-            {
-              initial: { opacity: 0, y: 20 },
-              animate: { opacity: 1, y: 0 },
-              exit: { opacity: 0, scale: 0.9 },
-              className: "flex flex-col items-center justify-center py-16 space-y-8",
-              children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative w-32 h-32 flex items-center justify-center", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    motion.div,
-                    {
-                      animate: { scale: [1, 1.5, 1], opacity: [0.2, 0.6, 0.2] },
-                      transition: { repeat: Infinity, duration: 2, ease: "easeInOut" },
-                      className: "absolute inset-0 bg-brand/30 rounded-full blur-2xl"
-                    }
-                  ),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    motion.div,
-                    {
-                      animate: { rotate: 360 },
-                      transition: { repeat: Infinity, duration: 4, ease: "linear" },
-                      className: "absolute inset-0 border-[3px] border-dashed border-brand/30 rounded-full"
-                    }
-                  ),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    motion.div,
-                    {
-                      animate: { rotate: -360 },
-                      transition: { repeat: Infinity, duration: 2.5, ease: "linear" },
-                      className: "absolute inset-2 border-[4px] border-transparent border-t-brand border-l-brand rounded-full"
-                    }
-                  ),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    motion.div,
-                    {
-                      animate: { scale: [1, 1.1, 1] },
-                      transition: { repeat: Infinity, duration: 1 },
-                      className: "bg-white/90 backdrop-blur rounded-full p-4 shadow-xl z-10 border border-white/50",
-                      children: /* @__PURE__ */ jsxRuntimeExports.jsx(LoaderCircle, { className: "h-8 w-8 text-brand animate-spin" })
-                    }
-                  )
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-center space-y-2", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    motion.h3,
-                    {
-                      initial: { opacity: 0, y: 10 },
-                      animate: { opacity: 1, y: 0 },
-                      className: "text-2xl font-black text-slate-800 tracking-tight",
-                      children: loadingText
-                    },
-                    loadingText
-                  ),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-muted-foreground font-medium", children: "Please wait while we secure your slot..." })
-                ] })
-              ]
-            }
-          ),
-          step === "success" && /* @__PURE__ */ jsxRuntimeExports.jsxs(
-            motion.div,
-            {
-              initial: { opacity: 0, scale: 0.95 },
-              animate: { opacity: 1, scale: 1 },
-              className: "flex flex-col items-center justify-center py-8 text-center relative",
-              children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  motion.div,
-                  {
-                    initial: { opacity: 0, scale: 0 },
-                    animate: { opacity: 1, scale: 1 },
-                    transition: { delay: 0.2 },
-                    className: "absolute top-10 w-64 h-64 bg-success/10 blur-[60px] rounded-full -z-10"
-                  }
-                ),
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  motion.div,
-                  {
-                    initial: { scale: 0, rotate: -180 },
-                    animate: { scale: 1, rotate: 0 },
-                    transition: { type: "spring", bounce: 0.6, duration: 0.8 },
-                    className: "w-24 h-24 bg-gradient-to-tr from-success to-emerald-600 rounded-[2rem] flex items-center justify-center mb-8 shadow-2xl shadow-success/30 transform rotate-3",
-                    children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-                      motion.div,
-                      {
-                        initial: { scale: 0 },
-                        animate: { scale: 1 },
-                        transition: { delay: 0.5, type: "spring", bounce: 0.5 },
-                        children: /* @__PURE__ */ jsxRuntimeExports.jsx(CircleCheck, { className: "h-12 w-12 text-white" })
-                      }
-                    )
-                  }
-                ),
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  motion.h3,
-                  {
-                    initial: { opacity: 0, y: 10 },
-                    animate: { opacity: 1, y: 0 },
-                    transition: { delay: 0.3 },
-                    className: "text-3xl font-black mb-3 bg-gradient-to-r from-success to-emerald-600 bg-clip-text text-transparent",
-                    children: "Booking Confirmed!"
-                  }
-                ),
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  motion.p,
-                  {
-                    initial: { opacity: 0 },
-                    animate: { opacity: 1 },
-                    transition: { delay: 0.4 },
-                    className: "text-slate-600 mb-8 font-medium text-lg px-4",
-                    children: "Your request is secured. Our AI agent will contact you shortly!"
-                  }
-                ),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                  motion.div,
-                  {
-                    initial: { opacity: 0, y: 20 },
-                    animate: { opacity: 1, y: 0 },
-                    transition: { delay: 0.5 },
-                    className: "w-full bg-white/50 backdrop-blur-md border border-slate-200/60 rounded-[2rem] p-6 mb-8 text-left space-y-4 shadow-xl shadow-slate-200/20",
-                    children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center border-b border-slate-100 pb-4", children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-slate-500 font-medium", children: "Tracking ID" }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-black text-brand bg-brand/10 px-3 py-1 rounded-lg text-sm tracking-wider", children: bookingId })
-                      ] }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center border-b border-slate-100 pb-4", children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-slate-500 font-medium", children: "Service" }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-bold text-slate-800 text-sm max-w-[60%] text-right", children: serviceName })
-                      ] }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center", children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-slate-500 font-medium", children: "Schedule" }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "font-bold text-slate-800 text-sm text-right bg-slate-100 px-3 py-1 rounded-lg", children: [
-                          formData.date,
-                          " at ",
-                          formData.time
-                        ] })
-                      ] })
-                    ]
-                  }
-                ),
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  motion.button,
-                  {
-                    whileHover: { scale: 1.05, y: -2 },
-                    whileTap: { scale: 0.95 },
-                    initial: { opacity: 0 },
-                    animate: { opacity: 1 },
-                    transition: { delay: 0.7 },
-                    onClick: resetAndClose,
-                    className: "w-full bg-slate-900 text-white font-black text-lg py-5 rounded-2xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.5)] hover:bg-slate-800 transition-all",
-                    children: "Done & Close"
-                  }
-                )
-              ]
-            }
-          )
-        ] })
-      ]
-    }
-  ) }) });
 }
 function HomeAutomationDetails() {
   const [selectedItems, setSelectedItems] = reactExports.useState([]);

@@ -1,7 +1,7 @@
 import { j as jsxRuntimeExports } from "../_libs/react.mjs";
 import { L as Link } from "../_libs/tanstack__react-router.mjs";
-import { S as SiteLayout } from "./SiteLayout-Tt6sMPU4.mjs";
-import { c as useLocation } from "./router-Fi2taqLv.mjs";
+import { S as SiteLayout } from "./SiteLayout-BaAh-5Ug.mjs";
+import { c as useLocation } from "./router-Cprs8nsm.mjs";
 import "../_libs/firebase.mjs";
 import "../_libs/firebase__analytics.mjs";
 import "../_libs/firebase__auth.mjs";
@@ -10,7 +10,7 @@ import "../_libs/firebase__logger.mjs";
 import "../_libs/firebase__firestore.mjs";
 import "../_libs/sonner.mjs";
 import { m as motion } from "../_libs/framer-motion.mjs";
-import { k as Sparkles, l as Search, m as ShieldCheck, n as Star, o as Clock, j as ArrowRight, p as CirclePlay } from "../_libs/lucide-react.mjs";
+import { k as Sparkles, l as ShieldCheck, m as Star, n as Clock, j as ArrowRight, o as CirclePlay } from "../_libs/lucide-react.mjs";
 import "../_libs/tanstack__router-core.mjs";
 import "../_libs/tanstack__history.mjs";
 import "../_libs/cookie-es.mjs";
@@ -247,23 +247,6 @@ function Home() {
           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gradient", children: "delivered perfectly." })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-8 text-xl text-muted-foreground leading-relaxed max-w-2xl mx-auto font-medium", children: "Book verified experts for Digital Marketing, App Development, and Smart Home solutions. Enterprise standards, upfront pricing." }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(motion.div, { initial: {
-          opacity: 0,
-          y: 20
-        }, animate: {
-          opacity: 1,
-          y: 0
-        }, transition: {
-          delay: 0.4
-        }, className: "mt-12 mx-auto max-w-2xl", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "glass rounded-full p-2 flex items-center shadow-premium border border-white/40", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "pl-6 pr-4", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Search, { className: "h-6 w-6 text-muted-foreground" }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "text", placeholder: "What do you need help with today?", className: "flex-1 bg-transparent border-none outline-none text-lg text-foreground placeholder:text-muted-foreground" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(motion.button, { whileHover: {
-            scale: 1.02
-          }, whileTap: {
-            scale: 0.98
-          }, className: "bg-gradient-premium text-white px-8 py-4 rounded-full font-bold text-lg shadow-lg hover:shadow-xl transition-all", children: "Search" })
-        ] }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs(motion.div, { initial: {
           opacity: 0
         }, animate: {

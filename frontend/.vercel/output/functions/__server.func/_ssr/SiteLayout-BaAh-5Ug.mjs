@@ -1,8 +1,8 @@
 import { j as jsxRuntimeExports, r as reactExports } from "../_libs/react.mjs";
 import { L as Link } from "../_libs/tanstack__react-router.mjs";
-import { b as useAuth, u as useCart, c as useLocation } from "./router-Fi2taqLv.mjs";
+import { b as useAuth, u as useCart, c as useLocation } from "./router-Cprs8nsm.mjs";
 import { m as motion, A as AnimatePresence } from "../_libs/framer-motion.mjs";
-import { _ as MapPin, l as Search, i as ShoppingBag, Y as User, a1 as Instagram, a2 as Facebook, a3 as Twitter, a4 as Youtube, a5 as Apple, S as Smartphone } from "../_libs/lucide-react.mjs";
+import { _ as MapPin, r as Search, i as ShoppingBag, Y as User, a1 as Instagram, a2 as Facebook, a3 as Twitter, a4 as Youtube, a5 as Apple, S as Smartphone } from "../_libs/lucide-react.mjs";
 const nav = [
   { to: "/services", label: "Services" },
   { to: "/about", label: "About" }
@@ -36,7 +36,7 @@ function SiteHeader() {
       transition: { type: "spring", stiffness: 300, damping: 30 },
       className: `sticky top-0 z-50 transition-all duration-300 ${isScrolled ? "glass shadow-sm border-b border-white/20 py-2" : "bg-transparent py-4"}`,
       children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mx-auto flex h-16 max-w-7xl items-center gap-6 px-4 sm:px-6", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(Link, { to: "/", className: "flex items-center gap-2 group", children: /* @__PURE__ */ jsxRuntimeExports.jsx("img", { src: "/logo.png", alt: "Vendor99 Logo", className: "h-12 md:h-16 w-auto animate-float group-hover:scale-110 transition-all duration-500 drop-shadow-sm" }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(Link, { to: "/", className: "flex items-center gap-2 group", children: /* @__PURE__ */ jsxRuntimeExports.jsx("img", { src: "/logo.png", alt: "Vendor99 Logo", className: "h-20 md:h-28 w-auto animate-float group-hover:scale-110 transition-all duration-500 drop-shadow-sm" }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs(
           motion.button,
           {
@@ -105,27 +105,17 @@ function SiteHeader() {
             }
           ) })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("nav", { className: "ml-auto hidden md:flex items-center gap-2", children: [
-          nav.map((n) => /* @__PURE__ */ jsxRuntimeExports.jsx(
-            Link,
-            {
-              to: n.to,
-              activeProps: { className: "text-brand bg-brand-soft font-semibold" },
-              inactiveProps: { className: "text-foreground/70 hover:bg-secondary/50" },
-              className: "px-4 py-2 text-sm font-medium transition-all rounded-full",
-              children: n.label
-            },
-            n.to
-          )),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            Link,
-            {
-              to: "/admin",
-              className: "ml-2 px-4 py-2 text-sm font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 transition-colors rounded-full border border-slate-200",
-              children: "Admin Login"
-            }
-          )
-        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("nav", { className: "ml-auto hidden md:flex items-center gap-2", children: nav.map((n) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+          Link,
+          {
+            to: n.to,
+            activeProps: { className: "text-brand bg-brand-soft font-semibold" },
+            inactiveProps: { className: "text-foreground/70 hover:bg-secondary/50" },
+            className: "px-4 py-2 text-sm font-medium transition-all rounded-full",
+            children: n.label
+          },
+          n.to
+        )) }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-3", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(motion.div, { whileHover: { scale: 1.1 }, whileTap: { scale: 0.9 }, children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
             Link,
@@ -227,7 +217,7 @@ function SiteFooter() {
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mx-auto max-w-7xl px-6 py-20", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-10 md:grid-cols-5", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "md:col-span-1", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center gap-2 group", children: /* @__PURE__ */ jsxRuntimeExports.jsx("img", { src: "/logo.png", alt: "Vendor99 Logo", className: "h-14 md:h-20 w-auto animate-float group-hover:scale-110 transition-all duration-500 bg-white rounded-xl px-3 py-2 shadow-lg" }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center gap-2 group", children: /* @__PURE__ */ jsxRuntimeExports.jsx("img", { src: "/logo.png", alt: "Vendor99 Logo", className: "h-20 md:h-28 w-auto animate-float group-hover:scale-110 transition-all duration-500 bg-white rounded-xl px-3 py-2 shadow-lg" }) }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-6 text-sm text-slate-400 leading-relaxed max-w-xs", children: "Premium B2B & Home tech services, on demand. Empowering modern living." }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-8 flex gap-4 text-slate-400", children: [Instagram, Facebook, Twitter, Youtube].map((Icon, i) => /* @__PURE__ */ jsxRuntimeExports.jsx(
                 motion.a,
