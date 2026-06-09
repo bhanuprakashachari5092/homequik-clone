@@ -4,6 +4,9 @@ import { X, User, Phone, MapPin, Calendar, Clock, CheckCircle2, Loader2, FileTex
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { toast } from "sonner";
+import { useAuth } from "@/context/AuthContext";
+import { useNavigate } from "@tanstack/react-router";
+import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 
 interface BookingModalProps {
   isOpen: boolean;
@@ -13,6 +16,8 @@ interface BookingModalProps {
 }
 
 export function BookingModal({ isOpen, onClose, serviceName, selectedItems = [] }: BookingModalProps) {
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [step, setStep] = useState<"form" | "submitting" | "success">("form");
   const [bookingId, setBookingId] = useState("");
   const [loadingText, setLoadingText] = useState("Submitting Booking...");
@@ -38,6 +43,13 @@ export function BookingModal({ isOpen, onClose, serviceName, selectedItems = [] 
     e.preventDefault();
     console.log("Book button clicked");
     
+    if (!user) {
+      toast.error("Please login to proceed with booking.");
+      onClose();
+      navigate({ to: "/login" });
+      return;
+    }
+
     if (!formData.fullName || !formData.phone || !formData.address || !formData.date || !formData.time) {
       toast.error("Please fill in all required fields.");
       return;
@@ -68,9 +80,26 @@ export function BookingModal({ isOpen, onClose, serviceName, selectedItems = [] 
       console.log("SUCCESS:", docRef.id);
 
       setBookingId(generatedId);
+      
+      // Navigate to WhatsApp after animation
       setTimeout(() => {
-        setStep("success");
-      }, 3000); // Artificial delay to show the nice loading sequence
+        let text = `Hello Vendor99,\n\n*New Booking Request:*\n`;
+        text += `- Service: ${serviceName}\n`;
+        if (selectedItems && selectedItems.length > 0) {
+            text += `- Items: ${selectedItems.join(", ")}\n`;
+        }
+        text += `\n*Customer Details:*\n`;
+        text += `- Name: ${formData.fullName}\n`;
+        text += `- Phone: ${formData.phone}\n`;
+        text += `- Address: ${formData.address}\n`;
+        text += `- Schedule: ${formData.date} at ${formData.time}\n`;
+        if (formData.notes) text += `- Notes: ${formData.notes}\n`;
+
+        const WHATSAPP_NUMBER = "919141052539";
+        window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(text)}`, '_blank');
+        
+        resetAndClose();
+      }, 3500); 
     } catch (error) {
       console.error("FIRESTORE ERROR:", error);
       toast.error("Failed to create booking. Please try again.");
@@ -171,29 +200,12 @@ export function BookingModal({ isOpen, onClose, serviceName, selectedItems = [] 
                 exit={{ opacity: 0, scale: 0.9 }}
                 className="flex flex-col items-center justify-center py-16 space-y-8"
               >
-                <div className="relative w-32 h-32 flex items-center justify-center">
-                  <motion.div 
-                    animate={{ scale: [1, 1.5, 1], opacity: [0.2, 0.6, 0.2] }} 
-                    transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }} 
-                    className="absolute inset-0 bg-brand/30 rounded-full blur-2xl"
+                <div className="w-48 h-48 flex items-center justify-center">
+                  <DotLottieReact
+                    src="https://lottie.host/1b2ec91d-0683-4a1e-abda-07f152d13b78/W48qXw9YtF.lottie"
+                    loop
+                    autoplay
                   />
-                  <motion.div 
-                    animate={{ rotate: 360 }} 
-                    transition={{ repeat: Infinity, duration: 4, ease: "linear" }} 
-                    className="absolute inset-0 border-[3px] border-dashed border-brand/30 rounded-full"
-                  />
-                  <motion.div 
-                    animate={{ rotate: -360 }} 
-                    transition={{ repeat: Infinity, duration: 2.5, ease: "linear" }} 
-                    className="absolute inset-2 border-[4px] border-transparent border-t-brand border-l-brand rounded-full"
-                  />
-                  <motion.div 
-                    animate={{ scale: [1, 1.1, 1] }} 
-                    transition={{ repeat: Infinity, duration: 1 }}
-                    className="bg-white/90 backdrop-blur rounded-full p-4 shadow-xl z-10 border border-white/50"
-                  >
-                     <Loader2 className="h-8 w-8 text-brand animate-spin" />
-                  </motion.div>
                 </div>
                 <div className="text-center space-y-2">
                   <motion.h3 

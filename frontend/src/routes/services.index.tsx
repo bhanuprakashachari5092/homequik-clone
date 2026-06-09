@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { createFileRoute, Link, useLocation as useRouteLocation } from "@tanstack/react-router";
+import { createFileRoute, Link, useLocation as useRouteLocation, useNavigate } from "@tanstack/react-router";
 import { SiteLayout } from "@/components/SiteLayout";
 import { Star, ArrowLeft, ArrowRight } from "lucide-react";
 import { useCart } from "@/context/CartContext";
@@ -32,6 +32,7 @@ function ServicesPage() {
   const { addToCart } = useCart();
   const { location } = useLocation();
   const routeLocation = useRouteLocation();
+  const navigate = useNavigate();
   const [activeGroup, setActiveGroup] = useState<any | null>(null);
 
   useEffect(() => {
@@ -200,7 +201,7 @@ function ServicesPage() {
                           whileTap={{ scale: 0.95 }}
                           onClick={(e) => {
                             e.preventDefault();
-                            handleAddToCart(item);
+                            navigate({ to: "/services/$serviceId", params: { serviceId: item.id } });
                           }}
                           className="rounded-xl bg-gradient-premium px-6 py-2.5 text-sm font-bold text-white shadow-md hover:shadow-lg transition-all z-10 relative"
                         >

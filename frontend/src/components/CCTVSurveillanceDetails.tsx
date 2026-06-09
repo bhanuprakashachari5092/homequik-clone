@@ -1,11 +1,14 @@
 import { useState } from "react";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { 
   ArrowLeft, ShieldCheck, Clock, 
   Video, Phone, CheckCircle2, Server, Search, CheckSquare, Square,
   Wrench, ShoppingCart, Check, Shield, Award, Settings
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useAuth } from "@/context/AuthContext";
+import { toast } from "sonner";
+import { BookingModal } from "@/components/BookingModal";
 
 const cameraPriceList = [
   {
@@ -100,9 +103,14 @@ type TabType = "installation" | "repair" | "buy" | "accessories";
 
 export function CCTVSurveillanceDetails() {
   const WHATSAPP_NUMBER = "919141052539"; 
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<TabType>("installation");
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [searchAccessory, setSearchAccessory] = useState("");
+  
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalItems, setModalItems] = useState<string[]>([]);
   
   const toggleSelection = (serviceName: string) => {
     setSelectedItems(prev => 
@@ -113,16 +121,21 @@ export function CCTVSurveillanceDetails() {
   };
 
   const handleWhatsApp = (customText?: string) => {
-    let text = "";
-    if (customText) {
-      text = `Hello Vendor99, I would like to inquire about: *${customText}* (CCTV & Surveillance)`;
-    } else if (selectedItems.length > 0) {
-      const itemList = selectedItems.map(item => `- ${item}`).join('\n');
-      text = `Hello Vendor99, I would like to book the following (CCTV & Surveillance):\n\n${itemList}`;
-    } else {
-      text = `Hello Vendor99, I need a CCTV & Surveillance service.`;
+    if (!user) {
+      toast.error("Please login to proceed with booking.");
+      navigate({ to: "/login" });
+      return;
     }
-    window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(text)}`, '_blank');
+    
+    if (customText) {
+      setModalItems([customText]);
+    } else if (selectedItems.length > 0) {
+      setModalItems(selectedItems);
+    } else {
+      setModalItems(["General CCTV & Surveillance Service"]);
+    }
+    
+    setIsModalOpen(true);
   };
 
   const filteredAccessories = accessories.filter(a => a.name.toLowerCase().includes(searchAccessory.toLowerCase()));
@@ -169,6 +182,68 @@ export function CCTVSurveillanceDetails() {
       {/* Main Content Area */}
       <div className="mx-auto max-w-7xl px-4 sm:px-6 md:px-8 py-8 md:py-12">
         
+        {/* Collaborations Marquee */}
+        <div className="mb-8 bg-white rounded-2xl shadow-sm border border-border p-6 overflow-hidden relative">
+          <div className="flex items-center gap-4 mb-6 justify-center">
+             <div className="h-px bg-border flex-1 max-w-[100px]"></div>
+             <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest text-center">In Proud Collaboration With</p>
+             <div className="h-px bg-border flex-1 max-w-[100px]"></div>
+          </div>
+          <div className="flex w-full overflow-hidden relative group">
+             {/* We use 3 blocks of the same content to create the seamless infinite scroll */}
+             <div className="flex w-max animate-marquee-reverse whitespace-nowrap group-hover:[animation-play-state:paused] transition-all duration-300">
+                {/* Block 1 */}
+                <div className="flex items-center gap-24 md:gap-32 px-12 md:px-16">
+                   <div className="w-32 md:w-48 flex items-center justify-center mix-blend-multiply">
+                      <img src="/logos/hikvision-v2.png" alt="HIKVISION" className="w-full h-auto object-contain scale-[1.25] transition-all duration-300 hover:animate-pulse hover:-translate-y-3 hover:scale-[1.35]" />
+                   </div>
+                   <div className="w-32 md:w-48 flex items-center justify-center mix-blend-multiply">
+                      <img src="/logos/cpplus-v2.png" alt="CP PLUS" className="w-full h-auto object-contain scale-[1.35] transition-all duration-300 hover:animate-pulse hover:-translate-y-3 hover:scale-[1.45]" />
+                   </div>
+                   <div className="w-32 md:w-48 flex items-center justify-center mix-blend-multiply">
+                      <img src="/logos/dahua-v2.png" alt="dahua" className="w-full h-auto object-contain scale-[1.25] transition-all duration-300 hover:animate-pulse hover:-translate-y-3 hover:scale-[1.35]" />
+                   </div>
+                   <div className="w-32 md:w-48 flex items-center justify-center mix-blend-multiply">
+                      <img src="/logos/secureye-v2.png" alt="SECUREYE" className="w-full h-auto object-contain scale-[1.1] transition-all duration-300 hover:animate-pulse hover:-translate-y-3 hover:scale-[1.2]" />
+                   </div>
+                </div>
+                {/* Block 2 */}
+                <div className="flex items-center gap-24 md:gap-32 px-12 md:px-16">
+                   <div className="w-32 md:w-48 flex items-center justify-center mix-blend-multiply">
+                      <img src="/logos/hikvision-v2.png" alt="HIKVISION" className="w-full h-auto object-contain scale-[1.25] transition-all duration-300 hover:animate-pulse hover:-translate-y-3 hover:scale-[1.35]" />
+                   </div>
+                   <div className="w-32 md:w-48 flex items-center justify-center mix-blend-multiply">
+                      <img src="/logos/cpplus-v2.png" alt="CP PLUS" className="w-full h-auto object-contain scale-[1.35] transition-all duration-300 hover:animate-pulse hover:-translate-y-3 hover:scale-[1.45]" />
+                   </div>
+                   <div className="w-32 md:w-48 flex items-center justify-center mix-blend-multiply">
+                      <img src="/logos/dahua-v2.png" alt="dahua" className="w-full h-auto object-contain scale-[1.25] transition-all duration-300 hover:animate-pulse hover:-translate-y-3 hover:scale-[1.35]" />
+                   </div>
+                   <div className="w-32 md:w-48 flex items-center justify-center mix-blend-multiply">
+                      <img src="/logos/secureye-v2.png" alt="SECUREYE" className="w-full h-auto object-contain scale-[1.1] transition-all duration-300 hover:animate-pulse hover:-translate-y-3 hover:scale-[1.2]" />
+                   </div>
+                </div>
+                {/* Block 3 */}
+                <div className="flex items-center gap-24 md:gap-32 px-12 md:px-16">
+                   <div className="w-32 md:w-48 flex items-center justify-center mix-blend-multiply">
+                      <img src="/logos/hikvision-v2.png" alt="HIKVISION" className="w-full h-auto object-contain scale-[1.25] transition-all duration-300 hover:animate-pulse hover:-translate-y-3 hover:scale-[1.35]" />
+                   </div>
+                   <div className="w-32 md:w-48 flex items-center justify-center mix-blend-multiply">
+                      <img src="/logos/cpplus-v2.png" alt="CP PLUS" className="w-full h-auto object-contain scale-[1.35] transition-all duration-300 hover:animate-pulse hover:-translate-y-3 hover:scale-[1.45]" />
+                   </div>
+                   <div className="w-32 md:w-48 flex items-center justify-center mix-blend-multiply">
+                      <img src="/logos/dahua-v2.png" alt="dahua" className="w-full h-auto object-contain scale-[1.25] transition-all duration-300 hover:animate-pulse hover:-translate-y-3 hover:scale-[1.35]" />
+                   </div>
+                   <div className="w-32 md:w-48 flex items-center justify-center mix-blend-multiply">
+                      <img src="/logos/secureye-v2.png" alt="SECUREYE" className="w-full h-auto object-contain scale-[1.1] transition-all duration-300 hover:animate-pulse hover:-translate-y-3 hover:scale-[1.2]" />
+                   </div>
+                </div>
+             </div>
+          </div>
+          {/* Gradients to fade edges */}
+          <div className="absolute top-0 left-0 w-32 h-full bg-gradient-to-r from-white via-white/80 to-transparent pointer-events-none"></div>
+          <div className="absolute top-0 right-0 w-32 h-full bg-gradient-to-l from-white via-white/80 to-transparent pointer-events-none"></div>
+        </div>
+
         {/* Navigation Tabs (Hero Area) */}
         <div className="bg-[#1e293b] rounded-[2rem] p-8 md:p-12 mb-8 shadow-xl">
            <h2 className="text-center text-2xl md:text-3xl font-extrabold text-white mb-8 tracking-tight">Explore Category: CCTV</h2>
@@ -522,6 +597,13 @@ export function CCTVSurveillanceDetails() {
 
         </div>
       </div>
+      
+      <BookingModal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+        serviceName="CCTV & Surveillance" 
+        selectedItems={modalItems} 
+      />
     </div>
   );
 }

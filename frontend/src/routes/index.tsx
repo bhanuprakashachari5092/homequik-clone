@@ -130,31 +130,7 @@ function Home() {
               Book verified experts for Digital Marketing, App Development, and Smart Home solutions. Enterprise standards, upfront pricing.
             </p>
 
-            {/* Interactive Search Bar */}
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4 }}
-              className="mt-12 mx-auto max-w-2xl"
-            >
-              <div className="glass rounded-full p-2 flex items-center shadow-premium border border-white/40">
-                <div className="pl-6 pr-4">
-                  <Search className="h-6 w-6 text-muted-foreground" />
-                </div>
-                <input
-                  type="text"
-                  placeholder="What do you need help with today?"
-                  className="flex-1 bg-transparent border-none outline-none text-lg text-foreground placeholder:text-muted-foreground"
-                />
-                <motion.button 
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  className="bg-gradient-premium text-white px-8 py-4 rounded-full font-bold text-lg shadow-lg hover:shadow-xl transition-all"
-                >
-                  Search
-                </motion.button>
-              </div>
-            </motion.div>
+            {/* Interactive Search Bar Removed */}
 
             {/* Trust indicators */}
             <motion.div 

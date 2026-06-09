@@ -48,7 +48,7 @@ export function SiteHeader() {
     >
       <div className="mx-auto flex h-16 max-w-7xl items-center gap-6 px-4 sm:px-6">
         <Link to="/" className="flex items-center gap-2 group">
-          <img src="/logo.png" alt="Vendor99 Logo" className="h-12 md:h-16 w-auto animate-float group-hover:scale-110 transition-all duration-500 drop-shadow-sm" />
+          <img src="/logo.png" alt="Vendor99 Logo" className="h-20 md:h-28 w-auto animate-float group-hover:scale-110 transition-all duration-500 drop-shadow-sm" />
         </Link>
 
         <motion.button 
@@ -126,12 +126,6 @@ export function SiteHeader() {
               {n.label}
             </Link>
           ))}
-          <Link
-            to="/admin"
-            className="ml-2 px-4 py-2 text-sm font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 transition-colors rounded-full border border-slate-200"
-          >
-            Admin Login
-          </Link>
         </nav>
 
         <div className="flex items-center gap-3">

@@ -54,7 +54,7 @@ export function SiteFooter() {
         <div className="grid gap-10 md:grid-cols-5">
           <div className="md:col-span-1">
             <div className="flex items-center gap-2 group">
-              <img src="/logo.png" alt="Vendor99 Logo" className="h-14 md:h-20 w-auto animate-float group-hover:scale-110 transition-all duration-500 bg-white rounded-xl px-3 py-2 shadow-lg" />
+              <img src="/logo.png" alt="Vendor99 Logo" className="h-20 md:h-28 w-auto animate-float group-hover:scale-110 transition-all duration-500 bg-white rounded-xl px-3 py-2 shadow-lg" />
             </div>
             <p className="mt-6 text-sm text-slate-400 leading-relaxed max-w-xs">
               Premium B2B & Home tech services, on demand. Empowering modern living.
