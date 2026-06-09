@@ -32,7 +32,7 @@ export function PaintingDetails() {
       {/* Header */}
       <header className="bg-foreground text-background py-10 px-6">
         <div className="mx-auto max-w-5xl">
-          <Link to="/services" className="inline-flex items-center text-sm font-medium text-background/70 hover:text-background transition-colors mb-6">
+          <Link to="/" className="inline-flex items-center text-sm font-medium text-background/70 hover:text-background transition-colors mb-6">
             <ArrowLeft className="mr-2 h-4 w-4" /> Back to Services
           </Link>
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
@@ -53,7 +53,7 @@ export function PaintingDetails() {
       <section className="border-b border-border bg-card">
         <div className="mx-auto max-w-5xl grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-border">
           <div className="p-6 flex items-start gap-4">
-            <div className="bg-blue-100 dark:bg-blue-900/30 p-3 rounded-full text-blue-600 dark:text-blue-400">
+            <div className="bg-red-100 dark:bg-red-900/30 p-3 rounded-full text-red-600 dark:text-red-400">
               <Target className="h-6 w-6" />
             </div>
             <div>
@@ -168,11 +168,11 @@ export function PaintingDetails() {
             </div>
 
             {/* Note */}
-            <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/30 rounded-2xl p-6 shadow-sm flex gap-4">
-              <Settings className="h-6 w-6 text-blue-500 shrink-0" />
+            <div className="bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/30 rounded-2xl p-6 shadow-sm flex gap-4">
+              <Settings className="h-6 w-6 text-red-500 shrink-0" />
               <div>
-                <h3 className="font-bold text-blue-900 dark:text-blue-400">Area Calculation Protocol</h3>
-                <p className="text-sm text-blue-800 dark:text-blue-500 mt-2">
+                <h3 className="font-bold text-red-900 dark:text-red-400">Area Calculation Protocol</h3>
+                <p className="text-sm text-red-800 dark:text-red-500 mt-2">
                   Final billing values are tied to accurate carpet and wall surface data extracted via on-site laser measurements. 
                   <br/><br/>
                   <strong>Standardized Formulation:</strong><br/>

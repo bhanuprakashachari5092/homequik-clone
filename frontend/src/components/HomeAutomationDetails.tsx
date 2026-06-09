@@ -32,7 +32,7 @@ export function HomeAutomationDetails() {
       {/* Header */}
       <header className="bg-foreground text-background py-10 px-6">
         <div className="mx-auto max-w-5xl">
-          <Link to="/services" className="inline-flex items-center text-sm font-medium text-background/70 hover:text-background transition-colors mb-6">
+          <Link to="/" className="inline-flex items-center text-sm font-medium text-background/70 hover:text-background transition-colors mb-6">
             <ArrowLeft className="mr-2 h-4 w-4" /> Back to Services
           </Link>
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
@@ -71,7 +71,7 @@ export function HomeAutomationDetails() {
             </div>
           </div>
           <div className="p-6 flex items-start gap-4">
-            <div className="bg-blue-100 dark:bg-blue-900/30 p-3 rounded-full text-blue-600 dark:text-blue-400">
+            <div className="bg-red-100 dark:bg-red-900/30 p-3 rounded-full text-red-600 dark:text-red-400">
               <ShieldCheck className="h-6 w-6" />
             </div>
             <div>

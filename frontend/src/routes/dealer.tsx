@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { SiteLayout } from "@/components/SiteLayout";
 import { MapPin, Search, Star, ArrowLeft } from "lucide-react";
+import { useState, useEffect } from "react";
 
 export const Route = createFileRoute("/dealer")({
   head: () => ({
@@ -12,7 +13,28 @@ export const Route = createFileRoute("/dealer")({
   component: DealerPage,
 });
 
+const initialDealers = [
+  { id: "DLR-101", name: "TechVision Security", contact: "John Doe", phone: "+91 9876543210", city: "Bangalore", status: "Active" },
+  { id: "DLR-102", name: "SecureHomes Systems", contact: "Priya Patel", phone: "+91 9123456780", city: "Mumbai", status: "Pending" },
+  { id: "DLR-103", name: "ElectroTech Installations", contact: "Rahul Sharma", phone: "+91 9988776655", city: "Delhi", status: "Active" },
+  { id: "DLR-104", name: "SafeGuard Solutions", contact: "Amit Kumar", phone: "+91 9876512345", city: "Hyderabad", status: "Inactive" },
+];
+
 function DealerPage() {
+  const [dealers, setDealers] = useState<any[]>([]);
+
+  useEffect(() => {
+    const stored = localStorage.getItem("vendor99_dealers");
+    if (stored) {
+      setDealers(JSON.parse(stored));
+    } else {
+      setDealers(initialDealers);
+      localStorage.setItem("vendor99_dealers", JSON.stringify(initialDealers));
+    }
+  }, []);
+
+  const activeDealers = dealers.filter(d => d.status === "Active");
+
   return (
     <SiteLayout>
       <div className="bg-[#f0f4f8] min-h-screen py-10 font-sans">
@@ -46,8 +68,8 @@ function DealerPage() {
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[1, 2, 3, 4, 5, 6].map((i) => (
-              <div key={i} className="bg-white rounded-2xl border border-border/50 p-6 shadow-sm hover:shadow-md transition-all group">
+            {activeDealers.map((dealer) => (
+              <div key={dealer.id} className="bg-white rounded-2xl border border-border/50 p-6 shadow-sm hover:shadow-md transition-all group">
                 <div className="flex items-start justify-between mb-4">
                   <div className="bg-brand/10 p-3 rounded-xl group-hover:bg-brand group-hover:text-white transition-colors">
                     <MapPin className="h-6 w-6 text-brand group-hover:text-white" />
@@ -56,17 +78,24 @@ function DealerPage() {
                     <Star className="h-3 w-3 fill-current" /> 4.9
                   </div>
                 </div>
-                <h3 className="font-bold text-xl text-slate-800 mb-1">TechVision Security</h3>
+                <h3 className="font-bold text-xl text-slate-800 mb-1">{dealer.name}</h3>
                 <p className="text-sm text-slate-500 mb-4">Authorized Hikvision & CP Plus Dealer</p>
                 <div className="space-y-2 text-sm text-slate-600 mb-6">
-                  <p>📍 123, Electronics Market, Area {i}</p>
-                  <p>📞 +91 98765 0000{i}</p>
+                  <p>📍 {dealer.city}</p>
+                  <p>📞 {dealer.phone}</p>
+                  <p>👤 Contact: {dealer.contact}</p>
                 </div>
                 <button className="w-full border-2 border-brand text-brand hover:bg-brand hover:text-white font-bold py-2.5 rounded-xl transition-colors">
                   Contact Dealer
                 </button>
               </div>
             ))}
+            
+            {activeDealers.length === 0 && (
+              <div className="col-span-full py-12 text-center text-slate-500 font-medium">
+                No active dealers found. Please check back later.
+              </div>
+            )}
           </div>
 
         </div>

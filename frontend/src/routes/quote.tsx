@@ -42,14 +42,14 @@ function QuotePage() {
                   <h3 className="text-2xl font-bold mb-4">Why Choose Us?</h3>
                   <ul className="space-y-4 text-slate-300">
                     <li className="flex gap-3"><CheckCircle2 className="h-6 w-6 text-brand shrink-0" /> Wholesale Prices</li>
-                    <li className="flex gap-3"><CheckCircle2 className="h-6 w-6 text-brand shrink-0" /> Verified Installers</li>
+
                     <li className="flex gap-3"><CheckCircle2 className="h-6 w-6 text-brand shrink-0" /> 1 Year Warranty</li>
                     <li className="flex gap-3"><CheckCircle2 className="h-6 w-6 text-brand shrink-0" /> Dedicated Support</li>
                   </ul>
                 </div>
                 <div className="mt-12">
                   <p className="text-sm text-slate-400">Need immediate help?</p>
-                  <p className="text-xl font-bold mt-1">+91 91410 52439</p>
+                  <p className="text-xl font-bold mt-1">+91 91410 52539</p>
                 </div>
               </div>
 
@@ -68,7 +68,7 @@ function QuotePage() {
                     const message = `*New Quote Request*\n\n*Name:* ${fname} ${lname}\n*Phone:* ${phone}\n*Service:* ${service}\n*Details:* ${details}`;
                     
                     const encodedMessage = encodeURIComponent(message);
-                    window.open(`https://wa.me/919141052439?text=${encodedMessage}`, '_blank');
+                    window.open(`https://wa.me/919141052539?text=${encodedMessage}`, '_blank');
                   }}
                 >
                   <div className="grid md:grid-cols-2 gap-6">

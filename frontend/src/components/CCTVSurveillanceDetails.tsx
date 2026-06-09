@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/context/AuthContext";
+import { useCart } from "@/context/CartContext";
 import { toast } from "sonner";
 import { BookingModal } from "@/components/BookingModal";
 
@@ -120,14 +121,14 @@ const wholesaleData = [
         ]
       },
       {
-        title: "Enclosures & Racks",
+        title: "Accessories",
         headers: ["Category", "Item Description", "Price (INR)"],
         items: [
-          { col1: "Enclosures & Racks", col2: "Camera Box (5\" x 5\")", col3: "₹ 100/-" },
-          { col1: "Enclosures & Racks", col2: "PVC Box (4\" x 4\")", col3: "₹ 75/-" },
-          { col1: "Enclosures & Racks", col2: "POE Switch Box", col3: "₹ 800/-" },
-          { col1: "Enclosures & Racks", col2: "DVR Rack (2U)", col3: "₹ 1,000/-" },
-          { col1: "Enclosures & Racks", col2: "DVR Rack (4U)", col3: "₹ 1,600/-" }
+          { col1: "Accessories", col2: "Camera Box (5\" x 5\")", col3: "₹ 100/-" },
+          { col1: "Accessories", col2: "PVC Box (4\" x 4\")", col3: "₹ 75/-" },
+          { col1: "Accessories", col2: "POE Switch Box", col3: "₹ 800/-" },
+          { col1: "Accessories", col2: "DVR Rack (2U)", col3: "₹ 1,000/-" },
+          { col1: "Accessories", col2: "DVR Rack (4U)", col3: "₹ 1,600/-" }
         ]
       },
       {
@@ -159,33 +160,6 @@ const wholesaleData = [
   }
 ];
 
-const accessories = [
-  { name: "4-Channel POE Switch", price: "₹2,500", image: "/cctv_router.png" },
-  { name: "8-Channel POE Switch", price: "₹5,000", image: "/cctv_router.png" },
-  { name: "16-Channel POE Switch", price: "₹12,000", image: "/cctv_router.png" },
-  { name: "17\" LED Monitor", price: "₹3,000", image: "/cctv_monitor.png" },
-  { name: "19\" LED Monitor", price: "₹6,000", image: "/cctv_monitor.png" },
-  { name: "22\" LED Monitor", price: "₹10,500", image: "/cctv_monitor.png" },
-  { name: "Basic SIM Card Router", price: "₹2,500", image: "/cctv_router.png" },
-  { name: "Camera Box (5\" x 5\")", price: "₹100", image: "/acc_pvc_box.png" },
-  { name: "PVC Box (4\" x 4\")", price: "₹75", image: "/acc_pvc_box.png" },
-  { name: "POE Switch Box", price: "₹800", image: "/acc_pvc_box.png" },
-  { name: "DVR Rack (2U)", price: "₹1,000", image: "/acc_rack.png" },
-  { name: "DVR Rack (4U)", price: "₹1,600", image: "/acc_rack.png" },
-  { name: "2AMP Power Adapter", price: "₹300", image: "/cctv_cables.png" },
-  { name: "Central Power Supply (4-Ch)", price: "₹750", image: "/acc_dc_connector.png" },
-  { name: "Central Power Supply (8-Ch)", price: "₹1,500", image: "/acc_dc_connector.png" },
-  { name: "RJ45 Connector", price: "₹10 / pc", image: "/acc_rj45.png" },
-  { name: "BNC Connector", price: "₹25 / pc", image: "/acc_bnc.png" },
-  { name: "DC Connector", price: "₹50 / pc", image: "/acc_dc_connector.png" },
-  { name: "Video Balun Connector", price: "₹250", image: "/acc_video_bullet.png" },
-  { name: "Power Cable", price: "₹15", image: "/cctv_cables.png" },
-  { name: "HDMI Cable (1.5 Meter)", price: "₹150", image: "/cctv_cables.png" },
-  { name: "VGA Cable (1.5 Meter)", price: "₹150", image: "/cctv_cables.png" },
-  { name: "Coaxial Cable (3+1)", price: "₹25 / meter", image: "/cctv_cables.png" },
-  { name: "CAT6 Network Cable", price: "₹40 / meter", image: "/cctv_cables.png" },
-  { name: "CAT6 Network Cable (Standard Quality)", price: "₹60 / meter", image: "/cctv_cables.png" }
-];
 
 const repairServices = [
   { id: "cam-repair", label: "CAMERA", image: "/acc_camera_extender.png" },
@@ -202,16 +176,15 @@ const repairServices = [
   { id: "other", label: "Other", image: "/cctv_cables.png" }
 ];
 
-type TabType = "buy" | "installation" | "repair" | "accessories";
+type TabType = "buy" | "installation" | "repair";
 
 export function CCTVSurveillanceDetails() {
   const WHATSAPP_NUMBER = "919141052539"; 
   const { user } = useAuth();
+  const { addToCart } = useCart();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<TabType>("installation");
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
-  const [searchAccessory, setSearchAccessory] = useState("");
-  
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalItems, setModalItems] = useState<string[]>([]);
   
@@ -241,7 +214,36 @@ export function CCTVSurveillanceDetails() {
     setIsModalOpen(true);
   };
 
-  const filteredAccessories = accessories.filter(a => a.name.toLowerCase().includes(searchAccessory.toLowerCase()));
+  const handleAddToCart = () => {
+    if (selectedItems.length === 0) {
+      toast.error("Please select at least one item.");
+      return;
+    }
+
+    selectedItems.forEach(itemStr => {
+      let price = "0";
+      let title = itemStr;
+      
+      const match = itemStr.match(/\[₹?\s*([\d,]+)/);
+      if (match) {
+        price = match[1].replace(/,/g, '');
+        title = itemStr.replace(/\s*\[.*?\]\s*/, '').trim();
+      } else if (itemStr.startsWith("Repair:")) {
+        price = "450";
+      }
+
+      addToCart({
+        id: `cctv-${title.replace(/\W+/g, '-').toLowerCase()}`,
+        title: `CCTV: ${title}`,
+        price: price,
+        image: "/cctv_hero.png"
+      });
+    });
+
+    toast.success("Items added to cart!");
+    setSelectedItems([]); // Clear selection after adding
+  };
+
 
   const totalPrice = (() => {
     let sum = 0;
@@ -281,9 +283,7 @@ export function CCTVSurveillanceDetails() {
              <img 
                src={{
                  installation: '/cctv_hero.png',
-                 repair: '/cctv_hero_repair.png',
-                 buy: '/cctv_hero_buy.png',
-                 accessories: '/cctv_hero_accessories.png'
+                 buy: '/cctv_hero_buy.png'
                }[activeTab] || '/cctv_hero.png'} 
                alt="CCTV Expert" 
                className="w-full h-full object-cover object-[50%_15%] opacity-90 transition-opacity duration-500" 
@@ -299,13 +299,13 @@ export function CCTVSurveillanceDetails() {
            </div>
 
            <div className="p-8 md:p-12 pt-2">
-             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <button 
                  onClick={() => setActiveTab("buy")}
                  className={`flex flex-col items-center justify-center gap-2 py-4 px-2 rounded-2xl font-extrabold text-sm md:text-base transition-all ${activeTab === 'buy' ? 'bg-white text-slate-800 shadow-[0_0_20px_rgba(255,255,255,0.2)] scale-105' : 'bg-white/10 text-white hover:bg-white/20'}`}
               >
                  <ShoppingCart className={`h-6 w-6 md:h-8 md:w-8 ${activeTab === 'buy' ? 'text-brand' : 'text-white/70'}`} />
-                 <span className="text-center leading-tight">Buy with<br/>Installation</span>
+                 <span className="text-center leading-tight">Product<br/>Price List</span>
               </button>
 
               <button 
@@ -324,13 +324,6 @@ export function CCTVSurveillanceDetails() {
                  <span className="text-center leading-tight">CCTV Repair<br/>& Service</span>
               </button>
 
-              <button 
-                 onClick={() => setActiveTab("accessories")}
-                 className={`flex flex-col items-center justify-center gap-2 py-4 px-2 rounded-2xl font-extrabold text-sm md:text-base transition-all ${activeTab === 'accessories' ? 'bg-white text-slate-800 shadow-[0_0_20px_rgba(255,255,255,0.2)] scale-105' : 'bg-white/10 text-white hover:bg-white/20'}`}
-              >
-                 <Server className={`h-6 w-6 md:h-8 md:w-8 ${activeTab === 'accessories' ? 'text-brand' : 'text-white/70'}`} />
-                 <span className="text-center leading-tight">Accessories<br/>& Parts</span>
-              </button>
            </div>
          </div>
         </div>
@@ -370,7 +363,7 @@ export function CCTVSurveillanceDetails() {
 
                           {/* NVR and DVR */}
                           <div>
-                             <h4 className="bg-[#3b82f6] text-white p-3 rounded-t-xl font-bold">NVR and DVR</h4>
+                             <h4 className="bg-primary text-white p-3 rounded-t-xl font-bold">NVR and DVR</h4>
                              <div className="border border-t-0 border-[#e2e8f0] rounded-b-xl p-4 grid grid-cols-1 md:grid-cols-3 gap-4 bg-white">
                                 {[
                                    { id: "NVR/DVR: 4chl [₹1000/-]", label: "4chl- [₹1000/-]" },
@@ -432,7 +425,7 @@ export function CCTVSurveillanceDetails() {
                           </div>
                           
                           <div className="pt-4 text-center">
-                             <button onClick={() => handleWhatsApp()} className="bg-[#3b82f6] hover:bg-[#2563eb] text-white font-bold py-3 px-8 rounded-xl transition-colors shadow-md">
+                             <button onClick={() => handleWhatsApp()} className="bg-primary hover:bg-primary/90 text-white font-bold py-3 px-8 rounded-xl transition-colors shadow-md">
                                 Proceed to Booking
                              </button>
                           </div>
@@ -481,11 +474,14 @@ export function CCTVSurveillanceDetails() {
                              </p>
                           </div>
                           
-                          <div className="pt-6 text-center">
-                             <button onClick={() => handleWhatsApp()} className="bg-[#3b82f6] hover:bg-[#2563eb] w-full text-white font-bold py-4 px-8 rounded-xl transition-colors shadow-md text-lg">
+                           <div className="pt-6 flex flex-col sm:flex-row gap-4 justify-center">
+                             <button onClick={() => handleAddToCart()} className="bg-slate-800 hover:bg-slate-700 w-full sm:w-auto text-white font-bold py-4 px-8 rounded-xl transition-colors shadow-md text-lg">
+                                Add to Cart
+                             </button>
+                             <button onClick={() => handleWhatsApp()} className="bg-primary hover:bg-primary/90 w-full sm:w-auto text-white font-bold py-4 px-8 rounded-xl transition-colors shadow-md text-lg">
                                 Proceed to Booking
                              </button>
-                          </div>
+                           </div>
                        </div>
                     </motion.div>
                  )}
@@ -500,7 +496,7 @@ export function CCTVSurveillanceDetails() {
                        <div className="bg-[#f8fafc] rounded-[2rem] border border-border shadow-md overflow-hidden mb-8">
                           <div className="p-8 text-center border-b border-border bg-white">
                              <div className="flex items-center justify-center gap-3 mb-2">
-                                <ShieldCheck className="text-[#3b82f6] h-8 w-8" />
+                                <ShieldCheck className="text-primary h-8 w-8" />
                                 <h3 className="text-2xl font-black text-slate-800">Vendor99 Security Systems</h3>
                              </div>
                              <h4 className="text-xl font-extrabold uppercase mt-4 mb-2">PRICE LIST - SECURITY CAMERAS (New Prices Applied)</h4>
@@ -553,11 +549,17 @@ export function CCTVSurveillanceDetails() {
                                                 </table>
                                              </div>
                                              
-                                             <div className="p-4 bg-slate-50 border-t border-slate-200 text-right flex justify-between items-center">
-                                                <span className="text-xs font-bold text-slate-500">Customer Care / Inquiry: +91 9141052439</span>
+                                             <div className="p-4 bg-slate-50 border-t border-slate-200 text-right flex flex-col sm:flex-row justify-end items-center gap-4">
+                                                <span className="text-xs font-bold text-slate-500 w-full sm:w-auto sm:mr-auto">Customer Care / Inquiry: +91 91410 52539</span>
+                                                <button 
+                                                   onClick={() => handleAddToCart()}
+                                                   className="bg-slate-800 hover:bg-slate-700 text-white font-bold py-2 px-6 rounded-lg text-sm transition-colors shadow-sm w-full sm:w-auto"
+                                                >
+                                                   Add to Cart
+                                                </button>
                                                 <button 
                                                    onClick={() => handleWhatsApp()}
-                                                   className="bg-[#3b82f6] hover:bg-[#2563eb] text-white font-bold py-2 px-6 rounded-lg text-sm transition-colors shadow-sm"
+                                                   className="bg-primary hover:bg-primary/90 text-white font-bold py-2 px-6 rounded-lg text-sm transition-colors shadow-sm w-full sm:w-auto"
                                                 >
                                                    Proceed to Booking
                                                 </button>
@@ -593,50 +595,7 @@ export function CCTVSurveillanceDetails() {
                     </motion.div>
                  )}
 
-                 {/* TAB 4: ACCESSORIES */}
-                 {activeTab === "accessories" && (
-                    <motion.div 
-                       key="accessories"
-                       initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
-                       className="bg-white rounded-[2rem] border border-border shadow-md overflow-hidden p-8"
-                    >
-                       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-                          <div>
-                             <h3 className="text-2xl font-extrabold text-slate-800">Accessories & Spare Parts</h3>
-                             <p className="text-sm font-medium text-muted-foreground mt-1">High-quality components for your security setup</p>
-                          </div>
-                          <div className="relative w-full md:w-72">
-                             <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                             <input 
-                                type="text" 
-                                placeholder="Search parts..." 
-                                value={searchAccessory}
-                                onChange={(e) => setSearchAccessory(e.target.value)}
-                                className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 pl-12 pr-4 text-sm font-medium outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition-all" 
-                             />
-                          </div>
-                       </div>
-                       
-                       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
-                          {filteredAccessories.map((acc, i) => {
-                             const accString = `Accessory: ${acc.name} [${acc.price}]`;
-                             const isSelected = selectedItems.includes(accString);
-                             return (
-                                <div key={i} className={`border rounded-2xl p-5 flex flex-col items-center text-center hover:shadow-lg transition-all cursor-pointer group ${isSelected ? 'border-brand bg-brand/5' : 'border-slate-200 bg-white hover:border-brand/30'}`} onClick={() => toggleSelection(accString)}>
-                                   <div className="h-28 w-28 mb-4 bg-slate-50 rounded-xl overflow-hidden flex items-center justify-center p-3 group-hover:scale-105 transition-transform duration-300">
-                                      <img src={acc.image} alt={acc.name} className="max-h-full max-w-full object-contain mix-blend-multiply" />
-                                   </div>
-                                   <h4 className="font-bold text-sm text-slate-800 mb-2 leading-snug">{acc.name}</h4>
-                                   <p className="text-sm font-black text-brand mt-auto mb-4">{acc.price}</p>
-                                   <button className={`w-full py-2.5 rounded-xl text-sm font-bold transition-all ${isSelected ? 'bg-brand text-white shadow-md' : 'bg-slate-100 text-slate-700 group-hover:bg-brand group-hover:text-white'}`}>
-                                      {isSelected ? '✓ Added' : 'Add to Selection'}
-                                   </button>
-                                </div>
-                             );
-                          })}
-                       </div>
-                    </motion.div>
-                 )}
+
                </AnimatePresence>
               
            </div>
@@ -665,23 +624,32 @@ export function CCTVSurveillanceDetails() {
                          </div>
                        )}
 
-                       <button onClick={() => handleWhatsApp()} className="w-full bg-white text-brand font-bold py-3 rounded-xl hover:bg-slate-50 transition-colors shadow-md">
-                          Proceed to Booking
-                       </button>
+                       <div className="space-y-3">
+                         <button onClick={() => handleAddToCart()} className="w-full bg-slate-800 text-white font-bold py-3 rounded-xl hover:bg-slate-700 transition-colors shadow-md">
+                            Add to Cart
+                         </button>
+                         <button onClick={() => handleWhatsApp()} className="w-full bg-white text-brand font-bold py-3 rounded-xl hover:bg-slate-50 transition-colors shadow-md">
+                            Proceed to Booking
+                         </button>
+                       </div>
                     </motion.div>
                  )}
 
                  {/* Information Sidebar Box */}
                  <div className="bg-white rounded-[2rem] border border-border shadow-md p-6 lg:p-8">
                     <ul className="space-y-4">
-                       <li className="flex items-start gap-3">
-                          <CheckCircle2 className="text-slate-800 h-5 w-5 shrink-0 mt-0.5" />
-                          <span className="font-bold text-slate-700">Proper 1 Year Warranty</span>
-                       </li>
-                       <li className="flex items-start gap-3">
-                          <Shield className="text-slate-800 h-5 w-5 shrink-0 mt-0.5" />
-                          <span className="font-bold text-slate-700">Additional Warranty on Bulk Buying</span>
-                       </li>
+                       {activeTab === "buy" && (
+                          <>
+                             <li className="flex items-start gap-3">
+                                <CheckCircle2 className="text-slate-800 h-5 w-5 shrink-0 mt-0.5" />
+                                <span className="font-bold text-slate-700">Proper 1 Year Warranty</span>
+                             </li>
+                             <li className="flex items-start gap-3">
+                                <Shield className="text-slate-800 h-5 w-5 shrink-0 mt-0.5" />
+                                <span className="font-bold text-slate-700">Additional Warranty on Bulk Buying</span>
+                             </li>
+                          </>
+                       )}
                        <li className="flex items-start gap-3">
                           <Phone className="text-slate-800 h-5 w-5 shrink-0 mt-0.5" />
                           <span className="font-bold text-slate-700">Technical Online Support</span>

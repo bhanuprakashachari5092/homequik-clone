@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { SiteLayout } from "@/components/SiteLayout";
 import { Briefcase, Building2, UserPlus, CheckCircle2, ArrowLeft } from "lucide-react";
+import { useState } from "react";
 
 export const Route = createFileRoute("/partner")({
   head: () => ({
@@ -13,6 +14,20 @@ export const Route = createFileRoute("/partner")({
 });
 
 function PartnerPage() {
+  const [businessName, setBusinessName] = useState("");
+  const [contactPerson, setContactPerson] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [city, setCity] = useState("");
+  const [expertise, setExpertise] = useState("CCTV Dealer & Installer");
+  const [experience, setExperience] = useState("0-2 Years");
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const WHATSAPP_NUMBER = "919141052539";
+    const text = `*New Partner Application*\n\n*Business Name:* ${businessName}\n*Contact Person:* ${contactPerson}\n*Phone:* ${phoneNumber}\n*City/Pincode:* ${city}\n*Expertise:* ${expertise}\n*Experience:* ${experience}`;
+    window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(text)}`, '_blank');
+  };
+
   return (
     <SiteLayout>
       <div className="bg-[#f0f4f8] min-h-screen py-10 font-sans">
@@ -72,32 +87,32 @@ function PartnerPage() {
                   <p className="text-slate-500 text-sm mt-1">Fill out the form below and our team will contact you.</p>
                </div>
                
-               <form className="space-y-6" onSubmit={(e) => e.preventDefault()}>
+               <form className="space-y-6" onSubmit={handleSubmit}>
                   <div className="grid md:grid-cols-2 gap-6">
                     <div className="space-y-2">
                       <label className="text-sm font-bold text-slate-700">Business Name</label>
-                      <input type="text" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent transition-all" placeholder="TechVision Security" />
+                      <input type="text" value={businessName} onChange={(e) => setBusinessName(e.target.value)} required className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent transition-all" placeholder="TechVision Security" />
                     </div>
                     <div className="space-y-2">
                       <label className="text-sm font-bold text-slate-700">Contact Person</label>
-                      <input type="text" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent transition-all" placeholder="John Doe" />
+                      <input type="text" value={contactPerson} onChange={(e) => setContactPerson(e.target.value)} required className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent transition-all" placeholder="John Doe" />
                     </div>
                   </div>
 
                   <div className="grid md:grid-cols-2 gap-6">
                     <div className="space-y-2">
                       <label className="text-sm font-bold text-slate-700">Phone Number</label>
-                      <input type="tel" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent transition-all" placeholder="+91 98765 43210" />
+                      <input type="tel" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} required className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent transition-all" placeholder="+91 98765 43210" />
                     </div>
                     <div className="space-y-2">
                       <label className="text-sm font-bold text-slate-700">City / Pincode</label>
-                      <input type="text" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent transition-all" placeholder="500081" />
+                      <input type="text" value={city} onChange={(e) => setCity(e.target.value)} required className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent transition-all" placeholder="500081" />
                     </div>
                   </div>
 
                   <div className="space-y-2">
                     <label className="text-sm font-bold text-slate-700">Primary Expertise</label>
-                    <select className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent transition-all appearance-none font-medium text-slate-700">
+                    <select value={expertise} onChange={(e) => setExpertise(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent transition-all appearance-none font-medium text-slate-700">
                       <option>CCTV Dealer & Installer</option>
                       <option>Biometric & Access Control</option>
                       <option>Electrical Contractor</option>
@@ -107,7 +122,7 @@ function PartnerPage() {
 
                   <div className="space-y-2">
                     <label className="text-sm font-bold text-slate-700">Years of Experience</label>
-                    <select className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent transition-all appearance-none font-medium text-slate-700">
+                    <select value={experience} onChange={(e) => setExperience(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent transition-all appearance-none font-medium text-slate-700">
                       <option>0-2 Years</option>
                       <option>3-5 Years</option>
                       <option>5-10 Years</option>
@@ -115,7 +130,7 @@ function PartnerPage() {
                     </select>
                   </div>
 
-                  <button className="w-full bg-brand hover:bg-brand-hover text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-all shadow-md mt-4">
+                  <button type="submit" className="w-full bg-brand hover:bg-brand-dark text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-all shadow-md mt-4">
                     Submit Application <UserPlus className="h-5 w-5" />
                   </button>
                </form>
@@ -127,3 +142,4 @@ function PartnerPage() {
     </SiteLayout>
   );
 }
+
