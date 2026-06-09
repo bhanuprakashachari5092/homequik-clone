@@ -1,7 +1,7 @@
 import { j as jsxRuntimeExports, r as reactExports } from "../_libs/react.mjs";
 import { L as Link, e as useNavigate } from "../_libs/tanstack__react-router.mjs";
-import { S as SiteLayout } from "./SiteLayout-BaAh-5Ug.mjs";
-import { R as Route, u as useCart, b as useAuth, d as db } from "./router-Cprs8nsm.mjs";
+import { S as SiteLayout } from "./SiteLayout-Bx7ddDv5.mjs";
+import { R as Route, u as useCart, b as useAuth, d as db } from "./router-Oi4dvHye.mjs";
 import { t as toast } from "../_libs/sonner.mjs";
 import { a as addDoc, c as collection, s as serverTimestamp } from "../_libs/firebase__firestore.mjs";
 import { c } from "../_libs/lottiefiles__dotlottie-react.mjs";
@@ -552,9 +552,32 @@ function CCTVSurveillanceDetails() {
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute top-0 left-0 w-32 h-full bg-gradient-to-r from-white via-white/80 to-transparent pointer-events-none" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute top-0 right-0 w-32 h-full bg-gradient-to-l from-white via-white/80 to-transparent pointer-events-none" })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-[#1e293b] rounded-[2rem] p-8 md:p-12 mb-8 shadow-xl", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-center text-2xl md:text-3xl font-extrabold text-white mb-8 tracking-tight", children: "Explore Category: CCTV" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 lg:grid-cols-4 gap-4", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-[#1e293b] rounded-[2rem] overflow-hidden mb-8 shadow-xl relative", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative h-[280px] md:h-[400px] w-full overflow-hidden bg-black transition-all duration-500", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "img",
+            {
+              src: {
+                installation: "/cctv_hero.png",
+                repair: "/cctv_hero_repair.png",
+                buy: "/cctv_hero_buy.png",
+                accessories: "/cctv_hero_accessories.png"
+              }[activeTab] || "/cctv_hero.png",
+              alt: "CCTV Expert",
+              className: "w-full h-full object-cover object-[50%_15%] opacity-90 transition-opacity duration-500"
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute bottom-0 left-0 w-full p-8 md:p-10 text-left", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("h2", { className: "text-2xl md:text-4xl font-extrabold text-white tracking-tight leading-snug", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[#f97316]", children: "Vendor99:" }),
+            " Professional CCTV Solutions.",
+            /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+            "Certified Experts.",
+            /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+            "Clean, Minimalist Installations."
+          ] }) })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-8 md:p-12 pt-2", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 lg:grid-cols-4 gap-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs(
             "button",
             {
@@ -615,7 +638,7 @@ function CCTVSurveillanceDetails() {
               ]
             }
           )
-        ] })
+        ] }) })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 lg:grid-cols-12 gap-8", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "lg:col-span-8 space-y-8", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(AnimatePresence, { mode: "wait", children: [

@@ -247,8 +247,17 @@ export function CCTVSurveillanceDetails() {
         {/* Navigation Tabs (Hero Area) */}
         <div className="bg-[#1e293b] rounded-[2rem] overflow-hidden mb-8 shadow-xl relative">
            {/* Hero Image Section */}
-           <div className="relative h-[280px] md:h-[400px] w-full overflow-hidden bg-black">
-             <img src="/cctv_hero.png" alt="CCTV Installation Expert" className="w-full h-full object-cover object-[50%_15%] opacity-90" />
+           <div className="relative h-[280px] md:h-[400px] w-full overflow-hidden bg-black transition-all duration-500">
+             <img 
+               src={{
+                 installation: '/cctv_hero.png',
+                 repair: '/cctv_hero_repair.png',
+                 buy: '/cctv_hero_buy.png',
+                 accessories: '/cctv_hero_accessories.png'
+               }[activeTab] || '/cctv_hero.png'} 
+               alt="CCTV Expert" 
+               className="w-full h-full object-cover object-[50%_15%] opacity-90 transition-opacity duration-500" 
+             />
              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent"></div>
              <div className="absolute bottom-0 left-0 w-full p-8 md:p-10 text-left">
                <h2 className="text-2xl md:text-4xl font-extrabold text-white tracking-tight leading-snug">
