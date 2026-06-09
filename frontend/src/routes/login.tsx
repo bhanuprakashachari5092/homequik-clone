@@ -1,7 +1,8 @@
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { SiteLayout } from "@/components/SiteLayout";
 import { useState } from "react";
-import { Mail, Lock, Phone, Loader2, CheckCircle2 } from "lucide-react";
+import { Mail, Lock, Phone, CheckCircle2 } from "lucide-react";
+import { Loader } from "@/components/Loader";
 import { motion, AnimatePresence } from "framer-motion";
 import { auth, db } from "@/lib/firebase";
 import { 
@@ -216,7 +217,7 @@ function Login() {
                 disabled={loading}
                 className="mt-2 w-full flex justify-center items-center rounded-2xl bg-gradient-premium px-4 py-4 text-base font-bold text-white shadow-lg hover:shadow-xl transition-all disabled:opacity-70 disabled:cursor-not-allowed"
               >
-                {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : (mode === "login" ? "Login" : "Create account")}
+                {loading ? <Loader size="xs" text="" /> : (mode === "login" ? "Login" : "Create account")}
               </motion.button>
             </form>
 

@@ -1,10 +1,9 @@
 import { j as jsxRuntimeExports, r as reactExports } from "../_libs/react.mjs";
 import { L as Link, e as useNavigate } from "../_libs/tanstack__react-router.mjs";
-import { S as SiteLayout } from "./SiteLayout-Bx7ddDv5.mjs";
-import { R as Route, u as useCart, b as useAuth, d as db } from "./router-Oi4dvHye.mjs";
+import { S as SiteLayout } from "./SiteLayout-DbkfJJH4.mjs";
+import { R as Route, u as useCart, b as useAuth, L as Loader, d as db } from "./router-1gUiNko7.mjs";
 import { t as toast } from "../_libs/sonner.mjs";
 import { a as addDoc, c as collection, s as serverTimestamp } from "../_libs/firebase__firestore.mjs";
-import { c } from "../_libs/lottiefiles__dotlottie-react.mjs";
 import "../_libs/firebase.mjs";
 import "../_libs/firebase__analytics.mjs";
 import "../_libs/firebase__auth.mjs";
@@ -27,6 +26,8 @@ import "crypto";
 import "../_libs/isbot.mjs";
 import "../_libs/tanstack__query-core.mjs";
 import "../_libs/tanstack__react-query.mjs";
+import "../_libs/lottiefiles__dotlottie-react.mjs";
+import "../_libs/lottiefiles__dotlottie-web.mjs";
 import "../_libs/firebase__util.mjs";
 import "../_libs/firebase__component.mjs";
 import "../_libs/firebase__installations.mjs";
@@ -59,7 +60,6 @@ import "../_libs/long.mjs";
 import "../_libs/protobufjs__codegen.mjs";
 import "../_libs/protobufjs__fetch.mjs";
 import "../_libs/protobufjs__path.mjs";
-import "../_libs/lottiefiles__dotlottie-web.mjs";
 import "../_libs/motion-dom.mjs";
 import "../_libs/motion-utils.mjs";
 function BookingModal({ isOpen, onClose, serviceName, selectedItems = [] }) {
@@ -246,14 +246,7 @@ function BookingModal({ isOpen, onClose, serviceName, selectedItems = [] }) {
               exit: { opacity: 0, scale: 0.9 },
               className: "flex flex-col items-center justify-center py-16 space-y-8",
               children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-48 h-48 flex items-center justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  c,
-                  {
-                    src: "https://lottie.host/1b2ec91d-0683-4a1e-abda-07f152d13b78/W48qXw9YtF.lottie",
-                    loop: true,
-                    autoplay: true
-                  }
-                ) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-48 h-48 flex items-center justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Loader, { size: "lg", text: "" }) }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-center space-y-2", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx(
                     motion.h3,

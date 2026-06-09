@@ -1,7 +1,7 @@
 import { r as reactExports, j as jsxRuntimeExports } from "../_libs/react.mjs";
 import { u as useRouter, L as Link } from "../_libs/tanstack__react-router.mjs";
-import { S as SiteLayout } from "./SiteLayout-Bx7ddDv5.mjs";
-import { a as auth, d as db } from "./router-Oi4dvHye.mjs";
+import { S as SiteLayout } from "./SiteLayout-DbkfJJH4.mjs";
+import { L as Loader, a as auth, d as db } from "./router-1gUiNko7.mjs";
 import { c as createUserWithEmailAndPassword, u as updateProfile, a as signInWithEmailAndPassword } from "../_libs/firebase__auth.mjs";
 import "../_libs/firebase__app.mjs";
 import "../_libs/firebase__logger.mjs";
@@ -10,7 +10,7 @@ import "../_libs/firebase.mjs";
 import "../_libs/firebase__analytics.mjs";
 import "../_libs/sonner.mjs";
 import { m as motion, A as AnimatePresence } from "../_libs/framer-motion.mjs";
-import { d as CircleCheck, e as Phone, f as Mail, g as Lock, h as LoaderCircle } from "../_libs/lucide-react.mjs";
+import { d as CircleCheck, e as Phone, f as Mail, g as Lock } from "../_libs/lucide-react.mjs";
 import "../_libs/tanstack__router-core.mjs";
 import "../_libs/tanstack__history.mjs";
 import "../_libs/cookie-es.mjs";
@@ -26,6 +26,8 @@ import "crypto";
 import "../_libs/isbot.mjs";
 import "../_libs/tanstack__query-core.mjs";
 import "../_libs/tanstack__react-query.mjs";
+import "../_libs/lottiefiles__dotlottie-react.mjs";
+import "../_libs/lottiefiles__dotlottie-web.mjs";
 import "../_libs/firebase__util.mjs";
 import "../_libs/firebase__component.mjs";
 import "../_libs/firebase__installations.mjs";
@@ -192,7 +194,7 @@ function Login() {
             scale: 1.02
           }, whileTap: {
             scale: 0.98
-          }, type: "submit", disabled: loading, className: "mt-2 w-full flex justify-center items-center rounded-2xl bg-gradient-premium px-4 py-4 text-base font-bold text-white shadow-lg hover:shadow-xl transition-all disabled:opacity-70 disabled:cursor-not-allowed", children: loading ? /* @__PURE__ */ jsxRuntimeExports.jsx(LoaderCircle, { className: "h-5 w-5 animate-spin" }) : mode === "login" ? "Login" : "Create account" })
+          }, type: "submit", disabled: loading, className: "mt-2 w-full flex justify-center items-center rounded-2xl bg-gradient-premium px-4 py-4 text-base font-bold text-white shadow-lg hover:shadow-xl transition-all disabled:opacity-70 disabled:cursor-not-allowed", children: loading ? /* @__PURE__ */ jsxRuntimeExports.jsx(Loader, { size: "xs", text: "" }) : mode === "login" ? "Login" : "Create account" })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-8 text-center text-xs font-medium text-muted-foreground", children: [
           "By continuing you agree to our",

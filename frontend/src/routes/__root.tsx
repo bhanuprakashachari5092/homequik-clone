@@ -9,6 +9,7 @@ import {
 } from "@tanstack/react-router";
 
 import appCss from "../styles.css?url";
+import { Loader } from "@/components/Loader";
 
 function NotFoundComponent() {
   return (
@@ -105,6 +106,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   component: RootComponent,
   notFoundComponent: NotFoundComponent,
   errorComponent: ErrorComponent,
+  pendingComponent: () => <Loader fullScreen text="Loading..." size="lg" />,
 });
 
 function RootShell({ children }: { children: React.ReactNode }) {

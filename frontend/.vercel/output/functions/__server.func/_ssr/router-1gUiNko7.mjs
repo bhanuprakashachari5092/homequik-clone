@@ -3,6 +3,7 @@ import { Q as QueryClientProvider } from "../_libs/tanstack__react-query.mjs";
 import { c as createRouter, a as createRootRouteWithContext, u as useRouter, L as Link, O as Outlet, H as HeadContent, S as Scripts, b as createFileRoute, l as lazyRouteComponent } from "../_libs/tanstack__react-router.mjs";
 import { Q as notFound } from "../_libs/tanstack__router-core.mjs";
 import { j as jsxRuntimeExports, r as reactExports } from "../_libs/react.mjs";
+import { c } from "../_libs/lottiefiles__dotlottie-react.mjs";
 import "../_libs/firebase.mjs";
 import { g as getAnalytics } from "../_libs/firebase__analytics.mjs";
 import { o as onAuthStateChanged, s as signOut, g as getAuth } from "../_libs/firebase__auth.mjs";
@@ -23,6 +24,7 @@ import "../_libs/cookie-es.mjs";
 import "../_libs/seroval.mjs";
 import "../_libs/seroval-plugins.mjs";
 import "node:stream/web";
+import "../_libs/lottiefiles__dotlottie-web.mjs";
 import "../_libs/firebase__util.mjs";
 import "../_libs/firebase__component.mjs";
 import "../_libs/firebase__installations.mjs";
@@ -55,7 +57,52 @@ import "../_libs/long.mjs";
 import "../_libs/protobufjs__codegen.mjs";
 import "../_libs/protobufjs__fetch.mjs";
 import "../_libs/protobufjs__path.mjs";
-const appCss = "/assets/styles-CUWMsoz-.css";
+const appCss = "/assets/styles-DALoLXjM.css";
+const v = "5.7.4";
+const fr = 30;
+const ip = 0;
+const op = 60;
+const w = 512;
+const h = 512;
+const nm = "Spinner";
+const ddd = 0;
+const assets = [];
+const layers = [{ "ddd": 0, "ind": 1, "ty": 4, "nm": "Shape Layer 1", "sr": 1, "ks": { "o": { "a": 0, "k": 100, "ix": 11 }, "r": { "a": 1, "k": [{ "i": { "x": [0.833], "y": [0.833] }, "o": { "x": [0.167], "y": [0.167] }, "t": 0, "s": [0] }, { "t": 60, "s": [360] }], "ix": 10 }, "p": { "a": 0, "k": [256, 256, 0], "ix": 2 }, "a": { "a": 0, "k": [0, 0, 0], "ix": 1 }, "s": { "a": 0, "k": [100, 100, 100], "ix": 6 } }, "ao": 0, "shapes": [{ "ty": "gr", "it": [{ "d": 1, "ty": "el", "s": { "a": 0, "k": [200, 200], "ix": 2 }, "p": { "a": 0, "k": [0, 0], "ix": 3 }, "nm": "Ellipse Path 1", "mn": "ADBE Vector Shape - Ellipse", "hd": false }, { "ty": "st", "c": { "a": 0, "k": [0.145, 0.388, 0.922, 1], "ix": 3 }, "o": { "a": 0, "k": 100, "ix": 4 }, "w": { "a": 0, "k": 30, "ix": 5 }, "lc": 2, "lj": 2, "bm": 0, "nm": "Stroke 1", "mn": "ADBE Vector Graphic - Stroke", "hd": false }, { "ty": "tm", "s": { "a": 0, "k": 0, "ix": 1 }, "e": { "a": 0, "k": 75, "ix": 2 }, "o": { "a": 0, "k": 0, "ix": 3 }, "m": 1, "ix": 3, "nm": "Trim Paths 1", "mn": "ADBE Vector Filter - Trim", "hd": false }, { "ty": "tr", "p": { "a": 0, "k": [0, 0], "ix": 2 }, "a": { "a": 0, "k": [0, 0], "ix": 1 }, "s": { "a": 0, "k": [100, 100], "ix": 3 }, "r": { "a": 0, "k": 0, "ix": 6 }, "o": { "a": 0, "k": 100, "ix": 7 }, "sk": { "a": 0, "k": 0, "ix": 4 }, "sa": { "a": 0, "k": 0, "ix": 5 }, "nm": "Transform" }], "nm": "Ellipse 1", "np": 3, "cix": 2, "bm": 0, "ix": 1, "mn": "ADBE Vector Group", "hd": false }], "ip": 0, "op": 60, "st": 0, "bm": 0 }];
+const spinnerJson = {
+  v,
+  fr,
+  ip,
+  op,
+  w,
+  h,
+  nm,
+  ddd,
+  assets,
+  layers
+};
+function Loader({ fullScreen = false, text = "Loading...", size = "md" }) {
+  const sizeClasses = {
+    xs: "w-8 h-8",
+    sm: "w-16 h-16",
+    md: "w-32 h-32",
+    lg: "w-48 h-48"
+  };
+  const content = /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col items-center justify-center gap-2", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `${sizeClasses[size]}`, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+      c,
+      {
+        data: JSON.stringify(spinnerJson),
+        loop: true,
+        autoplay: true
+      }
+    ) }),
+    text && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-brand font-semibold text-sm animate-pulse tracking-wide", children: text })
+  ] });
+  if (fullScreen) {
+    return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 z-50 flex items-center justify-center bg-background/60 backdrop-blur-md", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-white/80 dark:bg-slate-900/80 p-8 rounded-3xl shadow-premium border border-white/20", children: content }) });
+  }
+  return content;
+}
 const firebaseConfig = {
   apiKey: "AIzaSyC8yfL_9YR9ZvfO9ID6MKfn3eqCpZdhy-8",
   authDomain: "homequik-clone.firebaseapp.com",
@@ -98,7 +145,7 @@ const AuthProvider = ({ children }) => {
       console.error("Error signing out", error);
     }
   };
-  return /* @__PURE__ */ jsxRuntimeExports.jsx(AuthContext.Provider, { value: { user, loading, signOut: signOut$1 }, children });
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(AuthContext.Provider, { value: { user, loading, signOut: signOut$1 }, children: loading ? /* @__PURE__ */ jsxRuntimeExports.jsx(Loader, { fullScreen: true, text: "Initializing...", size: "lg" }) : children });
 };
 const useAuth = () => reactExports.useContext(AuthContext);
 const CartContext = reactExports.createContext(null);
@@ -334,7 +381,8 @@ const Route$6 = createRootRouteWithContext()({
   shellComponent: RootShell,
   component: RootComponent,
   notFoundComponent: NotFoundComponent,
-  errorComponent: ErrorComponent
+  errorComponent: ErrorComponent,
+  pendingComponent: () => /* @__PURE__ */ jsxRuntimeExports.jsx(Loader, { fullScreen: true, text: "Loading...", size: "lg" })
 });
 function RootShell({ children }) {
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("html", { lang: "en", children: [
@@ -349,7 +397,7 @@ function RootComponent() {
   const { queryClient } = Route$6.useRouteContext();
   return /* @__PURE__ */ jsxRuntimeExports.jsx(QueryClientProvider, { client: queryClient, children: /* @__PURE__ */ jsxRuntimeExports.jsx(LocationProvider, { children: /* @__PURE__ */ jsxRuntimeExports.jsx(AuthProvider, { children: /* @__PURE__ */ jsxRuntimeExports.jsx(CartProvider, { children: /* @__PURE__ */ jsxRuntimeExports.jsx(Outlet, {}) }) }) }) });
 }
-const $$splitComponentImporter$5 = () => import("./login-D1GRo58c.mjs");
+const $$splitComponentImporter$5 = () => import("./login-N2b3_Tvj.mjs");
 const Route$5 = createFileRoute("/login")({
   head: () => ({
     meta: [{
@@ -361,7 +409,7 @@ const Route$5 = createFileRoute("/login")({
   }),
   component: lazyRouteComponent($$splitComponentImporter$5, "component")
 });
-const $$splitComponentImporter$4 = () => import("./cart-xUohAO6C.mjs");
+const $$splitComponentImporter$4 = () => import("./cart-CVkR4a4H.mjs");
 const Route$4 = createFileRoute("/cart")({
   head: () => ({
     meta: [{
@@ -370,7 +418,7 @@ const Route$4 = createFileRoute("/cart")({
   }),
   component: lazyRouteComponent($$splitComponentImporter$4, "component")
 });
-const $$splitComponentImporter$3 = () => import("./about-C0JyYYOs.mjs");
+const $$splitComponentImporter$3 = () => import("./about-DeZSiKtJ.mjs");
 const Route$3 = createFileRoute("/about")({
   head: () => ({
     meta: [{
@@ -382,7 +430,7 @@ const Route$3 = createFileRoute("/about")({
   }),
   component: lazyRouteComponent($$splitComponentImporter$3, "component")
 });
-const $$splitComponentImporter$2 = () => import("./index-CntfGlWa.mjs");
+const $$splitComponentImporter$2 = () => import("./index-SgEM2Shf.mjs");
 const Route$2 = createFileRoute("/")({
   head: () => ({
     meta: [{
@@ -394,7 +442,7 @@ const Route$2 = createFileRoute("/")({
   }),
   component: lazyRouteComponent($$splitComponentImporter$2, "component")
 });
-const $$splitComponentImporter$1 = () => import("./services.index-f1UQZN8q.mjs");
+const $$splitComponentImporter$1 = () => import("./services.index-CmsnFIFT.mjs");
 const Route$1 = createFileRoute("/services/")({
   head: () => ({
     meta: [{
@@ -770,7 +818,7 @@ function getServiceById(id) {
   }
   return null;
 }
-const $$splitComponentImporter = () => import("./services_._serviceId-DeESyN-6.mjs");
+const $$splitComponentImporter = () => import("./services_._serviceId-Cx0gshYK.mjs");
 const Route = createFileRoute("/services_/$serviceId")({
   loader: ({
     params
@@ -849,6 +897,7 @@ const router = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProper
   getRouter
 }, Symbol.toStringTag, { value: "Module" }));
 export {
+  Loader as L,
   Route as R,
   auth as a,
   useAuth as b,

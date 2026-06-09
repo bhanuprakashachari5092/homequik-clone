@@ -6,7 +6,7 @@ import { db } from "@/lib/firebase";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
 import { useNavigate } from "@tanstack/react-router";
-import { DotLottieReact } from '@lottiefiles/dotlottie-react';
+import { Loader } from "@/components/Loader";
 
 interface BookingModalProps {
   isOpen: boolean;
@@ -201,11 +201,7 @@ export function BookingModal({ isOpen, onClose, serviceName, selectedItems = [] 
                 className="flex flex-col items-center justify-center py-16 space-y-8"
               >
                 <div className="w-48 h-48 flex items-center justify-center">
-                  <DotLottieReact
-                    src="https://lottie.host/1b2ec91d-0683-4a1e-abda-07f152d13b78/W48qXw9YtF.lottie"
-                    loop
-                    autoplay
-                  />
+                  <Loader size="lg" text="" />
                 </div>
                 <div className="text-center space-y-2">
                   <motion.h3 

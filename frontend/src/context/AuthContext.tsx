@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { auth } from "@/lib/firebase";
 import { onAuthStateChanged, User, signOut as firebaseSignOut } from "firebase/auth";
+import { Loader } from "@/components/Loader";
 
 interface AuthContextType {
   user: User | null;
@@ -43,7 +44,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   return (
     <AuthContext.Provider value={{ user, loading, signOut }}>
-      {children}
+      {loading ? <Loader fullScreen text="Initializing..." size="lg" /> : children}
     </AuthContext.Provider>
   );
 };
