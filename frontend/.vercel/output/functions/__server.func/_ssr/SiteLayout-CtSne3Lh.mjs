@@ -1,19 +1,17 @@
 import { j as jsxRuntimeExports, r as reactExports } from "../_libs/react.mjs";
 import { L as Link } from "../_libs/tanstack__react-router.mjs";
-import { b as useAuth, u as useCart, c as useLocation } from "./router-1gUiNko7.mjs";
+import { b as useAuth, u as useCart, c as useLocation } from "./router-BENyWQ3J.mjs";
 import { m as motion, A as AnimatePresence } from "../_libs/framer-motion.mjs";
-import { _ as MapPin, r as Search, h as ShoppingBag, Y as User, a1 as Instagram, a2 as Facebook, a3 as Twitter, a4 as Youtube, a5 as Apple, S as Smartphone } from "../_libs/lucide-react.mjs";
+import { a as MapPin, q as Briefcase, d as ShoppingBag, p as User, I as Instagram, r as Facebook, s as Twitter, Y as Youtube, t as Apple, u as Smartphone } from "../_libs/lucide-react.mjs";
 const nav = [
   { to: "/services", label: "Services" },
   { to: "/about", label: "About" }
 ];
 const allServices = [
-  "Digital Marketing",
-  "Telemarketing",
-  "Graphic Design",
-  "Web Development",
-  "App Development",
-  "Printer/Stationery"
+  "CCTV Installation",
+  "Camera Repair",
+  "CCTV Accessories",
+  "NVR/DVR Setup"
 ];
 function SiteHeader() {
   const { user, signOut } = useAuth();
@@ -21,7 +19,7 @@ function SiteHeader() {
   const { location, isLocating, fetchDynamicLocation, updateLocation } = useLocation();
   const [searchQuery, setSearchQuery] = reactExports.useState("");
   const [isSearchFocused, setIsSearchFocused] = reactExports.useState(false);
-  const filteredServices = allServices.filter((s) => s.toLowerCase().includes(searchQuery.toLowerCase())).slice(0, 10);
+  allServices.filter((s) => s.toLowerCase().includes(searchQuery.toLowerCase())).slice(0, 10);
   const [isScrolled, setIsScrolled] = reactExports.useState(false);
   reactExports.useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 20);
@@ -58,61 +56,27 @@ function SiteHeader() {
             ]
           }
         ),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative flex-1 max-w-md hidden lg:block", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs(
-            motion.div,
-            {
-              whileHover: { scale: 1.02 },
-              className: `flex items-center gap-2 rounded-full border px-4 py-2.5 transition-all ${isSearchFocused ? "border-brand ring-4 ring-brand/10 bg-white shadow-sm" : "border-border/50 bg-secondary/50 hover:bg-secondary"}`,
-              children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx(Search, { className: `h-4 w-4 transition-colors ${isSearchFocused ? "text-brand" : "text-muted-foreground"}` }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "input",
-                  {
-                    placeholder: "Search for 'Digital Marketing'...",
-                    value: searchQuery,
-                    onChange: (e) => setSearchQuery(e.target.value),
-                    onFocus: () => setIsSearchFocused(true),
-                    onBlur: () => setTimeout(() => setIsSearchFocused(false), 200),
-                    className: "flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground font-medium"
-                  }
-                )
-              ]
-            }
-          ),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(AnimatePresence, { children: isSearchFocused && searchQuery && /* @__PURE__ */ jsxRuntimeExports.jsxs(
-            motion.div,
-            {
-              initial: { opacity: 0, y: 10, scale: 0.95 },
-              animate: { opacity: 1, y: 0, scale: 1 },
-              exit: { opacity: 0, y: 10, scale: 0.95 },
-              className: "absolute top-full left-0 w-full mt-3 bg-card border border-border/50 rounded-2xl shadow-premium z-50 py-2 overflow-hidden",
-              children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-5 py-3 text-xs font-bold text-brand uppercase tracking-wider bg-brand-soft/50", children: [
-                  "Top results near ",
-                  location
-                ] }),
-                filteredServices.length > 0 ? filteredServices.map((service) => /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  Link,
-                  {
-                    to: "/services",
-                    className: "block px-5 py-3 text-sm hover:bg-secondary/80 transition-colors",
-                    children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-medium text-foreground", children: service })
-                  },
-                  service
-                )) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-5 py-4 text-sm text-muted-foreground", children: "No services found" })
-              ]
-            }
-          ) })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("nav", { className: "ml-auto hidden md:flex items-center gap-2", children: nav.map((n) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+        /* @__PURE__ */ jsxRuntimeExports.jsx("nav", { className: "ml-auto hidden md:flex items-center gap-2", children: nav.map((n) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
           Link,
           {
-            to: n.to,
+            to: n.to === "/services" ? "/" : n.to,
+            onClick: (e) => {
+              if (n.label === "Services") {
+                e.preventDefault();
+                if (window.location.pathname !== "/") {
+                  window.location.href = "/#services";
+                } else {
+                  document.getElementById("services")?.scrollIntoView({ behavior: "smooth" });
+                }
+              }
+            },
             activeProps: { className: "text-brand bg-brand-soft font-semibold" },
             inactiveProps: { className: "text-foreground/70 hover:bg-secondary/50" },
-            className: "px-4 py-2 text-sm font-medium transition-all rounded-full",
-            children: n.label
+            className: "px-4 py-2 text-sm font-medium transition-all rounded-full flex items-center gap-2",
+            children: [
+              n.label === "Services" && /* @__PURE__ */ jsxRuntimeExports.jsx(Briefcase, { className: "h-4 w-4" }),
+              n.label
+            ]
           },
           n.to
         )) }),

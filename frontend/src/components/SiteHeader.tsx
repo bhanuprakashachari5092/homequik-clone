@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { Search, MapPin, ShoppingBag, User } from "lucide-react";
+import { Search, MapPin, ShoppingBag, User, Briefcase } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useCart } from "@/context/CartContext";
@@ -12,12 +12,10 @@ const nav = [
 ] as const;
 
 const allServices = [
-  "Digital Marketing",
-  "Telemarketing",
-  "Graphic Design",
-  "Web Development",
-  "App Development",
-  "Printer/Stationery",
+  "CCTV Installation",
+  "Camera Repair",
+  "CCTV Accessories",
+  "NVR/DVR Setup",
 ];
 
 export function SiteHeader() {
@@ -69,60 +67,28 @@ export function SiteHeader() {
           <span className="font-medium">{isLocating ? "Locating..." : location}</span>
         </motion.button>
 
-        <div className="relative flex-1 max-w-md hidden lg:block">
-          <motion.div 
-            whileHover={{ scale: 1.02 }}
-            className={`flex items-center gap-2 rounded-full border px-4 py-2.5 transition-all ${isSearchFocused ? "border-brand ring-4 ring-brand/10 bg-white shadow-sm" : "border-border/50 bg-secondary/50 hover:bg-secondary"}`}
-          >
-            <Search className={`h-4 w-4 transition-colors ${isSearchFocused ? "text-brand" : "text-muted-foreground"}`} />
-            <input
-              placeholder="Search for 'Digital Marketing'..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onFocus={() => setIsSearchFocused(true)}
-              onBlur={() => setTimeout(() => setIsSearchFocused(false), 200)}
-              className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground font-medium"
-            />
-          </motion.div>
-          
-          <AnimatePresence>
-            {isSearchFocused && searchQuery && (
-              <motion.div 
-                initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                className="absolute top-full left-0 w-full mt-3 bg-card border border-border/50 rounded-2xl shadow-premium z-50 py-2 overflow-hidden"
-              >
-                <div className="px-5 py-3 text-xs font-bold text-brand uppercase tracking-wider bg-brand-soft/50">
-                  Top results near {location}
-                </div>
-                {filteredServices.length > 0 ? (
-                  filteredServices.map((service) => (
-                    <Link
-                      key={service}
-                      to="/services"
-                      className="block px-5 py-3 text-sm hover:bg-secondary/80 transition-colors"
-                    >
-                      <div className="font-medium text-foreground">{service}</div>
-                    </Link>
-                  ))
-                ) : (
-                  <div className="px-5 py-4 text-sm text-muted-foreground">No services found</div>
-                )}
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
+
 
         <nav className="ml-auto hidden md:flex items-center gap-2">
           {nav.map((n) => (
             <Link
               key={n.to}
-              to={n.to}
+              to={n.to === "/services" ? "/" : n.to}
+              onClick={(e) => {
+                 if (n.label === "Services") {
+                    e.preventDefault();
+                    if (window.location.pathname !== "/") {
+                       window.location.href = "/#services";
+                    } else {
+                       document.getElementById('services')?.scrollIntoView({ behavior: 'smooth' });
+                    }
+                 }
+              }}
               activeProps={{ className: "text-brand bg-brand-soft font-semibold" }}
               inactiveProps={{ className: "text-foreground/70 hover:bg-secondary/50" }}
-              className="px-4 py-2 text-sm font-medium transition-all rounded-full"
+              className="px-4 py-2 text-sm font-medium transition-all rounded-full flex items-center gap-2"
             >
+              {n.label === "Services" && <Briefcase className="h-4 w-4" />}
               {n.label}
             </Link>
           ))}

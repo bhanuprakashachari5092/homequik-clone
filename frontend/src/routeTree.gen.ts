@@ -9,21 +9,43 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as QuoteRouteImport } from './routes/quote'
+import { Route as PartnerRouteImport } from './routes/partner'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as DealerRouteImport } from './routes/dealer'
 import { Route as CartRouteImport } from './routes/cart'
+import { Route as BookRouteImport } from './routes/book'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as ServicesIndexRouteImport } from './routes/services.index'
-import { Route as ServicesServiceIdRouteImport } from './routes/services_.$serviceId'
 
+const QuoteRoute = QuoteRouteImport.update({
+  id: '/quote',
+  path: '/quote',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PartnerRoute = PartnerRouteImport.update({
+  id: '/partner',
+  path: '/partner',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DealerRoute = DealerRouteImport.update({
+  id: '/dealer',
+  path: '/dealer',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CartRoute = CartRouteImport.update({
   id: '/cart',
   path: '/cart',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BookRoute = BookRouteImport.update({
+  id: '/book',
+  path: '/book',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AboutRoute = AboutRouteImport.update({
@@ -36,74 +58,98 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ServicesIndexRoute = ServicesIndexRouteImport.update({
-  id: '/services/',
-  path: '/services/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ServicesServiceIdRoute = ServicesServiceIdRouteImport.update({
-  id: '/services_/$serviceId',
-  path: '/services/$serviceId',
-  getParentRoute: () => rootRouteImport,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/book': typeof BookRoute
   '/cart': typeof CartRoute
+  '/dealer': typeof DealerRoute
   '/login': typeof LoginRoute
-  '/services/$serviceId': typeof ServicesServiceIdRoute
-  '/services/': typeof ServicesIndexRoute
+  '/partner': typeof PartnerRoute
+  '/quote': typeof QuoteRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/book': typeof BookRoute
   '/cart': typeof CartRoute
+  '/dealer': typeof DealerRoute
   '/login': typeof LoginRoute
-  '/services/$serviceId': typeof ServicesServiceIdRoute
-  '/services': typeof ServicesIndexRoute
+  '/partner': typeof PartnerRoute
+  '/quote': typeof QuoteRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/book': typeof BookRoute
   '/cart': typeof CartRoute
+  '/dealer': typeof DealerRoute
   '/login': typeof LoginRoute
-  '/services_/$serviceId': typeof ServicesServiceIdRoute
-  '/services/': typeof ServicesIndexRoute
+  '/partner': typeof PartnerRoute
+  '/quote': typeof QuoteRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
     | '/about'
+    | '/book'
     | '/cart'
+    | '/dealer'
     | '/login'
-    | '/services/$serviceId'
-    | '/services/'
+    | '/partner'
+    | '/quote'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/about' | '/cart' | '/login' | '/services/$serviceId' | '/services'
+  to:
+    | '/'
+    | '/about'
+    | '/book'
+    | '/cart'
+    | '/dealer'
+    | '/login'
+    | '/partner'
+    | '/quote'
   id:
     | '__root__'
     | '/'
     | '/about'
+    | '/book'
     | '/cart'
+    | '/dealer'
     | '/login'
-    | '/services_/$serviceId'
-    | '/services/'
+    | '/partner'
+    | '/quote'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AboutRoute: typeof AboutRoute
+  BookRoute: typeof BookRoute
   CartRoute: typeof CartRoute
+  DealerRoute: typeof DealerRoute
   LoginRoute: typeof LoginRoute
-  ServicesServiceIdRoute: typeof ServicesServiceIdRoute
-  ServicesIndexRoute: typeof ServicesIndexRoute
+  PartnerRoute: typeof PartnerRoute
+  QuoteRoute: typeof QuoteRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/quote': {
+      id: '/quote'
+      path: '/quote'
+      fullPath: '/quote'
+      preLoaderRoute: typeof QuoteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/partner': {
+      id: '/partner'
+      path: '/partner'
+      fullPath: '/partner'
+      preLoaderRoute: typeof PartnerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/login': {
       id: '/login'
       path: '/login'
@@ -111,11 +157,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/dealer': {
+      id: '/dealer'
+      path: '/dealer'
+      fullPath: '/dealer'
+      preLoaderRoute: typeof DealerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/cart': {
       id: '/cart'
       path: '/cart'
       fullPath: '/cart'
       preLoaderRoute: typeof CartRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/book': {
+      id: '/book'
+      path: '/book'
+      fullPath: '/book'
+      preLoaderRoute: typeof BookRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/about': {
@@ -132,30 +192,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/services/': {
-      id: '/services/'
-      path: '/services'
-      fullPath: '/services/'
-      preLoaderRoute: typeof ServicesIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/services_/$serviceId': {
-      id: '/services_/$serviceId'
-      path: '/services/$serviceId'
-      fullPath: '/services/$serviceId'
-      preLoaderRoute: typeof ServicesServiceIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
+  BookRoute: BookRoute,
   CartRoute: CartRoute,
+  DealerRoute: DealerRoute,
   LoginRoute: LoginRoute,
-  ServicesServiceIdRoute: ServicesServiceIdRoute,
-  ServicesIndexRoute: ServicesIndexRoute,
+  PartnerRoute: PartnerRoute,
+  QuoteRoute: QuoteRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
