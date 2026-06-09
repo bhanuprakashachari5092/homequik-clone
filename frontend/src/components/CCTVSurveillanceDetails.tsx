@@ -245,10 +245,22 @@ export function CCTVSurveillanceDetails() {
         </div>
 
         {/* Navigation Tabs (Hero Area) */}
-        <div className="bg-[#1e293b] rounded-[2rem] p-8 md:p-12 mb-8 shadow-xl">
-           <h2 className="text-center text-2xl md:text-3xl font-extrabold text-white mb-8 tracking-tight">Explore Category: CCTV</h2>
-           
-           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-[#1e293b] rounded-[2rem] overflow-hidden mb-8 shadow-xl relative">
+           {/* Hero Image Section */}
+           <div className="relative h-[280px] md:h-[400px] w-full overflow-hidden bg-black">
+             <img src="/cctv_hero.png" alt="CCTV Installation Expert" className="w-full h-full object-cover object-[50%_15%] opacity-90" />
+             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent"></div>
+             <div className="absolute bottom-0 left-0 w-full p-8 md:p-10 text-left">
+               <h2 className="text-2xl md:text-4xl font-extrabold text-white tracking-tight leading-snug">
+                 <span className="text-[#f97316]">Vendor99:</span> Professional CCTV Solutions.<br/>
+                 Certified Experts.<br/>
+                 Clean, Minimalist Installations.
+               </h2>
+             </div>
+           </div>
+
+           <div className="p-8 md:p-12 pt-2">
+             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               <button 
                  onClick={() => setActiveTab("installation")}
                  className={`flex flex-col items-center justify-center gap-2 py-4 px-2 rounded-2xl font-extrabold text-sm md:text-base transition-all ${activeTab === 'installation' ? 'bg-white text-slate-800 shadow-[0_0_20px_rgba(255,255,255,0.2)] scale-105' : 'bg-white/10 text-white hover:bg-white/20'}`}
@@ -281,8 +293,8 @@ export function CCTVSurveillanceDetails() {
                  <span className="text-center leading-tight">Accessories<br/>& Parts</span>
               </button>
            </div>
+         </div>
         </div>
-
         {/* Tab Contents */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
            
