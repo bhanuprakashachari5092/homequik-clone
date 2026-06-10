@@ -309,6 +309,26 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
     }
   };
 
+  const exportDealersToCSV = () => {
+    const headers = ["ID", "Business Name", "Contact", "Phone", "Email", "City", "Expertise", "Plan", "Amount", "Status", "Payment Status", "Transaction ID"];
+    const csvContent = [
+      headers.join(","),
+      ...dealers.map(d => [
+        d.id, d.name || d.businessName, d.contact || d.ownerName, d.phone, d.email || "", d.city, d.expertise || d.category, d.plan || "", d.amount || "", d.status, d.paymentStatus || "", d.transactionId || ""
+      ].map(v => `"${(v || "").toString().replace(/"/g, '""')}"`).join(","))
+    ].join("\n");
+    
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", "dealers_export.csv");
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 flex font-sans">
       {/* Sidebar */}
@@ -468,9 +488,14 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                      <h2 className="text-2xl font-bold text-slate-800">Dealer Network</h2>
                      <p className="text-slate-500 mt-1">Manage, approve, and edit partner registration requests.</p>
                   </div>
-                  <button onClick={() => setShowAddModal(true)} className="bg-brand hover:bg-brand-dark text-white px-4 py-2 rounded-xl font-bold transition-colors">
-                     + Add New Dealer
-                  </button>
+                  <div className="flex gap-3">
+                     <button onClick={exportDealersToCSV} className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-4 py-2 rounded-xl font-bold transition-colors flex items-center gap-2 shadow-sm">
+                        Export CSV
+                     </button>
+                     <button onClick={() => setShowAddModal(true)} className="bg-brand hover:bg-brand-dark text-white px-4 py-2 rounded-xl font-bold transition-colors shadow-sm">
+                        + Add New Dealer
+                     </button>
+                  </div>
                </div>
                
                <div className="bg-white rounded-3xl border border-border shadow-sm overflow-hidden">
