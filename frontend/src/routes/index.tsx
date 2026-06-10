@@ -4,6 +4,9 @@ import { Search, Star, ShieldCheck, Clock, Sparkles, ArrowRight, MapPin, PlayCir
 import { useLocation } from "@/context/LocationContext";
 import { motion } from "framer-motion";
 import { CCTVSurveillanceDetails } from "@/components/CCTVSurveillanceDetails";
+import { useState, useEffect, useRef } from "react";
+import { db } from "@/lib/firebase";
+import { collection, onSnapshot } from "firebase/firestore";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -97,6 +100,39 @@ const itemVariants = {
 
 function Home() {
   const { location } = useLocation();
+  const [services, setServices] = useState<any[]>([]);
+  const initialLoadRef = useRef(true);
+
+  useEffect(() => {
+    // Request Notification Permission
+    if ("Notification" in window && Notification.permission !== "denied") {
+      Notification.requestPermission();
+    }
+
+    const unsubscribe = onSnapshot(collection(db, "services"), (snapshot) => {
+       const fetched: any[] = [];
+       snapshot.forEach(doc => fetched.push({ id: doc.id, ...doc.data() }));
+       
+       fetched.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+
+       if (!initialLoadRef.current) {
+         snapshot.docChanges().forEach((change) => {
+           if (change.type === "added") {
+             if (Notification.permission === "granted") {
+                new Notification("New Service Available!", {
+                  body: change.doc.data().title,
+                });
+             }
+           }
+         });
+       } else {
+         initialLoadRef.current = false;
+       }
+       setServices(fetched);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   return (
     <SiteLayout>
@@ -148,7 +184,13 @@ function Home() {
                 Book Service
               </Link>
               <Link to="/partner" className="bg-amber-100 text-amber-800 border-2 border-amber-200 hover:bg-amber-200 font-bold py-3 px-6 rounded-full shadow-sm transition-all hover:-translate-y-1 block">
-                Become Partner
+                Dealer Registration
+              </Link>
+              <Link to="/dealer-portal" className="bg-emerald-100 text-emerald-800 border-2 border-emerald-200 hover:bg-emerald-200 font-bold py-3 px-6 rounded-full shadow-sm transition-all hover:-translate-y-1 block">
+                Dealer Login
+              </Link>
+              <Link to="/become-partner" className="bg-purple-100 text-purple-800 border-2 border-purple-200 hover:bg-purple-200 font-bold py-3 px-6 rounded-full shadow-sm transition-all hover:-translate-y-1 block">
+                Become a Partner
               </Link>
             </motion.div>
 
@@ -195,6 +237,41 @@ function Home() {
           </div>
         </div>
       </section>
+
+      {/* Dynamic Services / Posts */}
+      {services.length > 0 && (
+         <section className="bg-slate-50 py-16 border-b border-border/50">
+            <div className="mx-auto max-w-7xl px-6 lg:px-8">
+               <div className="text-center mb-12">
+                 <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight sm:text-4xl">Latest Services & Offers</h2>
+                 <p className="mt-4 text-lg text-slate-600 max-w-2xl mx-auto font-medium">Discover our newest additions, professional offerings, and exclusive updates from Vendor99.</p>
+               </div>
+               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                  {services.map((service) => (
+                     <motion.div key={service.id} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="bg-white rounded-3xl border border-border shadow-sm overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col">
+                        {service.imageUrl ? (
+                           <div className="h-56 w-full overflow-hidden">
+                              <img src={service.imageUrl} alt={service.title} className="w-full h-full object-cover transition-transform duration-500 hover:scale-105" />
+                           </div>
+                        ) : (
+                           <div className="h-56 w-full bg-gradient-to-br from-brand/10 to-brand/5 flex items-center justify-center">
+                              <Sparkles className="h-12 w-12 text-brand/40" />
+                           </div>
+                        )}
+                        <div className="p-8 flex flex-col flex-1">
+                           <span className="text-xs font-bold text-brand bg-brand/10 px-3 py-1.5 rounded-full uppercase tracking-wider w-fit mb-4">{service.category}</span>
+                           <h3 className="text-xl font-bold text-slate-800 mb-3 line-clamp-2">{service.title}</h3>
+                           <p className="text-sm text-slate-600 line-clamp-3 mb-6 flex-1 leading-relaxed font-medium">{service.description}</p>
+                           <Link to="/book" className="font-bold text-brand hover:text-brand-dark flex items-center gap-2 group mt-auto">
+                              Book Service <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                           </Link>
+                        </div>
+                     </motion.div>
+                  ))}
+               </div>
+            </div>
+         </section>
+      )}
 
       <div className="mt-8">
         <CCTVSurveillanceDetails />

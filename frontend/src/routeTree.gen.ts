@@ -16,6 +16,7 @@ import { Route as DealerPortalRouteImport } from './routes/dealer-portal'
 import { Route as DealerRouteImport } from './routes/dealer'
 import { Route as CartRouteImport } from './routes/cart'
 import { Route as BookRouteImport } from './routes/book'
+import { Route as BecomePartnerRouteImport } from './routes/become-partner'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
@@ -55,6 +56,11 @@ const BookRoute = BookRouteImport.update({
   path: '/book',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BecomePartnerRoute = BecomePartnerRouteImport.update({
+  id: '/become-partner',
+  path: '/become-partner',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminRoute = AdminRouteImport.update({
   id: '/admin',
   path: '/admin',
@@ -75,6 +81,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/admin': typeof AdminRoute
+  '/become-partner': typeof BecomePartnerRoute
   '/book': typeof BookRoute
   '/cart': typeof CartRoute
   '/dealer': typeof DealerRoute
@@ -87,6 +94,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/admin': typeof AdminRoute
+  '/become-partner': typeof BecomePartnerRoute
   '/book': typeof BookRoute
   '/cart': typeof CartRoute
   '/dealer': typeof DealerRoute
@@ -100,6 +108,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/admin': typeof AdminRoute
+  '/become-partner': typeof BecomePartnerRoute
   '/book': typeof BookRoute
   '/cart': typeof CartRoute
   '/dealer': typeof DealerRoute
@@ -114,6 +123,7 @@ export interface FileRouteTypes {
     | '/'
     | '/about'
     | '/admin'
+    | '/become-partner'
     | '/book'
     | '/cart'
     | '/dealer'
@@ -126,6 +136,7 @@ export interface FileRouteTypes {
     | '/'
     | '/about'
     | '/admin'
+    | '/become-partner'
     | '/book'
     | '/cart'
     | '/dealer'
@@ -138,6 +149,7 @@ export interface FileRouteTypes {
     | '/'
     | '/about'
     | '/admin'
+    | '/become-partner'
     | '/book'
     | '/cart'
     | '/dealer'
@@ -151,6 +163,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AboutRoute: typeof AboutRoute
   AdminRoute: typeof AdminRoute
+  BecomePartnerRoute: typeof BecomePartnerRoute
   BookRoute: typeof BookRoute
   CartRoute: typeof CartRoute
   DealerRoute: typeof DealerRoute
@@ -211,6 +224,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BookRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/become-partner': {
+      id: '/become-partner'
+      path: '/become-partner'
+      fullPath: '/become-partner'
+      preLoaderRoute: typeof BecomePartnerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin': {
       id: '/admin'
       path: '/admin'
@@ -239,6 +259,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
   AdminRoute: AdminRoute,
+  BecomePartnerRoute: BecomePartnerRoute,
   BookRoute: BookRoute,
   CartRoute: CartRoute,
   DealerRoute: DealerRoute,

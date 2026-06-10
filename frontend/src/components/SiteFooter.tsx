@@ -16,7 +16,7 @@ const columns = [
   {
     title: "For customers",
     links: [
-      ["Categories near you", "/services"],
+      ["Categories near you", "/"],
       ["Blog", "/about"],
       ["Contact us", "/about"],
       ["Reviews", "/about"],
@@ -25,8 +25,8 @@ const columns = [
   {
     title: "For professionals",
     links: [
-      ["Register as a professional", "/login"],
-      ["Partner app", "/login"],
+      ["Register as a Dealer", "/partner"],
+      ["Dealer Login", "/dealer-portal"],
     ],
   },
   {

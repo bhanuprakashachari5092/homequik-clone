@@ -1,5 +1,6 @@
 var commonjsGlobal = typeof globalThis !== "undefined" ? globalThis : typeof window !== "undefined" ? window : typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : {};
 var Integer;
+var Md5;
 (function() {
   var h;
   function k(d, a) {
@@ -412,6 +413,7 @@ var Integer;
   m.prototype.digest = m.prototype.A;
   m.prototype.reset = m.prototype.u;
   m.prototype.update = m.prototype.v;
+  Md5 = m;
   t.prototype.add = t.prototype.add;
   t.prototype.multiply = t.prototype.j;
   t.prototype.modulo = t.prototype.B;
@@ -424,5 +426,6 @@ var Integer;
   Integer = t;
 }).apply(typeof commonjsGlobal !== "undefined" ? commonjsGlobal : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {});
 export {
-  Integer as I
+  Integer as I,
+  Md5 as M
 };

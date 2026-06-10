@@ -2,6 +2,8 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { SiteLayout } from "@/components/SiteLayout";
 import { MapPin, Search, Star, ArrowLeft } from "lucide-react";
 import { useState, useEffect } from "react";
+import { db } from "@/lib/firebase";
+import { collection, onSnapshot, query, where } from "firebase/firestore";
 
 export const Route = createFileRoute("/dealer")({
   head: () => ({
@@ -13,27 +15,30 @@ export const Route = createFileRoute("/dealer")({
   component: DealerPage,
 });
 
-const initialDealers = [
-  { id: "DLR-101", name: "TechVision Security", contact: "John Doe", phone: "+91 9876543210", city: "Bangalore", status: "Active" },
-  { id: "DLR-102", name: "SecureHomes Systems", contact: "Priya Patel", phone: "+91 9123456780", city: "Mumbai", status: "Pending" },
-  { id: "DLR-103", name: "ElectroTech Installations", contact: "Rahul Sharma", phone: "+91 9988776655", city: "Delhi", status: "Active" },
-  { id: "DLR-104", name: "SafeGuard Solutions", contact: "Amit Kumar", phone: "+91 9876512345", city: "Hyderabad", status: "Inactive" },
-];
-
 function DealerPage() {
   const [dealers, setDealers] = useState<any[]>([]);
 
   useEffect(() => {
-    const stored = localStorage.getItem("vendor99_dealers");
-    if (stored) {
-      setDealers(JSON.parse(stored));
-    } else {
-      setDealers(initialDealers);
-      localStorage.setItem("vendor99_dealers", JSON.stringify(initialDealers));
-    }
+    const q = query(
+      collection(db, "dealers"),
+      where("status", "==", "Active")
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const activeDealers: any[] = [];
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        if (data.paymentStatus === "Verified") {
+           activeDealers.push({ id: doc.id, ...data });
+        }
+      });
+      setDealers(activeDealers);
+    });
+
+    return () => unsubscribe();
   }, []);
 
-  const activeDealers = dealers.filter(d => d.status === "Active");
+  const activeDealers = dealers;
 
   return (
     <SiteLayout>

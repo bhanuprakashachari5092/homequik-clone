@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { 
-  Briefcase, LogOut, CheckCircle2, Clock, MapPin, Phone
+  Briefcase, LogOut, CheckCircle2, Clock, MapPin, Phone, XCircle
 } from "lucide-react";
 import { useState, useEffect } from "react";
 

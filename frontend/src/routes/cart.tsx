@@ -85,7 +85,7 @@ function CartPage() {
             <p className="mt-4 text-muted-foreground text-lg">Discover premium B2B services and add your first booking.</p>
             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="mt-10">
               <Link
-                to="/services"
+                to="/"
                 className="inline-flex items-center gap-2 rounded-xl bg-gradient-premium px-8 py-4 text-base font-bold text-white shadow-lg transition-all"
               >
                 Explore Services <ArrowRight className="h-5 w-5" />

@@ -17,6 +17,7 @@ const wholesaleData = [
     sections: [
       {
         title: "AHD Color Cameras",
+        image: "/images/cctv_ahd_camera.png",
         headers: ["Camera Model & Resolution", "Type / Housing", "Price (INR)"],
         items: [
           { col1: "AHD 2MP Colour Camera", col2: "Dome Camera", col3: "₹ 1,000/-" },
@@ -27,6 +28,7 @@ const wholesaleData = [
       },
       {
         title: "AHD Digital Video Recorders (DVR) — Bundle with Hard Disk",
+        image: "/images/cctv_dvr_system.png",
         headers: ["DVR Type & Channels", "Storage Capacity", "Price (INR)"],
         items: [
           { col1: "2MP 4-Channel DVR", col2: "500 GB HDD Included", col3: "₹ 7,000/-" },
@@ -62,6 +64,7 @@ const wholesaleData = [
     sections: [
       {
         title: "High-Performance IP Cameras",
+        image: "/images/cctv_ip_camera.png",
         headers: ["Series / Specification", "Housing / Model Style", "Price (INR)"],
         items: [
           { col1: "5MP Full ColorVu (EH55 PCB)", col2: "Plastic Dome", col3: "₹ 1,900/-" },
@@ -84,6 +87,7 @@ const wholesaleData = [
       },
       {
         title: "Network Video Recorders (NVR 8MP) — Bundle with Hard Disk",
+        image: "/images/cctv_dvr_system.png",
         headers: ["NVR Type & Channel Scale", "Storage Capacity", "Price (INR)"],
         items: [
           { col1: "10-Channel NVR (8MP Support)", col2: "500 GB HDD Included", col3: "₹ 9,000/-" },
@@ -103,6 +107,7 @@ const wholesaleData = [
     sections: [
       {
         title: "Power Over Ethernet (POE) Switches",
+        image: "/images/cctv_accessories.png",
         headers: ["Category", "Item Description", "Price (INR)"],
         items: [
           { col1: "Power Over Ethernet (POE) Switches", col2: "4-Channel POE Switch", col3: "₹ 2,500/-" },
@@ -112,6 +117,7 @@ const wholesaleData = [
       },
       {
         title: "Display Monitors & Routers",
+        image: "/images/cctv_monitor_router.png",
         headers: ["Category", "Item Description", "Price (INR)"],
         items: [
           { col1: "Display Monitors & Routers", col2: "17\" LED Monitor", col3: "₹ 3,000/-" },
@@ -122,6 +128,7 @@ const wholesaleData = [
       },
       {
         title: "Accessories",
+        image: "/images/cctv_accessories.png",
         headers: ["Category", "Item Description", "Price (INR)"],
         items: [
           { col1: "Accessories", col2: "Camera Box (5\" x 5\")", col3: "₹ 100/-" },
@@ -133,6 +140,7 @@ const wholesaleData = [
       },
       {
         title: "Connectors & Power Supplies",
+        image: "/images/cctv_power_supply.png",
         headers: ["Category", "Item Description", "Price (INR)"],
         items: [
           { col1: "Connectors & Power Supplies", col2: "2AMP Power Adapter", col3: "₹ 300/-" },
@@ -146,6 +154,7 @@ const wholesaleData = [
       },
       {
         title: "Cables & Interconnects",
+        image: "/images/cctv_cables.png",
         headers: ["Category", "Item Description", "Price (INR)"],
         items: [
           { col1: "Cables & Interconnects", col2: "Power Cable", col3: "₹ 15/-" },
@@ -281,10 +290,7 @@ export function CCTVSurveillanceDetails() {
            {/* Hero Image Section */}
            <div className="relative h-[280px] md:h-[400px] w-full overflow-hidden bg-black transition-all duration-500">
              <img 
-               src={{
-                 installation: '/cctv_hero.png',
-                 buy: '/cctv_hero_buy.png'
-               }[activeTab] || '/cctv_hero.png'} 
+               src={activeTab === 'buy' ? '/cctv_hero_buy.png' : '/cctv_hero.png'}  
                alt="CCTV Expert" 
                className="w-full h-full object-cover object-[50%_15%] opacity-90 transition-opacity duration-500" 
              />
@@ -513,7 +519,10 @@ export function CCTVSurveillanceDetails() {
                                     <div className="space-y-8">
                                        {categoryData.sections.map((section, j) => (
                                           <div key={j} className="bg-white border border-[#e2e8f0] rounded-2xl overflow-hidden shadow-sm">
-                                             <div className="bg-slate-800 p-4 border-b border-[#e2e8f0]">
+                                             <div className="bg-slate-800 p-4 border-b border-[#e2e8f0] flex items-center gap-4">
+                                                {section.image && (
+                                                   <img src={section.image} alt={section.title} className="w-16 h-16 object-cover rounded-lg bg-white shadow-sm border border-slate-600" />
+                                                )}
                                                 <h5 className="font-extrabold text-white text-lg">{section.title}</h5>
                                              </div>
                                              
@@ -675,7 +684,7 @@ export function CCTVSurveillanceDetails() {
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-brand"></span>
                 </span>
-                In Proud Collaboration With
+                In Proud Partner's With
              </div>
           </div>
           <div className="flex w-full overflow-hidden relative group">
@@ -695,6 +704,14 @@ export function CCTVSurveillanceDetails() {
                    <div className="w-32 md:w-48 flex items-center justify-center mix-blend-multiply">
                       <img src="/logos/secureye-v2.png" alt="SECUREYE" className="w-full h-auto object-contain scale-[1.1] transition-all duration-300 hover:animate-pulse hover:-translate-y-3 hover:scale-[1.2]" />
                    </div>
+                   <div className="w-32 md:w-48 flex flex-col items-center justify-center mix-blend-multiply">
+                      <img src="/logos/homewell.png" alt="HomeWell" className="w-[50%] h-auto object-contain transition-all duration-300 hover:animate-pulse hover:-translate-y-2 hover:scale-[1.1]" />
+                      <span className="text-sm font-bold text-slate-800 mt-1 uppercase tracking-wide">HomeWell</span>
+                   </div>
+                   <div className="w-32 md:w-48 flex flex-col items-center justify-center mix-blend-multiply">
+                      <img src="/logos/reboot.png" alt="REBOOT" className="w-[50%] h-auto object-contain transition-all duration-300 hover:animate-pulse hover:-translate-y-2 hover:scale-[1.1]" />
+                      <span className="text-sm font-bold text-slate-800 mt-1 uppercase tracking-wide">REBOOT</span>
+                   </div>
                 </div>
                 {/* Block 2 */}
                 <div className="flex items-center gap-24 md:gap-32 px-12 md:px-16">
@@ -710,6 +727,14 @@ export function CCTVSurveillanceDetails() {
                    <div className="w-32 md:w-48 flex items-center justify-center mix-blend-multiply">
                       <img src="/logos/secureye-v2.png" alt="SECUREYE" className="w-full h-auto object-contain scale-[1.1] transition-all duration-300 hover:animate-pulse hover:-translate-y-3 hover:scale-[1.2]" />
                    </div>
+                   <div className="w-32 md:w-48 flex flex-col items-center justify-center mix-blend-multiply">
+                      <img src="/logos/homewell.png" alt="HomeWell" className="w-[50%] h-auto object-contain transition-all duration-300 hover:animate-pulse hover:-translate-y-2 hover:scale-[1.1]" />
+                      <span className="text-sm font-bold text-slate-800 mt-1 uppercase tracking-wide">HomeWell</span>
+                   </div>
+                   <div className="w-32 md:w-48 flex flex-col items-center justify-center mix-blend-multiply">
+                      <img src="/logos/reboot.png" alt="REBOOT" className="w-[50%] h-auto object-contain transition-all duration-300 hover:animate-pulse hover:-translate-y-2 hover:scale-[1.1]" />
+                      <span className="text-sm font-bold text-slate-800 mt-1 uppercase tracking-wide">REBOOT</span>
+                   </div>
                 </div>
                 {/* Block 3 */}
                 <div className="flex items-center gap-24 md:gap-32 px-12 md:px-16">
@@ -724,6 +749,14 @@ export function CCTVSurveillanceDetails() {
                    </div>
                    <div className="w-32 md:w-48 flex items-center justify-center mix-blend-multiply">
                       <img src="/logos/secureye-v2.png" alt="SECUREYE" className="w-full h-auto object-contain scale-[1.1] transition-all duration-300 hover:animate-pulse hover:-translate-y-3 hover:scale-[1.2]" />
+                   </div>
+                   <div className="w-32 md:w-48 flex flex-col items-center justify-center mix-blend-multiply">
+                      <img src="/logos/homewell.png" alt="HomeWell" className="w-full h-auto object-contain scale-[1.0] transition-all duration-300 hover:animate-pulse hover:-translate-y-3 hover:scale-[1.1]" />
+                      <span className="text-sm font-bold text-slate-800 mt-2 uppercase tracking-wide">HomeWell</span>
+                   </div>
+                   <div className="w-32 md:w-48 flex flex-col items-center justify-center mix-blend-multiply">
+                      <img src="/logos/reboot.png" alt="REBOOT" className="w-full h-auto object-contain scale-[1.0] transition-all duration-300 hover:animate-pulse hover:-translate-y-3 hover:scale-[1.1]" />
+                      <span className="text-sm font-bold text-slate-800 mt-2 uppercase tracking-wide">REBOOT</span>
                    </div>
                 </div>
              </div>
