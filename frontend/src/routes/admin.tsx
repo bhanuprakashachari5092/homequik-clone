@@ -114,6 +114,11 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   const [showRevenueModal, setShowRevenueModal] = useState(false);
   const [newRevenue, setNewRevenue] = useState({ amount: "", description: "", paymentStatus: "Received" });
 
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [notificationsClearedAt, setNotificationsClearedAt] = useState<number>(() => {
+    return Number(localStorage.getItem('adminNotificationsClearedAt') || '0');
+  });
+
   useEffect(() => {
     const unsubscribeBookings = onSnapshot(collection(db, "bookings"), (snapshot) => {
        const bks: any[] = [];
@@ -412,6 +417,46 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   const completedOrdersCount = bookings.filter(b => b.status === "Completed").length;
   const completionRate = bookings.length > 0 ? Math.round((completedOrdersCount / bookings.length) * 100) : 0;
 
+  // Unified Notifications Logic
+  const allNotifications = [
+    ...dealers.map(d => {
+       // Using Firebase timestamp or fallback
+       let timeMs = Date.now();
+       if (d.createdAt?.toMillis) timeMs = d.createdAt.toMillis();
+       else if (d.paymentDate) timeMs = new Date(d.paymentDate).getTime();
+       
+       return {
+         id: d.id,
+         type: 'dealer',
+         message: `New Partner Registered: ${d.businessName || d.name} joined the ${d.plan || 'Starter Plan'}`,
+         timeMs: timeMs
+       };
+    }),
+    ...bookings.map(b => {
+       let timeMs = Date.now();
+       if (b.createdAt?.toMillis) timeMs = b.createdAt.toMillis();
+       else if (b.bookingDate) timeMs = new Date(b.bookingDate).getTime();
+
+       return {
+         id: b.id || b.bookingId,
+         type: 'booking',
+         message: `New Service Request: ${b.customerName} booked ${b.serviceName || b.service}`,
+         timeMs: timeMs
+       };
+    })
+  ];
+
+  const notifications = allNotifications
+    .filter(n => n.timeMs > notificationsClearedAt)
+    .sort((a, b) => b.timeMs - a.timeMs);
+
+  const handleClearNotifications = () => {
+    const now = Date.now();
+    setNotificationsClearedAt(now);
+    localStorage.setItem('adminNotificationsClearedAt', now.toString());
+    setIsNotificationsOpen(false);
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 flex font-sans">
       {/* Sidebar */}
@@ -476,10 +521,55 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
           </div>
           
           <div className="flex items-center gap-6">
-            <button className="relative p-2 text-slate-500 hover:text-brand transition-colors">
-              <Bell className="h-6 w-6" />
-              <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-brand rounded-full border-2 border-white"></span>
-            </button>
+            <div className="relative">
+              <button 
+                onClick={() => setIsNotificationsOpen(!isNotificationsOpen)} 
+                className={`relative p-2 transition-colors rounded-full ${isNotificationsOpen ? 'bg-slate-100 text-brand' : 'text-slate-500 hover:text-brand hover:bg-slate-50'}`}
+              >
+                <Bell className="h-6 w-6" />
+                {notifications.length > 0 && (
+                  <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>
+                )}
+              </button>
+              
+              {isNotificationsOpen && (
+                <div className="absolute right-0 mt-2 w-80 md:w-96 bg-white rounded-2xl shadow-xl border border-border overflow-hidden z-50 flex flex-col max-h-[80vh]">
+                  <div className="p-4 border-b border-border flex justify-between items-center bg-slate-50 shrink-0">
+                    <h3 className="font-bold text-slate-800">Notifications</h3>
+                    <button 
+                      onClick={handleClearNotifications}
+                      className="text-xs font-bold text-brand hover:text-brand-dark px-2 py-1 bg-brand/10 rounded-lg transition-colors"
+                    >
+                      Clear All
+                    </button>
+                  </div>
+                  <div className="overflow-y-auto flex-1">
+                    {notifications.length === 0 ? (
+                      <div className="p-8 text-center text-slate-500 flex flex-col items-center">
+                        <CheckCircle2 className="h-10 w-10 text-slate-300 mb-2" />
+                        <p className="font-medium text-sm">You're all caught up!</p>
+                      </div>
+                    ) : (
+                      <div className="divide-y divide-border">
+                        {notifications.map((n, i) => (
+                          <div key={`${n.id}-${i}`} className="p-4 hover:bg-slate-50 transition-colors flex gap-3 items-start">
+                            <div className={`mt-0.5 p-2 rounded-full shrink-0 ${n.type === 'dealer' ? 'bg-purple-100 text-purple-600' : 'bg-blue-100 text-blue-600'}`}>
+                              {n.type === 'dealer' ? <Briefcase className="h-4 w-4" /> : <User className="h-4 w-4" />}
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium text-slate-800 leading-snug">{n.message}</p>
+                              <p className="text-xs text-slate-400 mt-1">
+                                {new Date(n.timeMs).toLocaleString()}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-full bg-brand/20 border border-brand/30 flex items-center justify-center overflow-hidden">
                  <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Admin&backgroundColor=f8fafc" alt="Admin" />
