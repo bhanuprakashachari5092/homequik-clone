@@ -95,6 +95,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   const [activeTab, setActiveTab] = useState("Dashboard");
   const [dealers, setDealers] = useState<any[]>([]);
   const [bookings, setBookings] = useState<any[]>([]);
+  const [customRevenues, setCustomRevenues] = useState<any[]>([]);
   
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingDealerId, setEditingDealerId] = useState<string | null>(null);
@@ -109,6 +110,9 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   const [showOfferModal, setShowOfferModal] = useState(false);
   const [editingOfferId, setEditingOfferId] = useState<string | null>(null);
   const [newOffer, setNewOffer] = useState({ title: "", description: "", discountCode: "", imageUrl: "", isActive: true });
+
+  const [showRevenueModal, setShowRevenueModal] = useState(false);
+  const [newRevenue, setNewRevenue] = useState({ amount: "", description: "", paymentStatus: "Received" });
 
   useEffect(() => {
     const unsubscribeBookings = onSnapshot(collection(db, "bookings"), (snapshot) => {
@@ -135,11 +139,18 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
        setDealers(dlrs);
     });
 
+    const unsubscribeRevenue = onSnapshot(collection(db, "custom_revenues"), (snapshot) => {
+       const revs: any[] = [];
+       snapshot.forEach(d => revs.push({ id: d.id, ...d.data() }));
+       setCustomRevenues(revs);
+    });
+
     return () => {
       unsubscribeBookings();
       unsubscribeServices();
       unsubscribeOffers();
       unsubscribeDealers();
+      unsubscribeRevenue();
     };
   }, []);
 
@@ -353,7 +364,46 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
     }
   };
 
-  const totalRevNum = dealers.reduce((acc, d) => acc + (Number(d.amount) || 0), 0) + bookings.reduce((acc, b) => acc + (Number(b.numericAmount) || 0), 0);
+  const handleAddCustomRevenue = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newRevenue.amount) return;
+    
+    try {
+      await addDoc(collection(db, "custom_revenues"), {
+         amount: Number(newRevenue.amount),
+         description: newRevenue.description,
+         paymentStatus: newRevenue.paymentStatus,
+         createdAt: serverTimestamp()
+      });
+      setShowRevenueModal(false);
+      setNewRevenue({ amount: "", description: "", paymentStatus: "Received" });
+    } catch (err) {
+      console.error("Failed to add custom revenue:", err);
+    }
+  };
+
+  const updateBookingPaymentStatus = async (bookingId: string, status: string) => {
+    try {
+      await updateDoc(doc(db, "bookings", bookingId), { paymentStatus: status });
+    } catch (err) {
+      console.error("Failed to update payment status:", err);
+    }
+  };
+
+  const dealerRevenue = dealers.reduce((acc, d) => acc + (Number(d.amount) || 0), 0);
+  const bookingRevenue = bookings.reduce((acc, b) => acc + (Number(b.numericAmount) || 0), 0);
+  const customRevTotal = customRevenues.reduce((acc, c) => acc + (Number(c.amount) || 0), 0);
+  
+  const expectedRevenue = dealerRevenue + bookingRevenue + customRevTotal;
+  
+  const receivedBookingRev = bookings.filter(b => b.paymentStatus === 'Paid').reduce((acc, b) => acc + (Number(b.numericAmount) || 0), 0);
+  const receivedCustomRev = customRevenues.filter(c => c.paymentStatus === 'Received').reduce((acc, c) => acc + (Number(c.amount) || 0), 0);
+  const receivedRevenue = dealerRevenue + receivedBookingRev + receivedCustomRev;
+  
+  const remainingRevenue = expectedRevenue - receivedRevenue;
+
+  const totalRevNum = expectedRevenue; // keeping for backward compatibility if used elsewhere
+
   const formatCurrency = (val: number) => {
     if (val >= 100000) return `₹${(val / 100000).toFixed(2)}L`;
     return `₹${val.toLocaleString('en-IN')}`;
@@ -446,13 +496,20 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
         <div className="flex-1 p-8 overflow-y-auto">
           {activeTab === "Dashboard" ? (
             <div className="max-w-7xl mx-auto space-y-8">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-bold text-slate-800">Financial Overview</h2>
+                <button onClick={() => setShowRevenueModal(true)} className="bg-brand hover:bg-brand-dark text-white px-4 py-2 rounded-xl font-bold transition-colors">
+                  + Log Custom Revenue
+                </button>
+              </div>
+
               {/* Stats Row */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 {[
-                  { label: "Total Revenue", value: formatCurrency(totalRevNum), trend: "Dynamic", isPositive: true, icon: DollarSign, color: "text-emerald-600", bg: "bg-emerald-100" },
-                  { label: "Active Orders", value: activeOrdersCount.toString(), trend: "Real-time", isPositive: true, icon: ShoppingCart, color: "text-brand", bg: "bg-brand/20" },
+                  { label: "Expected Revenue", value: formatCurrency(expectedRevenue), trend: "Projected", isPositive: true, icon: Activity, color: "text-blue-600", bg: "bg-blue-100" },
+                  { label: "Received Revenue", value: formatCurrency(receivedRevenue), trend: "Verified", isPositive: true, icon: CheckCircle2, color: "text-emerald-600", bg: "bg-emerald-100" },
+                  { label: "Remaining Revenue", value: formatCurrency(remainingRevenue), trend: "Pending", isPositive: false, icon: DollarSign, color: "text-amber-600", bg: "bg-amber-100" },
                   { label: "Partner Dealers", value: dealers.length.toString(), trend: "Real-time", isPositive: true, icon: Briefcase, color: "text-purple-600", bg: "bg-purple-100" },
-                  { label: "Service Completion", value: `${completionRate}%`, trend: "Real-time", isPositive: true, icon: Activity, color: "text-blue-600", bg: "bg-blue-100" },
                 ].map((stat, i) => (
                   <div key={i} className="bg-white p-6 rounded-3xl border border-border shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow">
                     <div className="flex items-start justify-between">
@@ -465,10 +522,10 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                       </div>
                     </div>
                     <div className="mt-4 flex items-center gap-2">
-                      <span className={`text-sm font-bold ${stat.isPositive ? 'text-emerald-600' : 'text-red-500'}`}>
+                      <span className={`text-sm font-bold ${stat.isPositive ? 'text-emerald-600' : 'text-amber-500'}`}>
                         {stat.trend}
                       </span>
-                      <span className="text-sm text-slate-500">vs last month</span>
+                      <span className="text-sm text-slate-500">Live DB Match</span>
                     </div>
                   </div>
                 ))}
@@ -662,6 +719,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                         <th className="py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider">Service Request</th>
                         <th className="py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider">Assigned Dealer</th>
                         <th className="py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
+                        <th className="py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider">Payment</th>
                         <th className="py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">Actions</th>
                       </tr>
                     </thead>
@@ -699,6 +757,16 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                             }`}>
                               {booking.status}
                             </span>
+                          </td>
+                          <td className="py-4 px-6">
+                             <select 
+                                value={booking.paymentStatus || "Pending"}
+                                onChange={(e) => updateBookingPaymentStatus(booking.id, e.target.value)}
+                                className={`text-sm border rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-brand font-bold ${booking.paymentStatus === 'Paid' ? 'border-emerald-200 bg-emerald-50 text-emerald-600' : 'border-amber-200 bg-amber-50 text-amber-600'}`}
+                             >
+                                <option value="Pending">Pending</option>
+                                <option value="Paid">Paid</option>
+                             </select>
                           </td>
                           <td className="py-4 px-6 text-right whitespace-nowrap">
                              <button onClick={() => handleDeleteBooking(booking.id)} className="p-1.5 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg transition-colors" title="Delete Booking">
@@ -840,6 +908,45 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
             </div>
           )}
         </div>
+
+        {/* Log Custom Revenue Modal */}
+        {showRevenueModal && (
+           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+              <div className="bg-white rounded-3xl w-full max-w-md shadow-xl overflow-hidden">
+                 <div className="p-6 border-b border-border flex justify-between items-center bg-slate-50">
+                    <h3 className="font-bold text-xl text-slate-800">
+                       Log Custom Revenue
+                    </h3>
+                    <button onClick={() => setShowRevenueModal(false)} className="text-slate-400 hover:text-red-500 transition-colors">
+                       <XCircle className="h-6 w-6" />
+                    </button>
+                 </div>
+                 <form onSubmit={handleAddCustomRevenue} className="p-6 space-y-4">
+                    <div>
+                       <label className="text-sm font-bold text-slate-700 block mb-1">Amount (₹)</label>
+                       <input required type="number" min="0" value={newRevenue.amount} onChange={(e) => setNewRevenue({...newRevenue, amount: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand font-bold text-lg" placeholder="5000" />
+                    </div>
+                    <div>
+                       <label className="text-sm font-bold text-slate-700 block mb-1">Description</label>
+                       <input required type="text" value={newRevenue.description} onChange={(e) => setNewRevenue({...newRevenue, description: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand" placeholder="e.g. Offline cash payment for CCTV setup" />
+                    </div>
+                    <div>
+                       <label className="text-sm font-bold text-slate-700 block mb-1">Payment Status</label>
+                       <select required value={newRevenue.paymentStatus} onChange={(e) => setNewRevenue({...newRevenue, paymentStatus: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand appearance-none font-medium text-slate-700">
+                          <option value="Received">Received (Paid)</option>
+                          <option value="Pending">Pending (Unpaid)</option>
+                       </select>
+                    </div>
+                    <div className="pt-4 flex gap-4">
+                       <button type="button" onClick={() => setShowRevenueModal(false)} className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 rounded-xl transition-colors">Cancel</button>
+                       <button type="submit" className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 rounded-xl transition-colors shadow-md">
+                          Save Revenue
+                       </button>
+                    </div>
+                 </form>
+              </div>
+           </div>
+        )}
 
         {/* Add/Edit Dealer Modal */}
         {showAddModal && (
