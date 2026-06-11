@@ -604,7 +604,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                   </div>
                   <div className="bg-white p-4 rounded-2xl border border-border shadow-sm">
                      <p className="text-xs font-bold text-purple-600 uppercase tracking-wider mb-1">Premium</p>
-                     <p className="text-2xl font-black text-slate-800">{dealers.filter(d => d.plan === 'Premium Dealer').length}</p>
+                     <p className="text-2xl font-black text-slate-800">{dealers.filter(d => d.plan === 'Premium Plan' || d.plan === 'Premium Dealer').length}</p>
                   </div>
                   <div className="bg-white p-4 rounded-2xl border border-border shadow-sm">
                      <p className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-1">Monthly Rev</p>
@@ -626,9 +626,9 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                   </select>
                   <select className="bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm font-medium text-slate-700 outline-none focus:border-brand">
                      <option value="All">All Plans</option>
-                     <option value="Basic Dealer">Basic Dealer</option>
-                     <option value="Growth Dealer">Growth Dealer</option>
-                     <option value="Premium Dealer">Premium Dealer</option>
+                     <option value="Starter Plan">Starter Plan</option>
+                     <option value="Growth Plan">Growth Plan</option>
+                     <option value="Premium Plan">Premium Plan</option>
                   </select>
                   <select className="bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm font-medium text-slate-700 outline-none focus:border-brand">
                      <option value="All">All Statuses</option>
@@ -664,7 +664,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                              {dealer.email && <div className="text-xs text-blue-500 mt-0.5">{dealer.email}</div>}
                           </td>
                           <td className="py-4 px-6">
-                             <div className="text-sm font-bold text-slate-800 mb-1">{dealer.plan || 'Basic Dealer'} (₹{dealer.amount || '999'})</div>
+                             <div className="text-sm font-bold text-slate-800 mb-1">{dealer.plan || 'Starter Plan'} (₹{dealer.amount || '4999'})</div>
                              <div className="text-[10px] font-mono text-slate-500">TXN: {dealer.transactionId || 'N/A'}</div>
                              <div className="text-[10px] font-mono text-slate-500">ORD: {dealer.orderId || 'N/A'}</div>
                           </td>

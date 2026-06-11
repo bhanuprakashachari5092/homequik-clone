@@ -22,14 +22,14 @@ export const Route = createFileRoute("/partner")({
 
 const PLANS = [
   {
-    id: "basic",
-    name: "Basic Dealer",
-    price: 999,
-    description: "Perfect for getting started on Vendor99.",
+    id: "starter",
+    name: "Starter Plan",
+    price: 4999,
+    description: "Get started with high-quality verified leads.",
     features: [
+      "25 Verified Leads",
       "Dealer Profile",
       "Business Listing",
-      "Contact Details Display",
       "Category Listing"
     ],
     color: "bg-slate-100 border-slate-200 text-slate-800",
@@ -37,11 +37,11 @@ const PLANS = [
   },
   {
     id: "growth",
-    name: "Growth Dealer",
-    price: 2999,
-    description: "Accelerate your business with digital marketing.",
+    name: "Growth Plan",
+    price: 7500,
+    description: "Accelerate your business with double the leads.",
     features: [
-      "Everything in Basic",
+      "50 Verified Leads",
       "Digital Marketing",
       "Social Media Marketing",
       "Priority Listing"
@@ -52,12 +52,12 @@ const PLANS = [
   },
   {
     id: "premium",
-    name: "Premium Dealer",
-    price: 4999,
-    description: "Maximum visibility and priority support.",
+    name: "Premium Plan",
+    price: 15000,
+    description: "Exclusive district-wise leads for maximum impact.",
     features: [
-      "Everything in Growth",
-      "Lead Generation",
+      "150 Exclusive Leads",
+      "District-wise Exclusivity",
       "Featured Placement",
       "Homepage Recommendation",
       "Priority Support"
