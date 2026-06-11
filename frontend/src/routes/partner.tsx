@@ -1,116 +1,252 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { SiteLayout } from "@/components/SiteLayout";
-import { Building2, UserPlus, CheckCircle2, ArrowLeft, ShieldCheck, QrCode, UploadCloud, AlertCircle } from "lucide-react";
+import { 
+  Building2, User, Mail, Phone, MapPin, 
+  Briefcase, CheckCircle2, ArrowRight, ShieldCheck, 
+  CreditCard, Sparkles, ChevronRight, Check, AlertCircle
+} from "lucide-react";
 import { useState, useEffect } from "react";
-import { db, storage } from "@/lib/firebase";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useLocation } from "@/context/LocationContext";
-import Tesseract from "tesseract.js";
+import { motion, AnimatePresence } from "framer-motion";
+import { db } from "@/lib/firebase";
+import { doc, setDoc } from "firebase/firestore";
 
 export const Route = createFileRoute("/partner")({
   head: () => ({
     meta: [
-      { title: "Dealer Registration — Vendor99" },
+      { title: "Dealer Onboarding — Vendor99" },
     ],
   }),
   component: PartnerPage,
 });
 
+const PLANS = [
+  {
+    id: "basic",
+    name: "Basic Dealer",
+    price: 999,
+    description: "Perfect for getting started on Vendor99.",
+    features: [
+      "Dealer Profile",
+      "Business Listing",
+      "Contact Details Display",
+      "Category Listing"
+    ],
+    color: "bg-slate-100 border-slate-200 text-slate-800",
+    buttonColor: "bg-slate-800 hover:bg-slate-900 text-white",
+  },
+  {
+    id: "growth",
+    name: "Growth Dealer",
+    price: 2999,
+    description: "Accelerate your business with digital marketing.",
+    features: [
+      "Everything in Basic",
+      "Digital Marketing",
+      "Social Media Marketing",
+      "Priority Listing"
+    ],
+    isPopular: true,
+    color: "bg-brand/5 border-brand/20 text-slate-900",
+    buttonColor: "bg-brand hover:bg-brand-dark text-white shadow-lg shadow-brand/30",
+  },
+  {
+    id: "premium",
+    name: "Premium Dealer",
+    price: 4999,
+    description: "Maximum visibility and priority support.",
+    features: [
+      "Everything in Growth",
+      "Lead Generation",
+      "Featured Placement",
+      "Homepage Recommendation",
+      "Priority Support"
+    ],
+    color: "bg-gradient-to-br from-slate-900 to-slate-800 border-slate-700 text-white",
+    buttonColor: "bg-white hover:bg-slate-100 text-slate-900 shadow-xl",
+    textColor: "text-slate-300",
+    checkColor: "text-emerald-400"
+  }
+];
+
+// Configuration
+const USE_MOCK_PAYMENT = false; // Using real Razorpay payment
+
 function PartnerPage() {
   const { location, isLocating, fetchDynamicLocation } = useLocation();
   const [step, setStep] = useState(1);
-  const [agreed, setAgreed] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [autoVerifiedStatus, setAutoVerifiedStatus] = useState(false);
 
   // Form State
-  const [businessName, setBusinessName] = useState("");
-  const [contactPerson, setContactPerson] = useState("");
-  const [phoneNumber, setPhoneNumber] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [city, setCity] = useState("");
-  const [expertise, setExpertise] = useState("CCTV Dealer & Installer");
-  const [experience, setExperience] = useState("0-2 Years");
-  const [utrNumber, setUtrNumber] = useState("");
-  const [screenshot, setScreenshot] = useState<File | null>(null);
+  const [formData, setFormData] = useState({
+    businessName: "",
+    ownerName: "",
+    email: "",
+    phone: "",
+    city: "",
+    category: "CCTV & Security Solutions",
+    experience: "0–2 Years"
+  });
 
-  const UPI_ID = "8985541157@superyes";
-  const AMOUNT = "1";
-  const QR_URL = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(`upi://pay?pa=${UPI_ID}&pn=Vendor99&am=${AMOUNT}&cu=INR`)}`;
+  const [selectedPlan, setSelectedPlan] = useState<any>(null);
+  const [transactionDetails, setTransactionDetails] = useState<any>(null);
+  
+  // Mock Payment UI State
+  const [showMockPayment, setShowMockPayment] = useState(false);
+  const [mockPaymentStatus, setMockPaymentStatus] = useState<"idle" | "processing" | "success" | "failure">("idle");
 
   useEffect(() => {
-    if (location && location !== "Detecting..." && !city) {
-      setCity(location);
+    if (location && location !== "Detecting...") {
+      setFormData(prev => ({ ...prev, city: location }));
     }
   }, [location]);
 
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
   const handleNextStep = () => {
-    if (step === 1 && agreed) setStep(2);
-    else if (step === 2 && businessName && contactPerson && phoneNumber && email && password && confirmPassword && city) {
-      if (password !== confirmPassword) {
-        alert("Passwords do not match");
-        return;
+    if (step === 1) {
+      if (formData.businessName && formData.ownerName && formData.email && formData.phone && formData.city) {
+        setStep(2);
+      } else {
+        alert("Please fill all required fields.");
       }
-      setStep(3);
+    } else if (step === 2) {
+      if (selectedPlan) setStep(3);
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!utrNumber && !screenshot) {
-      alert("Please enter the UTR number or upload a payment screenshot.");
+  const loadRazorpayScript = () => {
+    return new Promise((resolve) => {
+      const script = document.createElement("script");
+      script.src = "https://checkout.razorpay.com/v1/checkout.js";
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+  };
+
+  const initiatePayment = async () => {
+    if (USE_MOCK_PAYMENT) {
+      setShowMockPayment(true);
       return;
     }
 
     setIsSubmitting(true);
-    let autoVerified = false;
+    const res = await loadRazorpayScript();
+    
+    if (!res) {
+      alert("Razorpay SDK failed to load. Please check your internet connection.");
+      setIsSubmitting(false);
+      return;
+    }
+
+    const options = {
+      key: "rzp_live_T0FloreMRW0cEB",
+      amount: selectedPlan.price * 100, // Amount in paise
+      currency: "INR",
+      name: "Vendor99",
+      description: `Dealer Registration - ${selectedPlan.name}`,
+      image: "https://api.dicebear.com/7.x/shapes/svg?seed=Vendor99",
+      handler: function (response: any) {
+        handlePaymentSuccess("RZP_ORDER_SKIPPED", response.razorpay_payment_id);
+      },
+      prefill: {
+        name: formData.ownerName,
+        email: formData.email,
+        contact: formData.phone,
+      },
+      theme: {
+        color: "#f97316", // Brand color
+      },
+    };
+
+    const paymentObject = new (window as any).Razorpay(options);
+    paymentObject.on("payment.failed", function (response: any) {
+      alert("Payment failed: " + response.error.description);
+      setIsSubmitting(false);
+    });
+    
+    paymentObject.open();
+    setIsSubmitting(false);
+  };
+
+  const handleMockPaymentAction = async (status: "success" | "failure") => {
+    setMockPaymentStatus("processing");
+    await new Promise(res => setTimeout(res, 2000));
+    
+    if (status === "success") {
+      setMockPaymentStatus("success");
+      await new Promise(res => setTimeout(res, 1000));
+      setShowMockPayment(false);
+      handlePaymentSuccess(`ORDER_${Math.floor(Math.random() * 1000000)}`, `TXN_${Math.floor(Math.random() * 1000000)}`);
+    } else {
+      setMockPaymentStatus("failure");
+      await new Promise(res => setTimeout(res, 2000));
+      setMockPaymentStatus("idle");
+      setShowMockPayment(false);
+    }
+  };
+
+  const handlePaymentSuccess = async (orderId: string, txnId: string) => {
+    setIsSubmitting(true);
+    
+    const newDealerId = `DLR-${Math.floor(Math.random() * 1000000)}`;
+    const dealerData = {
+      ...formData,
+      plan: selectedPlan.name,
+      amount: selectedPlan.price,
+      orderId: orderId,
+      transactionId: txnId,
+      paymentId: `PAY_${Math.floor(Math.random() * 1000000)}`, // From Cashfree webhook
+      paymentDate: new Date().toISOString(),
+      status: "Active"
+    };
 
     try {
-      let screenshotUrl = "";
-      if (screenshot) {
-         const storageRef = ref(storage, `dealers/${Date.now()}_${screenshot.name}`);
-         const uploadTask = await uploadBytes(storageRef, screenshot);
-         screenshotUrl = await getDownloadURL(uploadTask.ref);
-
-         if (utrNumber) {
-            try {
-               const { data: { text } } = await Tesseract.recognize(screenshot, 'eng');
-               const cleanText = text.replace(/[^a-zA-Z0-9]/g, '');
-               const cleanUtr = utrNumber.replace(/[^a-zA-Z0-9]/g, '');
-               if (cleanText.includes(cleanUtr) || text.includes(utrNumber)) {
-                  autoVerified = true;
-               }
-            } catch(e) {
-               console.error("OCR failed", e);
-            }
-         }
+      // Save to Firebase Firestore
+      try {
+        await setDoc(doc(db, "dealers", newDealerId), dealerData);
+        console.log("Saved dealer data to Firebase");
+      } catch (dbErr: any) {
+         console.error("Failed to save to Firebase:", dbErr);
+         throw new Error("Failed to save to database. Check your Firestore rules.");
       }
 
-      setAutoVerifiedStatus(autoVerified);
+      // Automatically trigger the Email Webhook
+      try {
+        // Wait for user to provide the Apps Script Web App URL
+        const emailWebhookUrl = "YOUR_WEBHOOK_URL_HERE"; 
+        if (emailWebhookUrl !== "YOUR_WEBHOOK_URL_HERE") {
+          await fetch(emailWebhookUrl, {
+            method: "POST",
+            mode: "no-cors",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              ownerName: formData.ownerName,
+              email: formData.email,
+              dealerId: newDealerId,
+              planName: selectedPlan.name
+            })
+          });
+          console.log("Sent welcome email webhook");
+        }
+      } catch(e) {
+        console.error("Failed to send welcome email webhook", e);
+      }
 
-      await addDoc(collection(db, "dealers"), {
-        name: businessName,
-        contact: contactPerson,
-        phone: phoneNumber,
-        email: email,
-        password: password,
-        city: city,
-        expertise: expertise,
-        experience: experience,
-        utrNumber: utrNumber,
-        screenshotUrl: screenshotUrl,
-        status: autoVerified ? "Active" : "Pending",
-        paymentStatus: autoVerified ? "Verified" : "Pending Verification",
-        agreedToRules: agreed,
-        createdAt: serverTimestamp()
+      setTransactionDetails({
+        id: newDealerId,
+        txnId: txnId,
+        plan: selectedPlan.name,
+        amount: selectedPlan.price
       });
       setStep(4);
-    } catch (error) {
-      console.error("Error submitting registration:", error);
-      alert("Something went wrong. Please try again.");
+    } catch (error: any) {
+      console.error("Error finalizing onboarding:", error);
+      alert("Registration failed: " + (error.message || "Please contact support."));
     } finally {
       setIsSubmitting(false);
     }
@@ -118,230 +254,403 @@ function PartnerPage() {
 
   return (
     <SiteLayout>
-      <div className="bg-[#f0f4f8] min-h-screen py-10 font-sans">
-        <div className="max-w-4xl mx-auto px-6 relative">
-          <Link to="/" className="inline-flex items-center gap-2 text-slate-500 hover:text-brand font-bold transition-colors mb-6 bg-white px-4 py-2 rounded-full shadow-sm border border-slate-100">
-            <ArrowLeft className="h-4 w-4" /> Back to Home
-          </Link>
+      <div className="bg-[#f8fafc] min-h-screen py-12 font-sans relative overflow-hidden">
+        {/* Decorative Background Elements */}
+        <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-brand/5 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/3 pointer-events-none" />
+        <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-purple-500/5 rounded-full blur-[100px] translate-y-1/3 -translate-x-1/3 pointer-events-none" />
+
+        <div className="max-w-5xl mx-auto px-6 relative z-10">
           
-          <div className="text-center mb-10">
-            <h1 className="text-4xl font-extrabold text-slate-800 tracking-tight">
+          <div className="text-center mb-12">
+            <motion.div 
+               initial={{ opacity: 0, y: 20 }}
+               animate={{ opacity: 1, y: 0 }}
+               className="inline-flex items-center gap-2 bg-brand/10 text-brand px-4 py-1.5 rounded-full text-sm font-bold mb-4"
+            >
+               <Sparkles className="h-4 w-4" /> Join Vendor99 Network
+            </motion.div>
+            <h1 className="text-4xl md:text-5xl font-extrabold text-slate-900 tracking-tight mb-4">
               Dealer Registration
             </h1>
-            <p className="mt-3 text-lg text-slate-600">
-              Join the Vendor99 network in 3 easy steps.
+            <p className="text-lg text-slate-600 max-w-2xl mx-auto">
+              Partner with Vendor99 to grow your business. Select a plan and start receiving premium leads today.
             </p>
           </div>
 
           {/* Stepper */}
-          <div className="flex items-center justify-center mb-12">
-            {[1, 2, 3].map((s) => (
-               <div key={s} className="flex items-center">
-                  <div className={`h-10 w-10 rounded-full flex items-center justify-center font-bold ${step >= s ? 'bg-brand text-white shadow-md shadow-brand/30' : 'bg-slate-200 text-slate-500'}`}>
-                     {step > s ? <CheckCircle2 className="h-5 w-5" /> : s}
+          {step < 4 && (
+             <div className="flex items-center justify-center mb-12 max-w-2xl mx-auto">
+               {[
+                 { num: 1, label: "Business Details" }, 
+                 { num: 2, label: "Select Plan" }, 
+                 { num: 3, label: "Payment" }
+               ].map((s, idx, arr) => (
+                  <div key={s.num} className="flex items-center w-full relative">
+                     <div className="flex flex-col items-center relative z-10 w-full">
+                        <div className={`h-12 w-12 rounded-full flex items-center justify-center font-bold text-lg transition-all duration-300 ${
+                           step > s.num ? 'bg-brand text-white shadow-md shadow-brand/30' : 
+                           step === s.num ? 'bg-white border-2 border-brand text-brand shadow-lg' : 
+                           'bg-slate-200 text-slate-500'
+                        }`}>
+                           {step > s.num ? <CheckCircle2 className="h-6 w-6" /> : s.num}
+                        </div>
+                        <span className={`text-xs md:text-sm font-bold mt-2 absolute -bottom-6 whitespace-nowrap ${step >= s.num ? 'text-slate-800' : 'text-slate-400'}`}>
+                           {s.label}
+                        </span>
+                     </div>
+                     {idx < arr.length - 1 && (
+                        <div className="absolute top-6 left-[50%] w-full h-[2px] -z-10">
+                           <div className={`h-full transition-all duration-500 ${step > s.num ? 'bg-brand' : 'bg-slate-200'}`} style={{ width: '100%' }} />
+                        </div>
+                     )}
                   </div>
-                  {s < 3 && <div className={`h-1 w-12 sm:w-24 mx-2 rounded-full ${step > s ? 'bg-brand' : 'bg-slate-200'}`} />}
-               </div>
-            ))}
-          </div>
+               ))}
+             </div>
+          )}
 
-          <div className="bg-white rounded-3xl p-6 md:p-10 shadow-xl border border-slate-100 relative overflow-hidden">
-             
-             {step === 1 && (
-                <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                   <div className="flex items-center gap-4 mb-6">
-                      <div className="bg-brand/10 p-3 rounded-xl">
-                         <ShieldCheck className="h-8 w-8 text-brand" />
-                      </div>
-                      <h2 className="text-2xl font-bold text-slate-800">Rules & Regulations</h2>
-                   </div>
-                   
-                   <div className="bg-slate-50 border border-slate-200 p-6 rounded-2xl h-64 overflow-y-auto text-slate-700 space-y-4 text-sm leading-relaxed mb-6">
-                      <p><strong>1. Code of Conduct:</strong> Dealers must maintain a professional attitude when interacting with customers assigned through Vendor99.</p>
-                      <p><strong>2. Pricing Policy:</strong> You agree not to overcharge customers. All wholesale equipment purchased via Vendor99 must be sold at the agreed-upon margin.</p>
-                      <p><strong>3. Registration Fee:</strong> A one-time non-refundable registration and verification fee of ₹1 is required to activate your account and background check.</p>
-                      <p><strong>4. Verification Process:</strong> Upon payment, our team will verify your UTR and business details within 24-48 hours. If rejected for compliance issues, the fee will not be refunded.</p>
-                      <p><strong>5. Quality of Work:</strong> Continuous poor ratings from customers will result in permanent suspension from the Dealer Network.</p>
-                   </div>
+          <AnimatePresence mode="wait">
+            {/* STEP 1: REGISTRATION FORM */}
+            {step === 1 && (
+              <motion.div 
+                key="step1"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                className="bg-white/80 backdrop-blur-xl rounded-3xl p-8 shadow-xl border border-white/40 max-w-3xl mx-auto"
+              >
+                <div className="flex items-center gap-4 mb-8 pb-6 border-b border-slate-100">
+                  <div className="bg-brand/10 p-3 rounded-2xl">
+                    <Building2 className="h-6 w-6 text-brand" />
+                  </div>
+                  <div>
+                     <h2 className="text-2xl font-bold text-slate-800">Business Information</h2>
+                     <p className="text-sm text-slate-500">Provide your primary contact and business details.</p>
+                  </div>
+                </div>
 
-                   <div className="flex items-center gap-3 mb-8">
-                      <input 
-                         type="checkbox" 
-                         id="agree" 
-                         checked={agreed} 
-                         onChange={(e) => setAgreed(e.target.checked)}
-                         className="h-5 w-5 rounded text-brand focus:ring-brand border-slate-300"
-                      />
-                      <label htmlFor="agree" className="font-bold text-slate-700 cursor-pointer select-none">
-                         I have read and agree to the Vendor99 Dealer Terms & Conditions
-                      </label>
-                   </div>
+                <div className="grid md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <label className="text-sm font-bold text-slate-700 flex items-center gap-2"><Briefcase className="h-4 w-4 text-slate-400"/> Business Name *</label>
+                    <input name="businessName" value={formData.businessName} onChange={handleInputChange} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand focus:bg-white transition-all" placeholder="TechVision Security" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-bold text-slate-700 flex items-center gap-2"><User className="h-4 w-4 text-slate-400"/> Owner Name *</label>
+                    <input name="ownerName" value={formData.ownerName} onChange={handleInputChange} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand focus:bg-white transition-all" placeholder="John Doe" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-bold text-slate-700 flex items-center gap-2"><Mail className="h-4 w-4 text-slate-400"/> Email Address *</label>
+                    <input type="email" name="email" value={formData.email} onChange={handleInputChange} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand focus:bg-white transition-all" placeholder="dealer@example.com" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-bold text-slate-700 flex items-center gap-2"><Phone className="h-4 w-4 text-slate-400"/> Phone Number *</label>
+                    <input type="tel" name="phone" value={formData.phone} onChange={handleInputChange} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand focus:bg-white transition-all" placeholder="+91 98765 43210" />
+                  </div>
+                  <div className="space-y-2 md:col-span-2">
+                    <label className="text-sm font-bold text-slate-700 flex items-center gap-2"><MapPin className="h-4 w-4 text-slate-400"/> City / Location *</label>
+                    <div className="relative">
+                      <input name="city" value={formData.city} onChange={handleInputChange} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 pr-24 focus:outline-none focus:ring-2 focus:ring-brand focus:bg-white transition-all" placeholder="Hyderabad" />
+                      <button 
+                         type="button" 
+                         onClick={() => fetchDynamicLocation(false)} 
+                         disabled={isLocating}
+                         className="absolute right-2 top-1/2 -translate-y-1/2 text-xs font-bold bg-brand/10 text-brand px-3 py-1.5 rounded-lg hover:bg-brand hover:text-white transition-colors"
+                      >
+                         {isLocating ? "Detecting..." : "Detect"}
+                      </button>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-bold text-slate-700">Business Category *</label>
+                    <select name="category" value={formData.category} onChange={handleInputChange} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand focus:bg-white transition-all font-medium text-slate-700">
+                      <option>CCTV & Security Solutions</option>
+                      <option>Home Construction</option>
+                      <option>Interior Design</option>
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-bold text-slate-700">Experience *</label>
+                    <select name="experience" value={formData.experience} onChange={handleInputChange} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand focus:bg-white transition-all font-medium text-slate-700">
+                      <option>0–2 Years</option>
+                      <option>2–5 Years</option>
+                      <option>5–10 Years</option>
+                      <option>10+ Years</option>
+                    </select>
+                  </div>
+                </div>
 
+                <div className="mt-8 flex justify-end">
                    <button 
                       onClick={handleNextStep}
-                      disabled={!agreed}
-                      className="w-full bg-brand hover:bg-brand-dark disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-all"
+                      className="bg-brand hover:bg-brand-dark text-white font-bold py-3.5 px-8 rounded-xl transition-all shadow-lg shadow-brand/20 flex items-center gap-2 group"
                    >
-                      Proceed to Details <ArrowLeft className="h-5 w-5 rotate-180" />
+                      Continue to Plans <ChevronRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
                    </button>
                 </div>
-             )}
+              </motion.div>
+            )}
 
-             {step === 2 && (
-                <div className="animate-in fade-in slide-in-from-right-8 duration-500">
-                   <div className="flex items-center gap-4 mb-8">
-                      <div className="bg-brand/10 p-3 rounded-xl">
-                         <Building2 className="h-8 w-8 text-brand" />
-                      </div>
-                      <h2 className="text-2xl font-bold text-slate-800">Business Details</h2>
-                   </div>
-
-                   <div className="grid md:grid-cols-2 gap-6 mb-8">
-                     <div className="space-y-2">
-                       <label className="text-sm font-bold text-slate-700">Business/Shop Name *</label>
-                       <input type="text" value={businessName} onChange={(e) => setBusinessName(e.target.value)} required className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand" placeholder="TechVision Security" />
-                     </div>
-                     <div className="space-y-2">
-                       <label className="text-sm font-bold text-slate-700">Contact Person *</label>
-                       <input type="text" value={contactPerson} onChange={(e) => setContactPerson(e.target.value)} required className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand" placeholder="Your Name" />
-                     </div>
-                     <div className="space-y-2">
-                       <label className="text-sm font-bold text-slate-700">Phone Number *</label>
-                       <input type="tel" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} required className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand" placeholder="+91 98765 43210" />
-                     </div>
-                     <div className="space-y-2">
-                       <label className="text-sm font-bold text-slate-700">Email Address *</label>
-                       <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand" placeholder="dealer@example.com" />
-                     </div>
-                     <div className="space-y-2">
-                       <label className="text-sm font-bold text-slate-700">Password *</label>
-                       <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand" placeholder="Create a password" />
-                     </div>
-                     <div className="space-y-2">
-                       <label className="text-sm font-bold text-slate-700">Confirm Password *</label>
-                       <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand" placeholder="Confirm your password" />
-                     </div>
-                     <div className="space-y-2">
-                       <label className="text-sm font-bold text-slate-700">City / District *</label>
-                       <div className="relative">
-                         <input type="text" value={city} onChange={(e) => setCity(e.target.value)} required className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 pr-24 focus:outline-none focus:ring-2 focus:ring-brand" placeholder="Hyderabad" />
-                         <button 
-                            type="button" 
-                            onClick={async () => {
-                               if (location && location !== "Detecting...") {
-                                  setCity(location);
-                               } else {
-                                  await fetchDynamicLocation(false);
-                               }
-                            }} 
-                            disabled={isLocating}
-                            className="absolute right-2 top-1/2 -translate-y-1/2 text-xs font-bold bg-brand/10 text-brand px-3 py-1.5 rounded-lg hover:bg-brand hover:text-white transition-colors disabled:opacity-50"
-                         >
-                            {isLocating ? "Detecting..." : "Detect"}
-                         </button>
-                       </div>
-                     </div>
-                     <div className="space-y-2">
-                       <label className="text-sm font-bold text-slate-700">Primary Expertise</label>
-                       <select value={expertise} onChange={(e) => setExpertise(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand">
-                         <option>CCTV Surveillance</option>
-                         <option>Smart Home Automation</option>
-                         <option>Electrical Works</option>
-                       </select>
-                     </div>
-                     <div className="space-y-2">
-                       <label className="text-sm font-bold text-slate-700">Experience</label>
-                       <select value={experience} onChange={(e) => setExperience(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand">
-                         <option>0-2 Years</option>
-                         <option>3-5 Years</option>
-                         <option>5+ Years</option>
-                       </select>
-                     </div>
-                   </div>
-
-                    <div className="flex gap-4 mt-6">
-                       <button onClick={() => setStep(1)} className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-4 rounded-xl transition-all">Back</button>
-                       <button onClick={handleNextStep} disabled={!businessName || !contactPerson || !phoneNumber || !email || !password || !confirmPassword || !city} className="flex-[2] bg-brand hover:bg-brand-dark disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-bold py-4 rounded-xl transition-all">Proceed to Payment</button>
-                    </div>
+            {/* STEP 2: DEALER SUBSCRIPTION PLANS */}
+            {step === 2 && (
+              <motion.div 
+                key="step2"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                className="max-w-6xl mx-auto"
+              >
+                <div className="text-center mb-8">
+                   <h2 className="text-3xl font-bold text-slate-900">Choose Your Plan</h2>
+                   <p className="text-slate-600 mt-2">Select the best subscription tier for your business growth.</p>
                 </div>
-             )}
 
-             {step === 3 && (
-                <div className="animate-in fade-in slide-in-from-right-8 duration-500">
-                   <div className="flex items-center gap-4 mb-6">
-                      <div className="bg-brand/10 p-3 rounded-xl">
-                         <QrCode className="h-8 w-8 text-brand" />
-                      </div>
-                      <h2 className="text-2xl font-bold text-slate-800">Verification Payment</h2>
-                   </div>
-
-                   <div className="bg-amber-50 border border-amber-200 p-4 rounded-xl text-amber-800 text-sm font-medium flex gap-3 mb-8">
-                      <AlertCircle className="h-5 w-5 shrink-0" />
-                      <p>Scan the QR code to pay the ₹{AMOUNT} registration fee. Once paid, enter the 12-digit UTR/Reference number or upload a screenshot of your payment below to submit your application.</p>
-                   </div>
-
-                   <div className="flex flex-col md:flex-row gap-8 items-center justify-center mb-8">
-                      <div className="bg-white p-4 rounded-3xl shadow-lg border border-slate-100">
-                         <img src={QR_URL} alt="Payment QR Code" className="w-48 h-48 rounded-xl" />
-                         <p className="text-center font-bold text-slate-700 mt-4 text-sm tracking-wider">SCAN TO PAY</p>
-                      </div>
-                      <div className="flex-1 w-full max-w-sm">
-                         <div className="space-y-4">
-                           <div>
-                             <label className="text-sm font-bold text-slate-700 block mb-2">Transaction UTR Number</label>
-                             <input 
-                               type="text" 
-                               value={utrNumber} 
-                               onChange={(e) => setUtrNumber(e.target.value)} 
-                               maxLength={12}
-                               className="w-full bg-slate-50 border-2 border-dashed border-slate-300 rounded-xl px-4 py-4 focus:outline-none focus:border-brand focus:ring-4 focus:ring-brand/10 text-center font-mono text-xl tracking-widest uppercase transition-all placeholder:text-slate-300" 
-                               placeholder="123456789012" 
-                             />
-                             <p className="text-xs text-slate-500 mt-2 text-center">Found on your GPay/PhonePe receipt after payment.</p>
-                           </div>
-                           <div>
-                             <label className="text-sm font-bold text-slate-700 block mb-2">Upload Payment Screenshot</label>
-                             <input 
-                               type="file" 
-                               accept="image/*"
-                               onChange={(e) => setScreenshot(e.target.files?.[0] || null)} 
-                               className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 focus:outline-none focus:border-brand transition-all text-sm" 
-                             />
-                           </div>
+                <div className="grid md:grid-cols-3 gap-8">
+                   {PLANS.map((plan) => (
+                      <div 
+                         key={plan.id}
+                         onClick={() => setSelectedPlan(plan)}
+                         className={`relative rounded-3xl p-8 border-2 transition-all cursor-pointer flex flex-col hover:-translate-y-2 hover:shadow-xl ${
+                            selectedPlan?.id === plan.id 
+                               ? 'border-brand ring-4 ring-brand/10 scale-[1.02]' 
+                               : `${plan.color} ${plan.isPopular ? 'shadow-lg border-brand/30' : 'hover:border-slate-300'}`
+                         }`}
+                      >
+                         {plan.isPopular && (
+                            <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-brand text-white text-xs font-bold px-4 py-1.5 rounded-full uppercase tracking-wider shadow-md">
+                               Most Popular
+                            </div>
+                         )}
+                         <div className="mb-6">
+                            <h3 className={`text-xl font-bold mb-2 ${plan.id === 'premium' ? 'text-white' : 'text-slate-900'}`}>{plan.name}</h3>
+                            <p className={`text-sm ${plan.textColor || 'text-slate-500'} h-10`}>{plan.description}</p>
                          </div>
+                         <div className="mb-8">
+                            <span className="text-4xl font-black">₹{plan.price}</span>
+                            <span className={`text-sm font-medium ${plan.textColor || 'text-slate-500'}`}>/year</span>
+                         </div>
+                         <ul className="space-y-4 mb-8 flex-1">
+                            {plan.features.map((feature, idx) => (
+                               <li key={idx} className="flex items-start gap-3">
+                                  <Check className={`h-5 w-5 shrink-0 ${plan.checkColor || 'text-brand'}`} />
+                                  <span className={`text-sm font-medium ${plan.id === 'premium' ? 'text-slate-200' : 'text-slate-700'}`}>{feature}</span>
+                               </li>
+                            ))}
+                         </ul>
+                         <button 
+                            className={`w-full py-3.5 rounded-xl font-bold transition-all ${
+                               selectedPlan?.id === plan.id 
+                                  ? 'bg-brand text-white shadow-lg shadow-brand/30' 
+                                  : plan.buttonColor
+                            }`}
+                         >
+                            {selectedPlan?.id === plan.id ? 'Selected' : `Choose ${plan.name.split(' ')[0]}`}
+                         </button>
+                      </div>
+                   ))}
+                </div>
+
+                <div className="mt-10 flex justify-between">
+                   <button onClick={() => setStep(1)} className="text-slate-500 hover:text-slate-800 font-bold px-6 py-3 transition-colors">
+                      Back to Details
+                   </button>
+                   <button 
+                      onClick={handleNextStep}
+                      disabled={!selectedPlan}
+                      className="bg-brand hover:bg-brand-dark disabled:bg-slate-300 text-white font-bold py-3.5 px-8 rounded-xl transition-all shadow-lg shadow-brand/20 flex items-center gap-2"
+                   >
+                      Proceed to Summary <ChevronRight className="h-5 w-5" />
+                   </button>
+                </div>
+              </motion.div>
+            )}
+
+            {/* STEP 3: ORDER SUMMARY */}
+            {step === 3 && selectedPlan && (
+              <motion.div 
+                key="step3"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                className="max-w-2xl mx-auto bg-white/80 backdrop-blur-xl rounded-3xl p-8 shadow-xl border border-white/40"
+              >
+                <div className="flex items-center gap-4 mb-8 pb-6 border-b border-slate-100">
+                  <div className="bg-slate-100 p-3 rounded-2xl">
+                    <ShieldCheck className="h-6 w-6 text-slate-700" />
+                  </div>
+                  <div>
+                     <h2 className="text-2xl font-bold text-slate-800">Order Summary</h2>
+                     <p className="text-sm text-slate-500">Review your details before payment.</p>
+                  </div>
+                </div>
+
+                <div className="bg-slate-50 border border-slate-200 rounded-2xl p-6 mb-8 space-y-4">
+                   <div className="grid grid-cols-2 gap-4 pb-4 border-b border-slate-200">
+                      <div>
+                         <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Business Name</p>
+                         <p className="text-sm font-bold text-slate-800">{formData.businessName}</p>
+                      </div>
+                      <div>
+                         <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Owner Name</p>
+                         <p className="text-sm font-bold text-slate-800">{formData.ownerName}</p>
+                      </div>
+                      <div>
+                         <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Category</p>
+                         <p className="text-sm font-bold text-slate-800">{formData.category}</p>
+                      </div>
+                      <div>
+                         <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Location</p>
+                         <p className="text-sm font-bold text-slate-800">{formData.city}</p>
                       </div>
                    </div>
 
-                   <form onSubmit={handleSubmit} className="flex gap-4 pt-4 border-t border-slate-100">
-                      <button type="button" onClick={() => setStep(2)} className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-4 rounded-xl transition-all">Back</button>
-                      <button type="submit" disabled={isSubmitting || (!screenshot && utrNumber.length < 8)} className="flex-[2] bg-emerald-500 hover:bg-emerald-600 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-bold py-4 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20">
-                         {isSubmitting ? "Submitting..." : <><UploadCloud className="h-5 w-5" /> Submit Application</>}
-                      </button>
-                   </form>
-                </div>
-             )}
-
-             {step === 4 && (
-                <div className="text-center py-12 animate-in zoom-in duration-500">
-                   <div className="inline-flex items-center justify-center w-24 h-24 bg-emerald-100 rounded-full mb-6 shadow-xl shadow-emerald-100">
-                      <CheckCircle2 className="h-12 w-12 text-emerald-600" />
+                   <div className="flex justify-between items-center pt-2">
+                      <div>
+                         <p className="text-sm font-bold text-brand bg-brand/10 px-3 py-1 rounded-full inline-block mb-1">{selectedPlan.name}</p>
+                         <p className="text-xs text-slate-500">1 Year Subscription</p>
+                      </div>
+                      <div className="text-right">
+                         <p className="text-xl font-black text-slate-900">₹{selectedPlan.price}</p>
+                      </div>
                    </div>
-                   <h2 className="text-3xl font-extrabold text-slate-800 mb-4">
-                      {autoVerifiedStatus ? "Payment Verified Successfully!" : "Application Submitted!"}
-                   </h2>
-                   <p className="text-lg text-slate-600 max-w-md mx-auto mb-8">
-                      {autoVerifiedStatus 
-                        ? "Your payment screenshot was automatically verified! Your dealer account is now Active and listed on the Vendor99 network."
-                        : "We have received your details. Our team will verify the payment and activate your dealer account within 24 hours."
-                      }
-                   </p>
-                   <Link to="/dealer-portal" className="inline-flex items-center justify-center bg-brand hover:bg-brand-dark text-white font-bold py-4 px-8 rounded-xl transition-all shadow-md">
-                      Go to Partner Portal
+                   
+                   <div className="flex justify-between items-center text-sm text-slate-500 pt-2 border-t border-slate-200/50">
+                      <p>GST (Included)</p>
+                      <p>₹0</p>
+                   </div>
+                   <div className="flex justify-between items-center pt-2 border-t border-slate-200">
+                      <p className="font-bold text-slate-800">Total Amount</p>
+                      <p className="text-2xl font-black text-brand">₹{selectedPlan.price}</p>
+                   </div>
+                </div>
+
+                <div className="flex justify-between items-center">
+                   <button onClick={() => setStep(2)} className="text-slate-500 hover:text-slate-800 font-bold px-4 py-3 transition-colors">
+                      Back
+                   </button>
+                   <button 
+                      onClick={initiatePayment}
+                      disabled={isSubmitting}
+                      className="bg-slate-900 hover:bg-slate-800 text-white font-bold py-3.5 px-8 rounded-xl transition-all shadow-lg flex items-center gap-2"
+                   >
+                      {isSubmitting ? "Processing..." : "Proceed to Payment"} <CreditCard className="h-5 w-5" />
+                   </button>
+                </div>
+              </motion.div>
+            )}
+
+            {/* STEP 4: SUCCESS PAGE */}
+            {step === 4 && transactionDetails && (
+              <motion.div 
+                key="step4"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="max-w-2xl mx-auto bg-white rounded-3xl p-10 shadow-2xl border border-emerald-100 text-center relative overflow-hidden"
+              >
+                <div className="absolute top-0 left-0 w-full h-2 bg-emerald-500"></div>
+                
+                <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
+                   <CheckCircle2 className="h-10 w-10 text-emerald-600" />
+                </div>
+                
+                <h2 className="text-3xl font-black text-slate-900 mb-2">🎉 Registration Successful</h2>
+                <p className="text-slate-600 mb-8 font-medium">Welcome to the Vendor99 Dealer Network. Your account is now Active.</p>
+
+                <div className="bg-slate-50 border border-slate-200 rounded-2xl p-6 mb-8 text-left max-w-md mx-auto">
+                   <div className="text-center mb-6 border-b border-slate-200 pb-6">
+                      <p className="text-slate-500 text-sm mb-2 uppercase tracking-widest font-bold">Your Official Dealer ID</p>
+                      <div className="text-4xl font-black text-brand tracking-widest bg-brand/10 inline-block px-6 py-3 rounded-2xl border border-brand/20 shadow-inner">{transactionDetails.id}</div>
+                      <p className="text-xs text-slate-400 mt-3">An email has been sent to you with this ID.</p>
+                   </div>
+                   <div className="flex justify-between mb-3">
+                      <span className="text-slate-500 text-sm">Plan Details</span>
+                      <span className="font-bold text-slate-800">{transactionDetails.plan}</span>
+                   </div>
+                   <div className="flex justify-between mb-3">
+                      <span className="text-slate-500 text-sm">Amount Paid</span>
+                      <span className="font-bold text-slate-800">₹{transactionDetails.amount}</span>
+                   </div>
+                   <div className="flex justify-between pt-3 border-t border-slate-200">
+                      <span className="text-slate-500 text-sm">Transaction ID</span>
+                      <span className="font-mono text-xs font-bold text-slate-700 bg-slate-200 px-2 py-1 rounded">{transactionDetails.txnId}</span>
+                   </div>
+                </div>
+
+                <div className="flex justify-center gap-4">
+                   <Link to="/" className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3.5 px-6 rounded-xl transition-all">
+                      View Profile
+                   </Link>
+                   <Link to="/dealer-portal" className="bg-brand hover:bg-brand-dark text-white font-bold py-3.5 px-6 rounded-xl transition-all shadow-md">
+                      Go To Dashboard
                    </Link>
                 </div>
-             )}
+              </motion.div>
+            )}
+          </AnimatePresence>
 
-          </div>
+          {/* Mock Payment Overlay */}
+          <AnimatePresence>
+             {showMockPayment && (
+                <motion.div 
+                   initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                   className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+                >
+                   <motion.div 
+                      initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
+                      className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden"
+                   >
+                      <div className="bg-slate-900 p-6 text-white text-center">
+                         <div className="flex items-center justify-center gap-2 mb-2">
+                            <ShieldCheck className="h-6 w-6 text-emerald-400" />
+                            <span className="font-bold text-lg tracking-widest">CASHFREE PAYMENTS</span>
+                         </div>
+                         <p className="text-slate-400 text-sm">Mock Checkout Environment</p>
+                      </div>
+                      
+                      <div className="p-8 text-center">
+                         {mockPaymentStatus === "idle" && (
+                            <>
+                               <p className="text-2xl font-black text-slate-900 mb-2">₹{selectedPlan?.price}</p>
+                               <p className="text-sm text-slate-500 mb-8">Pay securely for {selectedPlan?.name}</p>
+                               
+                               <div className="space-y-3">
+                                  <button onClick={() => handleMockPaymentAction("success")} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-xl transition-colors">
+                                     Simulate Successful Payment
+                                  </button>
+                                  <button onClick={() => handleMockPaymentAction("failure")} className="w-full bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold py-3.5 rounded-xl transition-colors">
+                                     Simulate Payment Failure
+                                  </button>
+                                  <button onClick={() => setShowMockPayment(false)} className="w-full text-slate-400 hover:text-slate-600 font-bold py-3.5 transition-colors text-sm">
+                                     Cancel Checkout
+                                  </button>
+                               </div>
+                            </>
+                         )}
+
+                         {mockPaymentStatus === "processing" && (
+                            <div className="py-12">
+                               <div className="w-12 h-12 border-4 border-slate-200 border-t-brand rounded-full animate-spin mx-auto mb-4"></div>
+                               <p className="font-bold text-slate-600">Processing Payment...</p>
+                            </div>
+                         )}
+
+                         {mockPaymentStatus === "success" && (
+                            <div className="py-12 text-emerald-600">
+                               <CheckCircle2 className="h-16 w-16 mx-auto mb-4" />
+                               <p className="font-bold text-xl">Payment Successful!</p>
+                            </div>
+                         )}
+
+                         {mockPaymentStatus === "failure" && (
+                            <div className="py-12 text-rose-600">
+                               <AlertCircle className="h-16 w-16 mx-auto mb-4" />
+                               <p className="font-bold text-xl">Payment Failed</p>
+                            </div>
+                         )}
+                      </div>
+                   </motion.div>
+                </motion.div>
+             )}
+          </AnimatePresence>
+
         </div>
       </div>
     </SiteLayout>

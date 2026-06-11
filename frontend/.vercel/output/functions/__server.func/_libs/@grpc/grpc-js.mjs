@@ -5,13 +5,13 @@ import require$$0$2 from "os";
 import require$$0$3 from "net";
 import require$$0$4 from "events";
 import require$$0$6 from "http2";
+import require$$3 from "http";
+import require$$7 from "url";
 import require$$1$1 from "dns";
-import Stream from "stream";
+import require$$0$7 from "zlib";
+import require$$5 from "stream";
 import { r as requireSrc$1 } from "./proto-loader.mjs";
-import http from "http";
-import Url from "url";
 import require$$0$5 from "util";
-import zlib from "zlib";
 var src = {};
 var callCredentials = {};
 var metadata = {};
@@ -1967,7 +1967,7 @@ function requireCall() {
   call.ClientDuplexStreamImpl = call.ClientWritableStreamImpl = call.ClientReadableStreamImpl = call.ClientUnaryCallImpl = void 0;
   call.callErrorFromStatus = callErrorFromStatus;
   const events_1 = require$$0$4;
-  const stream_1 = Stream;
+  const stream_1 = require$$5;
   const constants_1 = requireConstants();
   function callErrorFromStatus(status, callerStack) {
     const message = `${status.code} ${constants_1.Status[status.code]}: ${status.details}`;
@@ -4081,12 +4081,12 @@ function requireHttp_proxy() {
   const logging_1 = requireLogging();
   const constants_1 = requireConstants();
   const resolver_1 = requireResolver();
-  const http$1 = http;
+  const http = require$$3;
   const tls = require$$0$1;
   const logging2 = requireLogging();
   const subchannel_address_1 = requireSubchannelAddress();
   const uri_parser_1 = requireUriParser();
-  const url_1 = Url;
+  const url_1 = require$$7;
   const resolver_dns_1 = requireResolverDns();
   const TRACER_NAME = "proxy";
   function trace(text) {
@@ -4231,7 +4231,7 @@ function requireHttp_proxy() {
     const proxyAddressString = (0, subchannel_address_1.subchannelAddressToString)(address);
     trace("Using proxy " + proxyAddressString + " to connect to " + options.path);
     return new Promise((resolve, reject) => {
-      const request = http$1.request(options);
+      const request = http.request(options);
       request.once("connect", (res, socket, head) => {
         var _a2;
         request.removeAllListeners();
@@ -5415,7 +5415,7 @@ function requireCompressionFilter() {
   hasRequiredCompressionFilter = 1;
   Object.defineProperty(compressionFilter, "__esModule", { value: true });
   compressionFilter.CompressionFilterFactory = compressionFilter.CompressionFilter = void 0;
-  const zlib$1 = zlib;
+  const zlib = require$$0$7;
   const compression_algorithms_1 = requireCompressionAlgorithms();
   const constants_1 = requireConstants();
   const filter_1 = requireFilter();
@@ -5475,7 +5475,7 @@ function requireCompressionFilter() {
     }
     compressMessage(message) {
       return new Promise((resolve, reject) => {
-        zlib$1.deflate(message, (err, output) => {
+        zlib.deflate(message, (err, output) => {
           if (err) {
             reject(err);
           } else {
@@ -5488,7 +5488,7 @@ function requireCompressionFilter() {
       return new Promise((resolve, reject) => {
         let totalLength = 0;
         const messageParts = [];
-        const decompresser = zlib$1.createInflate();
+        const decompresser = zlib.createInflate();
         decompresser.on("error", (error2) => {
           reject({
             code: constants_1.Status.INTERNAL,
@@ -5521,7 +5521,7 @@ function requireCompressionFilter() {
     }
     compressMessage(message) {
       return new Promise((resolve, reject) => {
-        zlib$1.gzip(message, (err, output) => {
+        zlib.gzip(message, (err, output) => {
           if (err) {
             reject(err);
           } else {
@@ -5534,7 +5534,7 @@ function requireCompressionFilter() {
       return new Promise((resolve, reject) => {
         let totalLength = 0;
         const messageParts = [];
-        const decompresser = zlib$1.createGunzip();
+        const decompresser = zlib.createGunzip();
         decompresser.on("error", (error2) => {
           reject({
             code: constants_1.Status.INTERNAL,
@@ -7355,8 +7355,8 @@ function requireServerCall() {
   serverCall.Http2ServerCallStream = serverCall.ServerDuplexStreamImpl = serverCall.ServerWritableStreamImpl = serverCall.ServerReadableStreamImpl = serverCall.ServerUnaryCallImpl = void 0;
   const events_1 = require$$0$4;
   const http2 = require$$0$6;
-  const stream_1 = Stream;
-  const zlib$1 = zlib;
+  const stream_1 = require$$5;
+  const zlib = require$$0$7;
   const constants_1 = requireConstants();
   const metadata_1 = requireMetadata();
   const stream_decoder_1 = requireStreamDecoder();
@@ -7601,9 +7601,9 @@ function requireServerCall() {
       } else if (encoding === "deflate" || encoding === "gzip") {
         let decompresser;
         if (encoding === "deflate") {
-          decompresser = zlib$1.createInflate();
+          decompresser = zlib.createInflate();
         } else {
-          decompresser = zlib$1.createGunzip();
+          decompresser = zlib.createGunzip();
         }
         return new Promise((resolve, reject) => {
           let totalLength = 0;

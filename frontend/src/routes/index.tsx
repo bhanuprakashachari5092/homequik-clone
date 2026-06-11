@@ -4,6 +4,7 @@ import { Search, Star, ShieldCheck, Clock, Sparkles, ArrowRight, MapPin, PlayCir
 import { useLocation } from "@/context/LocationContext";
 import { motion } from "framer-motion";
 import { CCTVSurveillanceDetails } from "@/components/CCTVSurveillanceDetails";
+import PartnerMarquee from "@/components/PartnerMarquee";
 import { useState, useEffect, useRef } from "react";
 import { db } from "@/lib/firebase";
 import { collection, onSnapshot } from "firebase/firestore";
@@ -275,6 +276,7 @@ function Home() {
 
       <div className="mt-8">
         <CCTVSurveillanceDetails />
+        <PartnerMarquee />
       </div>
     </SiteLayout>
   );

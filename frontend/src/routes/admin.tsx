@@ -2,11 +2,14 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { 
   LayoutDashboard, Users, ShoppingCart, Settings, 
   LogOut, Bell, Search, Activity, DollarSign, Package,
-  Briefcase, CheckCircle2, XCircle, Edit, Trash2, MapPin, Gift
+  Briefcase, CheckCircle2, XCircle, Edit, Trash2, MapPin, Gift,
+  Download
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { db } from "@/lib/firebase";
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, serverTimestamp } from "firebase/firestore";
+import jsPDF from "jspdf";
+import "jspdf-autotable";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
@@ -86,19 +89,7 @@ function AdminPage() {
   return <AdminDashboard onLogout={() => setIsAuthenticated(false)} />;
 }
 
-const initialDealers = [
-  { id: "DLR-101", name: "TechVision Security", contact: "John Doe", phone: "+91 9876543210", city: "Bangalore", status: "Active", expertise: "CCTV Surveillance" },
-  { id: "DLR-102", name: "SecureHomes Systems", contact: "Priya Patel", phone: "+91 9123456780", city: "Mumbai", status: "Pending", expertise: "Smart Home Automation" },
-  { id: "DLR-103", name: "ElectroTech Installations", contact: "Rahul Sharma", phone: "+91 9988776655", city: "Delhi", status: "Active", expertise: "Electrical Works" },
-  { id: "DLR-104", name: "SafeGuard Solutions", contact: "Amit Kumar", phone: "+91 9876512345", city: "Hyderabad", status: "Inactive", expertise: "CCTV Surveillance" },
-];
 
-const initialBookings = [
-  { id: "BKG-8472", customerName: "Rahul Sharma", phone: "9876500001", service: "CCTV Installation", city: "Bangalore", status: "Completed", amount: "₹12,499", dealerId: "DLR-101" },
-  { id: "BKG-8473", customerName: "Priya Desai", phone: "9876500002", service: "Home Painting", city: "Mumbai", status: "In Progress", amount: "₹45,000", dealerId: "DLR-102" },
-  { id: "BKG-8474", customerName: "Amit Kumar", phone: "9876500003", service: "Electrical Wiring", city: "Delhi", status: "Pending", amount: "₹4,200", dealerId: null },
-  { id: "BKG-8475", customerName: "Sneha Reddy", phone: "9876500004", service: "Smart Home Setup", city: "Hyderabad", status: "Pending", amount: "₹85,000", dealerId: null },
-];
 
 function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   const [activeTab, setActiveTab] = useState("Dashboard");
@@ -120,14 +111,11 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   const [newOffer, setNewOffer] = useState({ title: "", description: "", discountCode: "", imageUrl: "", isActive: true });
 
   useEffect(() => {
-    // Load Bookings
-    const storedBookings = localStorage.getItem("vendor99_bookings");
-    if (storedBookings) {
-      setBookings(JSON.parse(storedBookings));
-    } else {
-      setBookings(initialBookings);
-      localStorage.setItem("vendor99_bookings", JSON.stringify(initialBookings));
-    }
+    const unsubscribeBookings = onSnapshot(collection(db, "bookings"), (snapshot) => {
+       const bks: any[] = [];
+       snapshot.forEach(d => bks.push({ id: d.id, ...d.data() }));
+       setBookings(bks);
+    });
 
     const unsubscribeServices = onSnapshot(collection(db, "services"), (snapshot) => {
        const svcs: any[] = [];
@@ -148,16 +136,12 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
     });
 
     return () => {
+      unsubscribeBookings();
       unsubscribeServices();
       unsubscribeOffers();
       unsubscribeDealers();
     };
   }, []);
-
-  const saveBookings = (updatedBookings: any[]) => {
-    setBookings(updatedBookings);
-    localStorage.setItem("vendor99_bookings", JSON.stringify(updatedBookings));
-  };
 
   const handleSaveDealer = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -215,9 +199,69 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
     }
   };
 
-  const assignDealerToBooking = (bookingId: string, dealerId: string) => {
-    const updated = bookings.map(b => b.id === bookingId ? { ...b, dealerId: dealerId === "" ? null : dealerId } : b);
-    saveBookings(updated);
+  const assignDealerToBooking = async (bookingId: string, dealerId: string) => {
+    try {
+      await updateDoc(doc(db, "bookings", bookingId), { dealerId: dealerId === "" ? null : dealerId });
+    } catch (e) {
+      console.error("Failed to assign dealer:", e);
+    }
+  };
+
+  const handleDeleteBooking = async (bookingId: string) => {
+    if (window.confirm("Are you sure you want to delete this customer booking?")) {
+      try {
+        // 1. Delete from Firebase
+        await deleteDoc(doc(db, "bookings", bookingId));
+        
+        // 2. Delete from Google Sheets
+        await fetch("https://script.google.com/macros/s/AKfycbxcEHZaSWkogoxOp6PNL0VhLVTNw0X11YEDekRNmCFobqWhL5V4HfMaB9SKTay6DXkK/exec", {
+          method: "POST",
+          mode: "no-cors",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            action: "delete",
+            bookingId: bookingId
+          }),
+        });
+        console.log("Sent delete request to Google Sheets");
+      } catch (err) {
+        console.error("Error deleting booking:", err);
+        alert("Failed to delete booking.");
+      }
+    }
+  };
+
+  const downloadDealersPDF = () => {
+    const doc = new jsPDF();
+    doc.text("Vendor99 Dealer Network", 14, 15);
+    
+    const tableColumn = ["ID", "Business Name", "Contact Person", "Phone", "City", "Plan", "Status"];
+    const tableRows = [];
+
+    dealers.forEach(dealer => {
+      const dealerData = [
+        dealer.id,
+        dealer.businessName || dealer.name || "N/A",
+        dealer.ownerName || dealer.contact || "N/A",
+        dealer.phone || "N/A",
+        dealer.city || "N/A",
+        dealer.plan || "Basic",
+        dealer.status || "Pending"
+      ];
+      tableRows.push(dealerData);
+    });
+
+    (doc as any).autoTable({
+      head: [tableColumn],
+      body: tableRows,
+      startY: 20,
+      styles: { fontSize: 8 },
+      headStyles: { fillColor: [249, 115, 22] } // Brand color
+    });
+
+    doc.save(`Vendor99_Dealers_${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
   const handleSaveService = async (e: React.FormEvent) => {
@@ -309,6 +353,15 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
     }
   };
 
+  const totalRevNum = dealers.reduce((acc, d) => acc + (Number(d.amount) || 0), 0) + bookings.reduce((acc, b) => acc + (Number(b.numericAmount) || 0), 0);
+  const formatCurrency = (val: number) => {
+    if (val >= 100000) return `₹${(val / 100000).toFixed(2)}L`;
+    return `₹${val.toLocaleString('en-IN')}`;
+  };
+  const activeOrdersCount = bookings.filter(b => b.status !== "Completed" && b.status !== "Cancelled").length;
+  const completedOrdersCount = bookings.filter(b => b.status === "Completed").length;
+  const completionRate = bookings.length > 0 ? Math.round((completedOrdersCount / bookings.length) * 100) : 0;
+
   return (
     <div className="min-h-screen bg-slate-50 flex font-sans">
       {/* Sidebar */}
@@ -396,10 +449,10 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
               {/* Stats Row */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 {[
-                  { label: "Total Revenue", value: "₹24.5L", trend: "+12.5%", isPositive: true, icon: DollarSign, color: "text-emerald-600", bg: "bg-emerald-100" },
-                  { label: "Active Orders", value: bookings.length.toString(), trend: "+5.2%", isPositive: true, icon: ShoppingCart, color: "text-brand", bg: "bg-brand/20" },
-                  { label: "Partner Dealers", value: dealers.length.toString(), trend: "+12", isPositive: true, icon: Briefcase, color: "text-purple-600", bg: "bg-purple-100" },
-                  { label: "Service Completion", value: "94%", trend: "+1.1%", isPositive: true, icon: Activity, color: "text-blue-600", bg: "bg-blue-100" },
+                  { label: "Total Revenue", value: formatCurrency(totalRevNum), trend: "Dynamic", isPositive: true, icon: DollarSign, color: "text-emerald-600", bg: "bg-emerald-100" },
+                  { label: "Active Orders", value: activeOrdersCount.toString(), trend: "Real-time", isPositive: true, icon: ShoppingCart, color: "text-brand", bg: "bg-brand/20" },
+                  { label: "Partner Dealers", value: dealers.length.toString(), trend: "Real-time", isPositive: true, icon: Briefcase, color: "text-purple-600", bg: "bg-purple-100" },
+                  { label: "Service Completion", value: `${completionRate}%`, trend: "Real-time", isPositive: true, icon: Activity, color: "text-blue-600", bg: "bg-blue-100" },
                 ].map((stat, i) => (
                   <div key={i} className="bg-white p-6 rounded-3xl border border-border shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow">
                     <div className="flex items-start justify-between">
@@ -441,9 +494,9 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                     <tbody className="divide-y divide-border">
                       {bookings.slice(0, 4).map((row, i) => (
                         <tr key={i} className="hover:bg-slate-50 transition-colors">
-                          <td className="py-4 px-6 text-sm font-medium text-slate-900">{row.id}</td>
+                          <td className="py-4 px-6 text-sm font-medium text-slate-900">{row.bookingId || row.id}</td>
                           <td className="py-4 px-6 text-sm text-slate-600">{row.customerName}</td>
-                          <td className="py-4 px-6 text-sm text-slate-600">{row.service}</td>
+                          <td className="py-4 px-6 text-sm text-slate-600">{row.serviceName || row.service}</td>
                           <td className="py-4 px-6">
                             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${
                               row.status === 'Completed' ? 'bg-emerald-100 text-emerald-800' :
@@ -466,21 +519,76 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                <div className="flex items-center justify-between">
                   <div>
                      <h2 className="text-2xl font-bold text-slate-800">Dealer Network</h2>
-                     <p className="text-slate-500 mt-1">Manage, approve, and edit partner registration requests.</p>
+                     <p className="text-slate-500 mt-1">Manage paid partner registrations and subscriptions.</p>
                   </div>
-                  <button onClick={() => setShowAddModal(true)} className="bg-brand hover:bg-brand-dark text-white px-4 py-2 rounded-xl font-bold transition-colors">
-                     + Add New Dealer
-                  </button>
+                  <div className="flex gap-3">
+                     <button onClick={() => downloadDealersPDF()} className="bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 px-4 py-2 rounded-xl font-bold transition-colors shadow-sm flex items-center gap-2">
+                        <Download className="h-4 w-4" /> Export PDF
+                     </button>
+                     <button onClick={() => setShowAddModal(true)} className="bg-brand hover:bg-brand-dark text-white px-4 py-2 rounded-xl font-bold transition-colors">
+                        + Add New Dealer
+                     </button>
+                  </div>
+               </div>
+               
+               {/* Dashboard Cards for Dealers */}
+               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                  <div className="bg-white p-4 rounded-2xl border border-border shadow-sm">
+                     <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Total</p>
+                     <p className="text-2xl font-black text-slate-800">{dealers.length}</p>
+                  </div>
+                  <div className="bg-white p-4 rounded-2xl border border-border shadow-sm">
+                     <p className="text-xs font-bold text-emerald-600 uppercase tracking-wider mb-1">Active</p>
+                     <p className="text-2xl font-black text-slate-800">{dealers.filter(d => d.status === 'Active').length}</p>
+                  </div>
+                  <div className="bg-white p-4 rounded-2xl border border-border shadow-sm">
+                     <p className="text-xs font-bold text-amber-600 uppercase tracking-wider mb-1">Pending</p>
+                     <p className="text-2xl font-black text-slate-800">{dealers.filter(d => d.status === 'Pending').length}</p>
+                  </div>
+                  <div className="bg-white p-4 rounded-2xl border border-border shadow-sm">
+                     <p className="text-xs font-bold text-purple-600 uppercase tracking-wider mb-1">Premium</p>
+                     <p className="text-2xl font-black text-slate-800">{dealers.filter(d => d.plan === 'Premium Dealer').length}</p>
+                  </div>
+                  <div className="bg-white p-4 rounded-2xl border border-border shadow-sm">
+                     <p className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-1">Monthly Rev</p>
+                     <p className="text-2xl font-black text-slate-800">₹{dealers.reduce((acc, d) => acc + (Number(d.amount) || 0), 0)}</p>
+                  </div>
+                  <div className="bg-white p-4 rounded-2xl border border-border shadow-sm">
+                     <p className="text-xs font-bold text-brand uppercase tracking-wider mb-1">Total Rev</p>
+                     <p className="text-2xl font-black text-slate-800">₹{dealers.reduce((acc, d) => acc + (Number(d.amount) || 0), 0)}</p>
+                  </div>
+               </div>
+
+               {/* Filters */}
+               <div className="flex flex-wrap gap-4 mb-4">
+                  <select className="bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm font-medium text-slate-700 outline-none focus:border-brand">
+                     <option value="All">All Categories</option>
+                     <option value="CCTV & Security Solutions">CCTV & Security</option>
+                     <option value="Home Construction">Home Construction</option>
+                     <option value="Interior Design">Interior Design</option>
+                  </select>
+                  <select className="bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm font-medium text-slate-700 outline-none focus:border-brand">
+                     <option value="All">All Plans</option>
+                     <option value="Basic Dealer">Basic Dealer</option>
+                     <option value="Growth Dealer">Growth Dealer</option>
+                     <option value="Premium Dealer">Premium Dealer</option>
+                  </select>
+                  <select className="bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm font-medium text-slate-700 outline-none focus:border-brand">
+                     <option value="All">All Statuses</option>
+                     <option value="Active">Active</option>
+                     <option value="Pending">Pending</option>
+                     <option value="Suspended">Suspended</option>
+                  </select>
                </div>
                
                <div className="bg-white rounded-3xl border border-border shadow-sm overflow-hidden">
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse min-w-[800px]">
+                  <table className="w-full text-left border-collapse min-w-[1000px]">
                     <thead>
                       <tr className="bg-slate-50 border-b border-border">
                         <th className="py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider">Business Info</th>
-                        <th className="py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider">Location & Contact</th>
-                        <th className="py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider">Payment & UTR</th>
+                        <th className="py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider">Contact</th>
+                        <th className="py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider">Plan & Payment</th>
                         <th className="py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
                         <th className="py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">Actions</th>
                       </tr>
@@ -489,51 +597,37 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                       {dealers.map((dealer, i) => (
                         <tr key={i} className="hover:bg-slate-50 transition-colors">
                           <td className="py-4 px-6">
-                             <div className="font-bold text-slate-800">{dealer.name}</div>
-                             <div className="text-xs text-brand font-bold bg-brand/10 inline-block px-2 py-0.5 rounded-full mt-1.5">{dealer.expertise || 'CCTV Surveillance'}</div>
+                             <div className="font-bold text-slate-800">{dealer.businessName || dealer.name}</div>
+                             <div className="text-xs text-brand font-bold bg-brand/10 inline-block px-2 py-0.5 rounded-full mt-1.5">{dealer.category || dealer.expertise || 'CCTV Surveillance'}</div>
+                             <div className="text-xs text-slate-500 mt-1">{dealer.experience || '0-2 Years'} Experience</div>
                           </td>
                           <td className="py-4 px-6">
                              <div className="text-sm font-bold text-slate-700">{dealer.city}</div>
-                             <div className="text-xs text-slate-500 mt-0.5">{dealer.contact} • {dealer.phone}</div>
+                             <div className="text-xs text-slate-500 mt-0.5">{dealer.ownerName || dealer.contact} • {dealer.phone}</div>
                              {dealer.email && <div className="text-xs text-blue-500 mt-0.5">{dealer.email}</div>}
                           </td>
                           <td className="py-4 px-6">
-                             <div className="text-xs font-mono font-bold text-slate-600 mb-1">UTR: {dealer.utrNumber || 'N/A'}</div>
-                             {dealer.screenshotUrl && (
-                                <a href={dealer.screenshotUrl} target="_blank" rel="noreferrer" className="text-xs text-brand hover:underline block mb-1">View Screenshot</a>
-                             )}
-                             <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
-                               dealer.paymentStatus === 'Verified' ? 'bg-emerald-100 text-emerald-800' :
-                               dealer.paymentStatus === 'Rejected' ? 'bg-red-100 text-red-800' :
-                               'bg-amber-100 text-amber-800'
-                             }`}>
-                               {dealer.paymentStatus || 'Manual'}
-                             </span>
+                             <div className="text-sm font-bold text-slate-800 mb-1">{dealer.plan || 'Basic Dealer'} (₹{dealer.amount || '999'})</div>
+                             <div className="text-[10px] font-mono text-slate-500">TXN: {dealer.transactionId || 'N/A'}</div>
+                             <div className="text-[10px] font-mono text-slate-500">ORD: {dealer.orderId || 'N/A'}</div>
                           </td>
                           <td className="py-4 px-6">
                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${
                                dealer.status === 'Active' ? 'bg-emerald-100 text-emerald-800' :
                                dealer.status === 'Pending' ? 'bg-amber-100 text-amber-800' :
+                               dealer.status === 'Suspended' ? 'bg-rose-100 text-rose-800' :
                                'bg-slate-100 text-slate-600'
                              }`}>
-                               {dealer.status}
+                               {dealer.status || 'Pending'}
                              </span>
                           </td>
                           <td className="py-4 px-6 text-right space-x-2 whitespace-nowrap">
-                             <button onClick={() => openEditModal(dealer)} className="p-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors" title="Edit">
-                                <Edit className="h-5 w-5" />
-                             </button>
-                             {dealer.paymentStatus === 'Pending Verification' && (
-                                <button onClick={() => updatePaymentStatus(dealer, 'Verified')} className="px-2 py-1.5 bg-emerald-500 text-white hover:bg-emerald-600 rounded-lg transition-colors text-xs font-bold" title="Verify Payment">
-                                   Verify Payment
-                                </button>
-                             )}
-                             {dealer.status !== 'Inactive' && dealer.paymentStatus === 'Verified' && (
-                                <button onClick={() => updateStatus(dealer.id, 'Inactive')} className="p-1.5 bg-amber-50 text-amber-600 hover:bg-amber-100 rounded-lg transition-colors" title="Deactivate">
+                             {dealer.status !== 'Suspended' && (
+                                <button onClick={() => updateStatus(dealer.id, 'Suspended')} className="p-1.5 bg-amber-50 text-amber-600 hover:bg-amber-100 rounded-lg transition-colors" title="Suspend">
                                    <XCircle className="h-5 w-5" />
                                 </button>
                              )}
-                             {dealer.status === 'Inactive' && dealer.paymentStatus === 'Verified' && (
+                             {dealer.status === 'Suspended' && (
                                 <button onClick={() => updateStatus(dealer.id, 'Active')} className="p-1.5 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 rounded-lg transition-colors" title="Activate">
                                    <CheckCircle2 className="h-5 w-5" />
                                 </button>
@@ -568,6 +662,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                         <th className="py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider">Service Request</th>
                         <th className="py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider">Assigned Dealer</th>
                         <th className="py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
+                        <th className="py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border">
@@ -575,14 +670,14 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                          const assignedDealer = dealers.find(d => d.id === booking.dealerId);
                          return (
                         <tr key={i} className="hover:bg-slate-50 transition-colors">
-                          <td className="py-4 px-6 text-sm font-bold text-slate-900">{booking.id}</td>
+                          <td className="py-4 px-6 text-sm font-bold text-slate-900">{booking.bookingId || booking.id}</td>
                           <td className="py-4 px-6">
                              <div className="font-bold text-slate-800">{booking.customerName}</div>
-                             <div className="text-xs text-slate-500 mt-0.5">{booking.phone}</div>
+                             <div className="text-xs text-slate-500 mt-0.5">{booking.customerPhone || booking.phone}</div>
                           </td>
                           <td className="py-4 px-6">
-                             <div className="text-sm font-medium text-slate-700">{booking.service}</div>
-                             <div className="text-xs text-slate-500 mt-0.5 flex items-center gap-1"><MapPin className="h-3 w-3"/> {booking.city}</div>
+                             <div className="text-sm font-medium text-slate-700">{booking.serviceName || booking.service}</div>
+                             <div className="text-xs text-slate-500 mt-0.5 flex items-center gap-1"><MapPin className="h-3 w-3"/> {booking.customerAddress || booking.city}</div>
                           </td>
                           <td className="py-4 px-6">
                              <select 
@@ -604,6 +699,11 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                             }`}>
                               {booking.status}
                             </span>
+                          </td>
+                          <td className="py-4 px-6 text-right whitespace-nowrap">
+                             <button onClick={() => handleDeleteBooking(booking.id)} className="p-1.5 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg transition-colors" title="Delete Booking">
+                                <Trash2 className="h-5 w-5" />
+                             </button>
                           </td>
                         </tr>
                       )})}

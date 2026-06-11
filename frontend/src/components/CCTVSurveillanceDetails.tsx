@@ -594,8 +594,8 @@ export function CCTVSurveillanceDetails() {
                                 <div className="text-center md:text-right">
                                    <h5 className="font-extrabold text-slate-800 mb-2">OUR COMMITMENT & SUPPORT</h5>
                                    <p className="text-xs font-medium text-slate-600 leading-relaxed">
-                                      • Proper 1 Year Warranty • Technical Online Support<br/>
-                                      • Additional Warranty on Bulk Buying • Proper Firmware and Tool Guidance
+                                      • Technical Online Support<br/>
+                                      • Proper Firmware and Tool Guidance
                                    </p>
                                 </div>
                              </div>
@@ -649,14 +649,6 @@ export function CCTVSurveillanceDetails() {
                     <ul className="space-y-4">
                        {activeTab === "buy" && (
                           <>
-                             <li className="flex items-start gap-3">
-                                <CheckCircle2 className="text-slate-800 h-5 w-5 shrink-0 mt-0.5" />
-                                <span className="font-bold text-slate-700">Proper 1 Year Warranty</span>
-                             </li>
-                             <li className="flex items-start gap-3">
-                                <Shield className="text-slate-800 h-5 w-5 shrink-0 mt-0.5" />
-                                <span className="font-bold text-slate-700">Additional Warranty on Bulk Buying</span>
-                             </li>
                           </>
                        )}
                        <li className="flex items-start gap-3">
@@ -676,95 +668,7 @@ export function CCTVSurveillanceDetails() {
 
         </div>
         
-        {/* Collaborations Marquee (Moved to Footer) */}
-        <div className="mt-12 bg-white rounded-2xl shadow-sm border border-border p-6 overflow-hidden relative">
-          <div className="flex items-center justify-center mb-8">
-             <div className="px-6 py-2.5 rounded-full bg-white border border-slate-200 text-xs font-bold text-slate-700 uppercase tracking-widest shadow-sm hover:shadow-md hover:border-slate-300 transition-all inline-flex items-center gap-3 cursor-default">
-                <span className="relative flex h-2.5 w-2.5">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-brand"></span>
-                </span>
-                In Proud Partner's With
-             </div>
-          </div>
-          <div className="flex w-full overflow-hidden relative group">
-             {/* We use 3 blocks of the same content to create the seamless infinite scroll */}
-             <div className="flex w-max animate-marquee-reverse whitespace-nowrap group-hover:[animation-play-state:paused] transition-all duration-300">
-                {/* Block 1 */}
-                <div className="flex items-center gap-24 md:gap-32 px-12 md:px-16">
-                   <div className="w-32 md:w-48 flex items-center justify-center mix-blend-multiply">
-                      <img src="/logos/hikvision-v2.png" alt="HIKVISION" className="w-full h-auto object-contain scale-[1.25] transition-all duration-300 hover:animate-pulse hover:-translate-y-3 hover:scale-[1.35]" />
-                   </div>
-                   <div className="w-32 md:w-48 flex items-center justify-center mix-blend-multiply">
-                      <img src="/logos/cpplus-v2.png" alt="CP PLUS" className="w-full h-auto object-contain scale-[1.35] transition-all duration-300 hover:animate-pulse hover:-translate-y-3 hover:scale-[1.45]" />
-                   </div>
-                   <div className="w-32 md:w-48 flex items-center justify-center mix-blend-multiply">
-                      <img src="/logos/dahua-v2.png" alt="dahua" className="w-full h-auto object-contain scale-[1.25] transition-all duration-300 hover:animate-pulse hover:-translate-y-3 hover:scale-[1.35]" />
-                   </div>
-                   <div className="w-32 md:w-48 flex items-center justify-center mix-blend-multiply">
-                      <img src="/logos/secureye-v2.png" alt="SECUREYE" className="w-full h-auto object-contain scale-[1.1] transition-all duration-300 hover:animate-pulse hover:-translate-y-3 hover:scale-[1.2]" />
-                   </div>
-                   <div className="w-32 md:w-48 flex flex-col items-center justify-center mix-blend-multiply">
-                      <img src="/logos/homewell.png" alt="HomeWell" className="w-[50%] h-auto object-contain transition-all duration-300 hover:animate-pulse hover:-translate-y-2 hover:scale-[1.1]" />
-                      <span className="text-sm font-bold text-slate-800 mt-1 uppercase tracking-wide">HomeWell</span>
-                   </div>
-                   <div className="w-32 md:w-48 flex flex-col items-center justify-center mix-blend-multiply">
-                      <img src="/logos/reboot.png" alt="REBOOT" className="w-[50%] h-auto object-contain transition-all duration-300 hover:animate-pulse hover:-translate-y-2 hover:scale-[1.1]" />
-                      <span className="text-sm font-bold text-slate-800 mt-1 uppercase tracking-wide">REBOOT</span>
-                   </div>
-                </div>
-                {/* Block 2 */}
-                <div className="flex items-center gap-24 md:gap-32 px-12 md:px-16">
-                   <div className="w-32 md:w-48 flex items-center justify-center mix-blend-multiply">
-                      <img src="/logos/hikvision-v2.png" alt="HIKVISION" className="w-full h-auto object-contain scale-[1.25] transition-all duration-300 hover:animate-pulse hover:-translate-y-3 hover:scale-[1.35]" />
-                   </div>
-                   <div className="w-32 md:w-48 flex items-center justify-center mix-blend-multiply">
-                      <img src="/logos/cpplus-v2.png" alt="CP PLUS" className="w-full h-auto object-contain scale-[1.35] transition-all duration-300 hover:animate-pulse hover:-translate-y-3 hover:scale-[1.45]" />
-                   </div>
-                   <div className="w-32 md:w-48 flex items-center justify-center mix-blend-multiply">
-                      <img src="/logos/dahua-v2.png" alt="dahua" className="w-full h-auto object-contain scale-[1.25] transition-all duration-300 hover:animate-pulse hover:-translate-y-3 hover:scale-[1.35]" />
-                   </div>
-                   <div className="w-32 md:w-48 flex items-center justify-center mix-blend-multiply">
-                      <img src="/logos/secureye-v2.png" alt="SECUREYE" className="w-full h-auto object-contain scale-[1.1] transition-all duration-300 hover:animate-pulse hover:-translate-y-3 hover:scale-[1.2]" />
-                   </div>
-                   <div className="w-32 md:w-48 flex flex-col items-center justify-center mix-blend-multiply">
-                      <img src="/logos/homewell.png" alt="HomeWell" className="w-[50%] h-auto object-contain transition-all duration-300 hover:animate-pulse hover:-translate-y-2 hover:scale-[1.1]" />
-                      <span className="text-sm font-bold text-slate-800 mt-1 uppercase tracking-wide">HomeWell</span>
-                   </div>
-                   <div className="w-32 md:w-48 flex flex-col items-center justify-center mix-blend-multiply">
-                      <img src="/logos/reboot.png" alt="REBOOT" className="w-[50%] h-auto object-contain transition-all duration-300 hover:animate-pulse hover:-translate-y-2 hover:scale-[1.1]" />
-                      <span className="text-sm font-bold text-slate-800 mt-1 uppercase tracking-wide">REBOOT</span>
-                   </div>
-                </div>
-                {/* Block 3 */}
-                <div className="flex items-center gap-24 md:gap-32 px-12 md:px-16">
-                   <div className="w-32 md:w-48 flex items-center justify-center mix-blend-multiply">
-                      <img src="/logos/hikvision-v2.png" alt="HIKVISION" className="w-full h-auto object-contain scale-[1.25] transition-all duration-300 hover:animate-pulse hover:-translate-y-3 hover:scale-[1.35]" />
-                   </div>
-                   <div className="w-32 md:w-48 flex items-center justify-center mix-blend-multiply">
-                      <img src="/logos/cpplus-v2.png" alt="CP PLUS" className="w-full h-auto object-contain scale-[1.35] transition-all duration-300 hover:animate-pulse hover:-translate-y-3 hover:scale-[1.45]" />
-                   </div>
-                   <div className="w-32 md:w-48 flex items-center justify-center mix-blend-multiply">
-                      <img src="/logos/dahua-v2.png" alt="dahua" className="w-full h-auto object-contain scale-[1.25] transition-all duration-300 hover:animate-pulse hover:-translate-y-3 hover:scale-[1.35]" />
-                   </div>
-                   <div className="w-32 md:w-48 flex items-center justify-center mix-blend-multiply">
-                      <img src="/logos/secureye-v2.png" alt="SECUREYE" className="w-full h-auto object-contain scale-[1.1] transition-all duration-300 hover:animate-pulse hover:-translate-y-3 hover:scale-[1.2]" />
-                   </div>
-                   <div className="w-32 md:w-48 flex flex-col items-center justify-center mix-blend-multiply">
-                      <img src="/logos/homewell.png" alt="HomeWell" className="w-full h-auto object-contain scale-[1.0] transition-all duration-300 hover:animate-pulse hover:-translate-y-3 hover:scale-[1.1]" />
-                      <span className="text-sm font-bold text-slate-800 mt-2 uppercase tracking-wide">HomeWell</span>
-                   </div>
-                   <div className="w-32 md:w-48 flex flex-col items-center justify-center mix-blend-multiply">
-                      <img src="/logos/reboot.png" alt="REBOOT" className="w-full h-auto object-contain scale-[1.0] transition-all duration-300 hover:animate-pulse hover:-translate-y-3 hover:scale-[1.1]" />
-                      <span className="text-sm font-bold text-slate-800 mt-2 uppercase tracking-wide">REBOOT</span>
-                   </div>
-                </div>
-             </div>
-          </div>
-          {/* Gradients to fade edges */}
-          <div className="absolute top-0 left-0 w-32 h-full bg-gradient-to-r from-white via-white/80 to-transparent pointer-events-none"></div>
-          <div className="absolute top-0 right-0 w-32 h-full bg-gradient-to-l from-white via-white/80 to-transparent pointer-events-none"></div>
-        </div>
+
       </div>
       
       <BookingModal 

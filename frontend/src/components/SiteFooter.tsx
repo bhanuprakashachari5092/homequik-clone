@@ -90,9 +90,18 @@ export function SiteFooter() {
         </div>
 
         <div className="mt-20 flex flex-col items-start gap-6 border-t border-white/10 pt-8 md:flex-row md:items-center md:justify-between">
-          <p className="text-sm text-slate-500 font-medium">
-            © {new Date().getFullYear()} Vendor99 Services Pvt. Ltd. All rights reserved.
-          </p>
+          <div className="flex flex-col gap-2">
+            <p className="text-sm text-slate-500 font-medium">
+              © {new Date().getFullYear()} Vendor99 Services Pvt. Ltd. All rights reserved.
+            </p>
+            <p className="text-sm text-slate-500 font-medium flex items-center gap-2">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-brand"></span>
+              </span>
+              Proud partner's With evvi
+            </p>
+          </div>
           <div className="flex gap-4">
             <motion.a
               whileHover={{ scale: 1.05 }}

@@ -32,7 +32,7 @@ export function OfferPopup() {
          // Check for new additions
          snapshot.docChanges().forEach((change) => {
             if (change.type === "added" && change.doc.data().isActive) {
-               const newOfferData = { id: change.doc.id, ...change.doc.data() };
+               const newOfferData: any = { id: change.doc.id, ...change.doc.data() };
                
                // Show Web Notification
                if (Notification.permission === "granted") {

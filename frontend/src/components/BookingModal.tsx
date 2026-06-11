@@ -63,7 +63,21 @@ export function BookingModal({ isOpen, onClose, serviceName, selectedItems = [] 
       setTimeout(() => setLoadingText("Saving Data..."), 1000);
       setTimeout(() => setLoadingText("Confirming Booking..."), 2000);
 
-      const docRef = await addDoc(collection(db, "bookings"), {
+      let calculatedAmount = 0;
+      let hasRepair = false;
+      selectedItems.forEach(item => {
+        if (item.startsWith("Repair:")) {
+          hasRepair = true;
+        } else {
+          const match = item.match(/\[₹?\s*([\d,]+)/);
+          if (match) {
+             calculatedAmount += parseInt(match[1].replace(/,/g, ''), 10);
+          }
+        }
+      });
+      if (hasRepair) calculatedAmount += 450;
+
+      const bookingData = {
         bookingId: generatedId,
         customerName: formData.fullName,
         customerPhone: formData.phone,
@@ -73,9 +87,29 @@ export function BookingModal({ isOpen, onClose, serviceName, selectedItems = [] 
         bookingDate: formData.date,
         bookingTime: formData.time,
         notes: formData.notes,
+        amount: calculatedAmount > 0 ? `₹${calculatedAmount.toLocaleString('en-IN')}` : "₹0",
+        numericAmount: calculatedAmount,
         status: "Pending",
         createdAt: serverTimestamp()
-      });
+      };
+
+      // 1. Save to Google Sheets
+      try {
+        await fetch("https://script.google.com/macros/s/AKfycbxcEHZaSWkogoxOp6PNL0VhLVTNw0X11YEDekRNmCFobqWhL5V4HfMaB9SKTay6DXkK/exec", {
+          method: "POST",
+          mode: "no-cors",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(bookingData),
+        });
+        console.log("Sent to Google Sheets");
+      } catch (err) {
+        console.error("Error saving to Google Sheets:", err);
+      }
+
+      // 2. Save to Firebase (Admin Dashboard uses this)
+      const docRef = await addDoc(collection(db, "bookings"), bookingData);
 
       console.log("SUCCESS:", docRef.id);
 

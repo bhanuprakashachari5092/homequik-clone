@@ -15553,6 +15553,14 @@ function firestoreClientListen(client, query2, options2, observer) {
     });
   };
 }
+function firestoreClientGetDocumentViaSnapshotListener(client, key, options2 = {}) {
+  const deferred = new Deferred();
+  client.asyncQueue.enqueueAndForget(async () => {
+    const eventManager = await getEventManager(client);
+    return readDocumentViaSnapshotListener(eventManager, client.asyncQueue, key, options2, deferred);
+  });
+  return deferred.promise;
+}
 function firestoreClientWrite(client, mutations) {
   const deferred = new Deferred();
   client.asyncQueue.enqueueAndForget(async () => {
@@ -15560,6 +15568,28 @@ function firestoreClientWrite(client, mutations) {
     return syncEngineWrite(syncEngine, mutations, deferred);
   });
   return deferred.promise;
+}
+function readDocumentViaSnapshotListener(eventManager, asyncQueue, key, options2, result) {
+  const wrappedObserver = new AsyncObserver({
+    next: (snap) => {
+      wrappedObserver.mute();
+      asyncQueue.enqueueAndForget(() => eventManagerUnlisten(eventManager, listener));
+      const exists = snap.docs.has(key);
+      if (!exists && snap.fromCache) {
+        result.reject(new FirestoreError(Code.UNAVAILABLE, "Failed to get document because the client is offline."));
+      } else if (exists && snap.fromCache && options2 && options2.source === "server") {
+        result.reject(new FirestoreError(Code.UNAVAILABLE, 'Failed to get document from server. (However, this document does exist in the local cache. Run again without setting source to "server" to retrieve the cached document.)'));
+      } else {
+        result.resolve(snap);
+      }
+    },
+    error: (e) => result.reject(e)
+  });
+  const listener = new QueryListener(newQueryForPath(key.path), wrappedObserver, {
+    includeMetadataChanges: true,
+    waitForSyncWhenOnline: true
+  });
+  return eventManagerListen(eventManager, listener);
 }
 function longPollingOptionsEqual(options1, options2) {
   return options1.timeoutSeconds === options2.timeoutSeconds;
@@ -17894,6 +17924,12 @@ function implementsAnyMethods(obj, methods) {
   }
   return false;
 }
+function getDoc(reference) {
+  reference = cast(reference, DocumentReference);
+  const firestore = cast(reference.firestore, Firestore);
+  const client = ensureFirestoreConfigured(firestore);
+  return firestoreClientGetDocumentViaSnapshotListener(client, reference._key).then((snapshot) => convertToDocSnapshot(firestore, reference, snapshot));
+}
 function setDoc(reference, data, options2) {
   reference = cast(reference, DocumentReference);
   const firestore = cast(reference.firestore, Firestore);
@@ -18000,7 +18036,8 @@ export {
   setDoc as b,
   collection as c,
   doc as d,
-  deleteDoc as e,
+  getDoc as e,
+  deleteDoc as f,
   getFirestore as g,
   onSnapshot as o,
   query as q,

@@ -3,6 +3,8 @@ import {
   Briefcase, LogOut, CheckCircle2, Clock, MapPin, Phone, XCircle
 } from "lucide-react";
 import { useState, useEffect } from "react";
+import { db } from "@/lib/firebase";
+import { doc, getDoc } from "firebase/firestore";
 
 export const Route = createFileRoute("/dealer-portal")({
   head: () => ({
@@ -20,26 +22,42 @@ function DealerPortal() {
   const [error, setError] = useState("");
   const [currentDealer, setCurrentDealer] = useState<any>(null);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    const storedDealers = localStorage.getItem("vendor99_dealers");
-    if (storedDealers) {
-      const dealers = JSON.parse(storedDealers);
-      const foundDealer = dealers.find((d: any) => d.id === dealerId && d.phone === phone);
+    setError("");
+    
+    try {
+      // Fetch dealer from Firebase Firestore
+      const docRef = doc(db, "dealers", dealerId);
+      const docSnap = await getDoc(docRef);
       
-      if (foundDealer) {
-        if (foundDealer.status !== "Active") {
-          setError("Your account is currently " + foundDealer.status + ". Please contact admin.");
-          return;
+      if (docSnap.exists()) {
+        const dealerData = docSnap.data();
+        
+        // Verify phone number acts as password in this flow
+        if (dealerData.phone === phone) {
+          if (dealerData.status !== "Active") {
+            setError("Your account is currently " + dealerData.status + ". Please contact admin.");
+            return;
+          }
+          
+          setCurrentDealer({
+            id: dealerId,
+            name: dealerData.businessName,
+            contact: dealerData.ownerName,
+            status: dealerData.status,
+            ...dealerData
+          });
+          setIsAuthenticated(true);
+        } else {
+          setError("Invalid Dealer ID or Phone Number");
         }
-        setCurrentDealer(foundDealer);
-        setIsAuthenticated(true);
-        setError("");
       } else {
         setError("Invalid Dealer ID or Phone Number");
       }
-    } else {
-      setError("No dealer network found. Please contact admin.");
+    } catch (err: any) {
+      console.error(err);
+      setError("Failed to connect to authentication server. Please check your Firestore rules.");
     }
   };
 

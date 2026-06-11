@@ -22,6 +22,5 @@ function requireInquire() {
   return inquire_1;
 }
 export {
-  commonjsRequire as c,
   requireInquire as r
 };
