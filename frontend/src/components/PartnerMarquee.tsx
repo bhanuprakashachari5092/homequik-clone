@@ -10,7 +10,7 @@ const PartnerMarquee: React.FC = () => {
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-brand"></span>
               </span>
-              Proud partner's With evvi
+              Proud partner's With
            </div>
         </div>
         <div className="flex w-full overflow-hidden relative group">

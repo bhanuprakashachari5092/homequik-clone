@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { SiteLayout } from "@/components/SiteLayout";
-import { useState } from "react";
-import { Mail, Lock, Phone, CheckCircle2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Mail, Lock, Phone, CheckCircle2, AlertCircle, X } from "lucide-react";
 import { Loader } from "@/components/Loader";
 import { motion, AnimatePresence } from "framer-motion";
 import { auth, db } from "@/lib/firebase";
@@ -32,6 +32,13 @@ function Login() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => setError(""), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [error]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
@@ -57,7 +64,11 @@ function Login() {
       router.navigate({ to: "/" });
     } catch (err: any) {
       console.error(err);
-      setError(err.message || "Authentication failed. Please check your credentials.");
+      if (mode === "login") {
+        setError("wrong credentials");
+      } else {
+        setError(err.message || "Authentication failed. Please check your credentials.");
+      }
     } finally {
       setLoading(false);
     }
@@ -139,11 +150,33 @@ function Login() {
                 : "It takes less than a minute."}
             </p>
 
-            {error && (
-              <div className="mt-4 rounded-md bg-destructive/15 p-3 text-sm text-destructive">
-                {error}
-              </div>
-            )}
+            {/* Professional Error Popup */}
+            <AnimatePresence>
+              {error && (
+                <motion.div
+                  initial={{ opacity: 0, y: -50, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -50, scale: 0.95 }}
+                  transition={{ type: "spring", bounce: 0.4, duration: 0.6 }}
+                  className="fixed top-8 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-white/90 backdrop-blur-md border border-red-100 shadow-2xl px-5 py-3.5 rounded-2xl w-[90%] max-w-sm"
+                >
+                  <div className="h-10 w-10 bg-red-50 rounded-xl flex items-center justify-center shrink-0">
+                    <AlertCircle className="h-5 w-5 text-red-500" />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="text-sm font-bold text-slate-800">Authentication Error</h4>
+                    <p className="text-xs font-medium text-slate-500 mt-0.5">{error}</p>
+                  </div>
+                  <button 
+                    onClick={() => setError("")}
+                    type="button"
+                    className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors shrink-0"
+                  >
+                    <X className="h-4 w-4 text-slate-400" />
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             <form className="mt-8 space-y-5" onSubmit={handleSubmit}>
               <AnimatePresence mode="popLayout">

@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { 
-  LayoutDashboard, Users, ShoppingCart, Settings, 
+  LayoutDashboard, Users, User, ShoppingCart, Settings, 
   LogOut, Bell, Search, Activity, DollarSign, Package,
   Briefcase, CheckCircle2, XCircle, Edit, Trash2, MapPin, Gift,
   Download
@@ -280,14 +280,32 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
     doc.save(`Vendor99_Dealers_${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
+  const convertDriveLink = (url: string) => {
+    if (!url) return url;
+    try {
+      const match = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) || url.match(/id=([a-zA-Z0-9_-]+)/);
+      if (match && match[1]) {
+        return `https://drive.google.com/uc?export=view&id=${match[1]}`;
+      }
+    } catch (e) {
+      console.error("Error parsing Drive link:", e);
+    }
+    return url;
+  };
+
   const handleSaveService = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      const serviceDataToSave = {
+        ...newService,
+        imageUrl: convertDriveLink(newService.imageUrl)
+      };
+
       if (editingServiceId) {
-        await updateDoc(doc(db, "services", editingServiceId), newService);
+        await updateDoc(doc(db, "services", editingServiceId), serviceDataToSave);
       } else {
         await addDoc(collection(db, "services"), {
-          ...newService,
+          ...serviceDataToSave,
           createdAt: serverTimestamp()
         });
       }
@@ -327,11 +345,16 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   const handleSaveOffer = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      const offerDataToSave = {
+        ...newOffer,
+        imageUrl: convertDriveLink(newOffer.imageUrl)
+      };
+
       if (editingOfferId) {
-        await updateDoc(doc(db, "offers", editingOfferId), newOffer);
+        await updateDoc(doc(db, "offers", editingOfferId), offerDataToSave);
       } else {
         await addDoc(collection(db, "offers"), {
-          ...newOffer,
+          ...offerDataToSave,
           createdAt: serverTimestamp()
         });
       }
@@ -395,7 +418,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
     }
   };
 
-  const dealerRevenue = dealers.reduce((acc, d) => acc + (Number(d.amount) || 0), 0);
+  const dealerRevenue = dealers.reduce((acc, d) => acc + (Number(d.amount) || 4999), 0);
   const bookingRevenue = bookings.reduce((acc, b) => acc + (Number(b.numericAmount) || 0), 0);
   const customRevTotal = customRevenues.reduce((acc, c) => acc + (Number(c.amount) || 0), 0);
   
@@ -403,7 +426,9 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   
   const receivedBookingRev = bookings.filter(b => b.paymentStatus === 'Paid').reduce((acc, b) => acc + (Number(b.numericAmount) || 0), 0);
   const receivedCustomRev = customRevenues.filter(c => c.paymentStatus === 'Received').reduce((acc, c) => acc + (Number(c.amount) || 0), 0);
-  const receivedRevenue = dealerRevenue + receivedBookingRev + receivedCustomRev;
+  const receivedDealerRev = dealers.filter(d => d.paymentStatus === 'Verified').reduce((acc, d) => acc + (Number(d.amount) || 4999), 0);
+  
+  const receivedRevenue = receivedDealerRev + receivedBookingRev + receivedCustomRev;
   
   const remainingRevenue = expectedRevenue - receivedRevenue;
 
@@ -473,7 +498,6 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
         <div className="flex-1 py-6 px-4 space-y-2">
           {[
             { icon: LayoutDashboard, label: "Dashboard" },
-            { icon: ShoppingCart, label: "Orders" },
             { icon: Users, label: "Customers" },
             { icon: Briefcase, label: "Dealers" },
             { icon: Package, label: "Services" },
@@ -698,11 +722,11 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                   </div>
                   <div className="bg-white p-4 rounded-2xl border border-border shadow-sm">
                      <p className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-1">Monthly Rev</p>
-                     <p className="text-2xl font-black text-slate-800">₹{dealers.reduce((acc, d) => acc + (Number(d.amount) || 0), 0)}</p>
+                     <p className="text-2xl font-black text-slate-800">₹{dealers.reduce((acc, d) => acc + (Number(d.amount) || 4999), 0)}</p>
                   </div>
                   <div className="bg-white p-4 rounded-2xl border border-border shadow-sm">
                      <p className="text-xs font-bold text-brand uppercase tracking-wider mb-1">Total Rev</p>
-                     <p className="text-2xl font-black text-slate-800">₹{dealers.reduce((acc, d) => acc + (Number(d.amount) || 0), 0)}</p>
+                     <p className="text-2xl font-black text-slate-800">₹{dealers.reduce((acc, d) => acc + (Number(d.amount) || 4999), 0)}</p>
                   </div>
                </div>
 

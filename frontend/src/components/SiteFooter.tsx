@@ -99,7 +99,7 @@ export function SiteFooter() {
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-brand"></span>
               </span>
-              Proud partner's With evvi
+              Proud partner's With
             </p>
           </div>
           <div className="flex gap-4">
