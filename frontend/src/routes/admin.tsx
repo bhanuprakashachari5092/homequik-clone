@@ -69,7 +69,7 @@ function AdminPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand"
-                placeholder="santhoshmarketing.com@gmail.com"
+                placeholder="Enter your email address"
                 required
               />
             </div>
