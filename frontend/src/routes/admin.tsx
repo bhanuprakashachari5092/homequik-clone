@@ -30,7 +30,7 @@ function AdminPage() {
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    if (email === "admin@gmail.com" && password === "admin") {
+    if (email === "santhoshmarketing.com@gmail.com" && password === "#Vendor99*") {
       setShowSuccess(true);
       setError("");
       setTimeout(() => {
@@ -68,7 +68,7 @@ function AdminPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand"
-                placeholder="admin@gmail.com"
+                placeholder="santhoshmarketing.com@gmail.com"
                 required
               />
             </div>
@@ -786,7 +786,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
               </div>
               <div className="hidden sm:block">
                 <p className="text-sm font-bold text-foreground">Super Admin</p>
-                <p className="text-xs text-slate-500">admin@gmail.com</p>
+                <p className="text-xs text-slate-500">santhoshmarketing.com@gmail.com</p>
               </div>
             </div>
           </div>
