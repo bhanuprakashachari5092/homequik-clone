@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
 import { useNavigate } from "@tanstack/react-router";
 import { Loader } from "@/components/Loader";
+import { useOffers } from "@/context/OfferContext";
 
 interface BookingModalProps {
   isOpen: boolean;
@@ -18,8 +19,10 @@ interface BookingModalProps {
 export function BookingModal({ isOpen, onClose, serviceName, selectedItems = [] }: BookingModalProps) {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { getApplicableOffer } = useOffers();
   const [step, setStep] = useState<"form" | "submitting" | "success">("form");
   const [bookingId, setBookingId] = useState("");
+  const [whatsappLink, setWhatsappLink] = useState("");
   const [loadingText, setLoadingText] = useState("Submitting Booking...");
 
   const today = new Date();
@@ -34,6 +37,38 @@ export function BookingModal({ isOpen, onClose, serviceName, selectedItems = [] 
     time: defaultTime,
     notes: ""
   });
+
+  const getPriceDetails = () => {
+    let originalAmount = 0;
+    let hasRepair = false;
+    selectedItems.forEach(item => {
+      if (item.startsWith("Repair:")) {
+        hasRepair = true;
+      } else {
+        const match = item.match(/\[₹?\s*([\d,]+)/);
+        if (match) {
+           originalAmount += parseInt(match[1].replace(/,/g, ''), 10);
+        }
+      }
+    });
+    if (hasRepair) originalAmount += 450;
+
+    const offer = getApplicableOffer(serviceName);
+    let discountAmount = 0;
+    let finalAmount = originalAmount;
+
+    if (offer && offer.discountValue && originalAmount > 0) {
+      if (offer.discountType === 'percentage') {
+         discountAmount = originalAmount * (offer.discountValue / 100);
+      } else {
+         discountAmount = offer.discountValue;
+      }
+      finalAmount = Math.max(0, Math.round(originalAmount - discountAmount));
+      discountAmount = originalAmount - finalAmount;
+    }
+
+    return { originalAmount, discountAmount, finalAmount, offer };
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -77,6 +112,16 @@ export function BookingModal({ isOpen, onClose, serviceName, selectedItems = [] 
       });
       if (hasRepair) calculatedAmount += 450;
 
+      const offer = getApplicableOffer(serviceName);
+      if (offer && offer.discountValue && calculatedAmount > 0) {
+        if (offer.discountType === 'percentage') {
+           calculatedAmount = calculatedAmount - (calculatedAmount * (offer.discountValue / 100));
+        } else {
+           calculatedAmount -= offer.discountValue;
+        }
+        calculatedAmount = Math.max(0, Math.round(calculatedAmount));
+      }
+
       const bookingData = {
         bookingId: generatedId,
         customerName: formData.fullName,
@@ -115,24 +160,24 @@ export function BookingModal({ isOpen, onClose, serviceName, selectedItems = [] 
 
       setBookingId(generatedId);
       
-      // Navigate to WhatsApp after animation
-      setTimeout(() => {
-        let text = `Hello Vendor99,\n\n*New Booking Request:*\n`;
-        text += `- Service: ${serviceName}\n`;
-        if (selectedItems && selectedItems.length > 0) {
-            text += `- Items: ${selectedItems.join(", ")}\n`;
-        }
-        text += `\n*Customer Details:*\n`;
-        text += `- Name: ${formData.fullName}\n`;
-        text += `- Phone: ${formData.phone}\n`;
-        text += `- Address: ${formData.address}\n`;
-        text += `- Schedule: ${formData.date} at ${formData.time}\n`;
-        if (formData.notes) text += `- Notes: ${formData.notes}\n`;
+      let text = `Hello Vendor99,\n\n*New Booking Request:*\n`;
+      text += `- Service: ${serviceName}\n`;
+      if (selectedItems && selectedItems.length > 0) {
+          text += `- Items: ${selectedItems.join(", ")}\n`;
+      }
+      text += `\n*Customer Details:*\n`;
+      text += `- Name: ${formData.fullName}\n`;
+      text += `- Phone: ${formData.phone}\n`;
+      text += `- Address: ${formData.address}\n`;
+      text += `- Schedule: ${formData.date} at ${formData.time}\n`;
+      if (formData.notes) text += `- Notes: ${formData.notes}\n`;
 
-        const WHATSAPP_NUMBER = "919141052539";
-        window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(text)}`, '_blank');
-        
-        resetAndClose();
+      const WHATSAPP_NUMBER = "919141052539";
+      setWhatsappLink(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(text)}`);
+
+      // Show success animation before requiring WhatsApp click
+      setTimeout(() => {
+        setStep("success");
       }, 3500); 
     } catch (error) {
       console.error("FIRESTORE ERROR:", error);
@@ -218,6 +263,31 @@ export function BookingModal({ isOpen, onClose, serviceName, selectedItems = [] 
                   </div>
                 )}
 
+                {(() => {
+                  const { originalAmount, discountAmount, finalAmount, offer } = getPriceDetails();
+                  if (originalAmount === 0) return null;
+                  return (
+                    <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 space-y-2 text-sm mt-3">
+                      <div className="flex justify-between items-center text-slate-500">
+                        <span>Original Price:</span>
+                        <span className="font-semibold text-slate-700">₹{originalAmount.toLocaleString('en-IN')}</span>
+                      </div>
+                      {discountAmount > 0 && (
+                        <div className="flex justify-between items-center text-emerald-600 font-medium">
+                          <span>
+                            Discount {offer?.discountCode ? `(${offer.discountCode})` : `(${offer?.title || 'Offer'})`}:
+                          </span>
+                          <span>- ₹{discountAmount.toLocaleString('en-IN')}</span>
+                        </div>
+                      )}
+                      <div className="border-t border-slate-200/60 pt-2 flex justify-between items-center font-bold text-slate-800 text-base">
+                        <span>Total Payable:</span>
+                        <span className="text-brand font-black">₹{finalAmount.toLocaleString('en-IN')}</span>
+                      </div>
+                    </div>
+                  );
+                })()}
+
                 <motion.button 
                   whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
                   type="submit"
@@ -299,20 +369,30 @@ export function BookingModal({ isOpen, onClose, serviceName, selectedItems = [] 
                     <span className="text-slate-500 font-medium">Service</span>
                     <span className="font-bold text-slate-800 text-sm max-w-[60%] text-right">{serviceName}</span>
                   </div>
-                  <div className="flex justify-between items-center">
+                  <div className="flex justify-between items-center border-b border-slate-100 pb-4">
                     <span className="text-slate-500 font-medium">Schedule</span>
                     <span className="font-bold text-slate-800 text-sm text-right bg-slate-100 px-3 py-1 rounded-lg">{formData.date} at {formData.time}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-500 font-medium">Total Amount</span>
+                    <span className="font-bold text-emerald-600 text-base">₹{getPriceDetails().finalAmount.toLocaleString('en-IN')}</span>
                   </div>
                 </motion.div>
 
                 <motion.button 
                   whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.95 }}
                   initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.7 }}
-                  onClick={resetAndClose}
-                  className="w-full bg-slate-900 text-white font-black text-lg py-5 rounded-2xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.5)] hover:bg-slate-800 transition-all"
+                  onClick={() => {
+                     window.open(whatsappLink, '_blank');
+                     resetAndClose();
+                  }}
+                  className="w-full flex items-center justify-center gap-2 bg-[#25D366] text-white font-black text-lg py-5 rounded-2xl shadow-[0_10px_40px_-10px_rgba(37,211,102,0.4)] hover:bg-[#20bd5a] transition-all"
                 >
-                  Done & Close
+                  <Phone className="h-6 w-6" /> Send via WhatsApp
                 </motion.button>
+                <button type="button" onClick={resetAndClose} className="mt-4 text-sm text-slate-500 font-medium hover:text-slate-800 transition-colors">
+                  Close without sending
+                </button>
               </motion.div>
             )}
           </div>

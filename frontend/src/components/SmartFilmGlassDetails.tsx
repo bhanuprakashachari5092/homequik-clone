@@ -6,6 +6,7 @@ import {
   Monitor, Settings, Layers,
   Phone, CheckCircle2, Tv
 } from "lucide-react";
+import { DynamicPrice } from "@/components/DynamicPrice";
 
 export function SmartFilmGlassDetails() {
   const WHATSAPP_NUMBER = "919141052539"; 
@@ -130,7 +131,7 @@ export function SmartFilmGlassDetails() {
                 <div className="flex items-center gap-6 md:border-l border-border md:pl-6">
                   <div className="text-right">
                     <p className="text-xs text-muted-foreground uppercase font-bold">Rate Range (Per Sq. Ft.)</p>
-                    <p className="text-xl font-bold whitespace-nowrap">{item.price}</p>
+                    <DynamicPrice originalPrice={item.price} category="Smart Home Automation" className="md:justify-end" discountClassName="text-xl font-bold whitespace-nowrap" />
                   </div>
                   <button 
                     onClick={() => toggleSelection(item.name)} 
@@ -183,7 +184,7 @@ export function SmartFilmGlassDetails() {
                 <div key={i} className="grid grid-cols-1 md:grid-cols-[1fr_2fr_150px_150px] gap-4 p-6 items-center">
                   <h3 className="font-bold text-foreground">{item.spec}</h3>
                   <p className="text-sm text-muted-foreground">{item.desc}</p>
-                  <div className="text-xl font-bold md:text-right whitespace-nowrap">{item.price}</div>
+                  <DynamicPrice originalPrice={item.price} category="Smart Home Automation" className="md:justify-end" discountClassName="text-xl font-bold md:text-right whitespace-nowrap" />
                   <div className="md:text-center">
                     {item.action === "WITH FILM" ? (
                       <span className="text-xs font-bold text-muted-foreground bg-secondary px-3 py-1.5 rounded uppercase w-full block">WITH FILM</span>

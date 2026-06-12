@@ -6,6 +6,7 @@ import {
   Zap, Settings, Activity, Wrench,
   Phone, CheckCircle2, AlertTriangle, Lightbulb
 } from "lucide-react";
+import { DynamicPrice } from "@/components/DynamicPrice";
 
 export function ElectricalWorkDetails() {
   const WHATSAPP_NUMBER = "919141052539"; 
@@ -121,7 +122,7 @@ export function ElectricalWorkDetails() {
                 <div className="flex items-center gap-6 md:border-l border-border md:pl-6">
                   <div className="text-right">
                     <p className="text-xs text-muted-foreground uppercase font-bold">Fixed Rate</p>
-                    <p className="text-xl font-bold whitespace-nowrap">{item.price}</p>
+                    <DynamicPrice originalPrice={item.price} category="Electrical Works" discountClassName="text-xl font-bold whitespace-nowrap" />
                   </div>
                   <button 
                     onClick={() => toggleSelection(item.name)} 
@@ -165,7 +166,7 @@ export function ElectricalWorkDetails() {
                 <div key={i} className="grid grid-cols-1 md:grid-cols-[1fr_2fr_150px_150px] gap-4 p-6 items-center">
                   <h3 className="font-bold text-foreground">{item.spec}</h3>
                   <p className="text-sm text-muted-foreground">{item.desc}</p>
-                  <div className="text-xl font-bold md:text-right whitespace-nowrap">{item.price}</div>
+                  <DynamicPrice originalPrice={item.price} category="Electrical Works" className="md:justify-end" discountClassName="text-xl font-bold md:text-right whitespace-nowrap" />
                   <div className="md:text-center">
                     <button 
                       onClick={() => toggleSelection(`Service: ${item.spec}`)} 
@@ -202,7 +203,7 @@ export function ElectricalWorkDetails() {
                 <div>
                   <div className="flex justify-between items-start gap-4">
                     <h3 className="font-bold text-foreground leading-tight">{cab.type}</h3>
-                    <span className="text-lg font-bold text-brand whitespace-nowrap">{cab.price}</span>
+                    <DynamicPrice originalPrice={cab.price} category="Electrical Works" discountClassName="text-lg font-bold text-brand whitespace-nowrap" />
                   </div>
                   <p className="text-sm text-muted-foreground mt-2">{cab.desc}</p>
                 </div>
@@ -243,7 +244,7 @@ export function ElectricalWorkDetails() {
                   <p className="text-sm text-muted-foreground mt-1">{diag.desc}</p>
                 </div>
                 <div className="flex items-center gap-6">
-                  <span className="font-bold whitespace-nowrap">{diag.price}</span>
+                  <DynamicPrice originalPrice={diag.price} category="Electrical Works" discountClassName="font-bold whitespace-nowrap" />
                   <button 
                     onClick={() => toggleSelection(`Repair Request: ${diag.title}`)} 
                     className={`px-5 py-2 rounded-lg font-bold whitespace-nowrap shadow-sm ${

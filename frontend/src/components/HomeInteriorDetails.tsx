@@ -3,9 +3,9 @@ import { BookingModal } from "@/components/BookingModal";
 import { Link } from "@tanstack/react-router";
 import { 
   ArrowLeft, ShieldCheck, 
-  Paintbrush, Home, LayoutTemplate,
   Phone, Sparkles, BoxSelect, AlertCircle, Info
 } from "lucide-react";
+import { DynamicPrice } from "@/components/DynamicPrice";
 
 export function HomeInteriorDetails() {
   const WHATSAPP_NUMBER = "919141052539"; 
@@ -129,7 +129,7 @@ export function HomeInteriorDetails() {
                 <div className="flex items-center gap-6 md:border-l border-border md:pl-6">
                   <div className="text-right">
                     <p className="text-xs text-muted-foreground uppercase font-bold">Package Rate</p>
-                    <p className="text-xl font-bold whitespace-nowrap">{item.price}</p>
+                    <DynamicPrice originalPrice={item.price} category="Home Interior" className="md:justify-end" discountClassName="text-xl font-bold whitespace-nowrap" />
                   </div>
                   <button 
                     onClick={() => toggleSelection(item.name)} 
@@ -175,7 +175,7 @@ export function HomeInteriorDetails() {
                 <div key={i} className="grid grid-cols-1 md:grid-cols-[2fr_150px_120px_120px] gap-4 p-6 items-center">
                   <h3 className="font-bold text-foreground">{item.zone}</h3>
                   <p className="text-sm text-muted-foreground">{item.time}</p>
-                  <div className="text-xl font-bold md:text-right whitespace-nowrap">{item.price}</div>
+                  <DynamicPrice originalPrice={item.price} category="Home Interior" className="md:justify-end" discountClassName="text-xl font-bold md:text-right whitespace-nowrap" />
                   <div className="md:text-center">
                     <button 
                       onClick={() => toggleSelection(`Painting: ${item.zone}`)} 
@@ -259,7 +259,7 @@ export function HomeInteriorDetails() {
                 <div>
                   <div className="flex justify-between items-start gap-4 mb-2">
                     <h3 className="font-bold text-foreground leading-tight">{spec.title}</h3>
-                    <span className="text-lg font-bold text-brand whitespace-nowrap">{spec.price}</span>
+                    <DynamicPrice originalPrice={spec.price} category="Home Interior" discountClassName="text-lg font-bold text-brand whitespace-nowrap" />
                   </div>
                   <p className="text-sm text-muted-foreground">{spec.desc}</p>
                   <p className="text-xs font-semibold mt-4 text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 inline-block px-2 py-1 rounded">⏱ {spec.time}</p>

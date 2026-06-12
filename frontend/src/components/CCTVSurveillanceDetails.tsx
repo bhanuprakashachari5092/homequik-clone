@@ -6,8 +6,10 @@ import {
   Wrench, ShoppingCart, Check, Shield, Award, Settings
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { DynamicPrice } from "@/components/DynamicPrice";
 import { useAuth } from "@/context/AuthContext";
 import { useCart } from "@/context/CartContext";
+import { useOffers } from "@/context/OfferContext";
 import { toast } from "sonner";
 import { BookingModal } from "@/components/BookingModal";
 
@@ -191,6 +193,7 @@ export function CCTVSurveillanceDetails() {
   const WHATSAPP_NUMBER = "919141052539"; 
   const { user } = useAuth();
   const { addToCart } = useCart();
+  const { getApplicableOffer } = useOffers();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<TabType>("installation");
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
@@ -273,7 +276,16 @@ export function CCTVSurveillanceDetails() {
       sum += 450;
     }
 
-    return sum;
+    const offer = getApplicableOffer("CCTV Cameras");
+    if (offer && offer.discountValue && sum > 0) {
+      if (offer.discountType === 'percentage') {
+         sum = sum - (sum * (offer.discountValue / 100));
+      } else {
+         sum -= offer.discountValue;
+      }
+    }
+
+    return Math.max(0, Math.round(sum));
   })();
 
   return (
@@ -550,7 +562,7 @@ export function CCTVSurveillanceDetails() {
                                                                   <span className="whitespace-pre-line">{item.col1}</span>
                                                                </td>
                                                                <td className="p-4 text-sm font-semibold text-slate-600">{item.col2}</td>
-                                                               <td className="p-4 text-sm font-extrabold text-brand whitespace-nowrap">{item.col3}</td>
+                                                               <td className="p-4"><DynamicPrice originalPrice={item.col3} category="CCTV Cameras" discountClassName="text-sm font-extrabold text-brand whitespace-nowrap" /></td>
                                                             </tr>
                                                          );
                                                       })}

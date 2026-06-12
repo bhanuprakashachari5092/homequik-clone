@@ -130,7 +130,9 @@ function RootShell({ children }: { children: React.ReactNode }) {
 
 import { AuthProvider } from "@/context/AuthContext";
 import { CartProvider } from "@/context/CartContext";
+import { OfferProvider } from "@/context/OfferContext";
 import { LocationProvider } from "@/context/LocationContext";
+import { CouponBar } from "@/components/CouponBar";
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
@@ -139,9 +141,12 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <LocationProvider>
         <AuthProvider>
-          <CartProvider>
-            <Outlet />
-          </CartProvider>
+          <OfferProvider>
+            <CartProvider>
+              <Outlet />
+              <CouponBar />
+            </CartProvider>
+          </OfferProvider>
         </AuthProvider>
       </LocationProvider>
     </QueryClientProvider>

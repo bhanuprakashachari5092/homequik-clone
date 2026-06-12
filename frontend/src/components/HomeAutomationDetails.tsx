@@ -6,6 +6,7 @@ import {
   Home, Lock, Zap, Smartphone,
   Phone, CheckCircle2, AlertTriangle, Speaker, Tv
 } from "lucide-react";
+import { DynamicPrice } from "@/components/DynamicPrice";
 
 export function HomeAutomationDetails() {
   const WHATSAPP_NUMBER = "919141052539"; 
@@ -104,7 +105,7 @@ export function HomeAutomationDetails() {
               <div className="flex items-center gap-6 md:border-l border-border md:pl-6">
                 <div className="text-right">
                   <p className="text-xs text-muted-foreground uppercase font-bold">Package Price</p>
-                  <p className="text-xl font-bold whitespace-nowrap">₹14,999 - ₹16,999</p>
+                  <DynamicPrice originalPrice="₹14,999 - ₹16,999" category="Smart Home Automation" discountClassName="text-xl font-bold whitespace-nowrap" />
                 </div>
                 <button 
                   onClick={() => toggleSelection("Native Smart Door Lock Pro Edition")} 
@@ -127,7 +128,7 @@ export function HomeAutomationDetails() {
               <div className="flex items-center gap-6 md:border-l border-border md:pl-6">
                 <div className="text-right">
                   <p className="text-xs text-muted-foreground uppercase font-bold">Package Price</p>
-                  <p className="text-xl font-bold whitespace-nowrap">₹24,999</p>
+                  <DynamicPrice originalPrice="₹24,999" category="Smart Home Automation" discountClassName="text-xl font-bold whitespace-nowrap" />
                 </div>
                 <button 
                   onClick={() => toggleSelection("Native Smart Door Lock Ultra Premium")} 
@@ -172,7 +173,7 @@ export function HomeAutomationDetails() {
                 <div key={i} className="grid grid-cols-1 md:grid-cols-[1fr_2fr_150px_150px] gap-4 p-6 items-center">
                   <h3 className="font-bold text-foreground">{item.spec}</h3>
                   <p className="text-sm text-muted-foreground">{item.desc}</p>
-                  <div className="text-xl font-bold md:text-right">{item.price}</div>
+                  <DynamicPrice originalPrice={item.price} category="Smart Home Automation" className="md:justify-end" discountClassName="text-xl font-bold md:text-right" />
                   <div className="md:text-center">
                     <button 
                       onClick={() => toggleSelection(`Install: ${item.spec}`)} 

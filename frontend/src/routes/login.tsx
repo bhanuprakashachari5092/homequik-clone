@@ -31,6 +31,7 @@ function Login() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
 
   useEffect(() => {
     if (error) {
@@ -60,8 +61,10 @@ function Login() {
         await signInWithEmailAndPassword(auth, email, password);
       }
       
-      // Navigate to home after successful auth
-      router.navigate({ to: "/" });
+      setShowSuccess(true);
+      setTimeout(() => {
+        router.navigate({ to: "/" });
+      }, 1500);
     } catch (err: any) {
       console.error(err);
       if (mode === "login") {
@@ -262,6 +265,31 @@ function Login() {
           </motion.div>
         </div>
       </section>
+
+      <AnimatePresence>
+        {showSuccess && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="bg-white rounded-[2rem] shadow-2xl p-8 max-w-sm w-full text-center space-y-6"
+            >
+              <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto text-emerald-600 animate-bounce">
+                <CheckCircle2 className="h-10 w-10 animate-pulse" />
+              </div>
+              <div>
+                <h3 className="text-2xl font-black text-slate-800">
+                  {mode === "login" ? "Login Successful!" : "Account Created!"}
+                </h3>
+                <p className="text-slate-500 font-medium mt-2">
+                  {mode === "login" ? "Welcome back to Vendor99." : "Getting things ready for you..."}
+                </p>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </SiteLayout>
   );
 }

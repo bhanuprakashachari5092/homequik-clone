@@ -52,7 +52,7 @@ export function OfferPopup() {
          
          // On initial load, check if we should show the latest offer
          if (latestOffer) {
-            const dismissedOffers = JSON.parse(localStorage.getItem("dismissedOffers") || "[]");
+            const dismissedOffers = JSON.parse(sessionStorage.getItem("dismissedOffers") || "[]");
             if (!dismissedOffers.includes(latestOffer.id)) {
                setActiveOffer(latestOffer);
                // Add a small delay so it doesn't pop up instantly on page load
@@ -68,10 +68,10 @@ export function OfferPopup() {
   const handleClose = () => {
     setIsOpen(false);
     if (activeOffer) {
-       const dismissedOffers = JSON.parse(localStorage.getItem("dismissedOffers") || "[]");
+       const dismissedOffers = JSON.parse(sessionStorage.getItem("dismissedOffers") || "[]");
        if (!dismissedOffers.includes(activeOffer.id)) {
           dismissedOffers.push(activeOffer.id);
-          localStorage.setItem("dismissedOffers", JSON.stringify(dismissedOffers));
+          sessionStorage.setItem("dismissedOffers", JSON.stringify(dismissedOffers));
        }
     }
   };
@@ -103,12 +103,12 @@ export function OfferPopup() {
             className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden"
           >
             {activeOffer.imageUrl ? (
-               <div className="h-48 w-full relative">
-                  <img src={activeOffer.imageUrl} alt={activeOffer.title} className="w-full h-full object-cover" />
+               <div className={`w-full relative ${activeOffer.imageSize ? activeOffer.imageSize.split(' ')[0] : 'h-48'}`}>
+                  <img src={activeOffer.imageUrl} alt={activeOffer.title} className={`w-full h-full ${activeOffer.imageSize ? activeOffer.imageSize.split(' ').slice(1).join(' ') : 'object-cover'}`} />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                </div>
             ) : (
-               <div className="h-32 w-full bg-gradient-to-r from-brand to-brand-hover relative overflow-hidden flex items-center justify-center">
+               <div className="h-32 w-full relative overflow-hidden flex items-center justify-center" style={{ backgroundColor: activeOffer.themeColor || '#f97316' }}>
                   <div className="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] mix-blend-overlay"></div>
                   <Gift className="h-16 w-16 text-white opacity-90" />
                </div>
@@ -122,7 +122,10 @@ export function OfferPopup() {
             </button>
 
             <div className="p-8 text-center">
-               <div className="inline-block bg-brand/10 text-brand font-extrabold text-xs px-3 py-1 rounded-full uppercase tracking-widest mb-4">
+               <div 
+                  className="inline-block font-extrabold text-xs px-3 py-1 rounded-full uppercase tracking-widest mb-4"
+                  style={{ backgroundColor: `${activeOffer.themeColor || '#f97316'}1A`, color: activeOffer.themeColor || '#f97316' }}
+               >
                   Limited Time Offer
                </div>
                <h3 className="text-2xl font-extrabold text-slate-800 mb-3">{activeOffer.title}</h3>
@@ -135,7 +138,8 @@ export function OfferPopup() {
                         <span className="font-mono font-bold text-lg text-slate-800 tracking-wider">{activeOffer.discountCode}</span>
                         <button 
                            onClick={handleCopyCode}
-                           className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-sm transition-all ${copied ? 'bg-emerald-100 text-emerald-700' : 'bg-brand hover:bg-brand-dark text-white'}`}
+                           className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-sm transition-all text-white hover:brightness-110`}
+                           style={copied ? { backgroundColor: '#10b981' } : { backgroundColor: activeOffer.themeColor || '#f97316' }}
                         >
                            {copied ? <><CheckCircle2 className="h-4 w-4" /> Copied!</> : <><Copy className="h-4 w-4" /> Copy</>}
                         </button>

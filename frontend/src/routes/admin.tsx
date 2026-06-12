@@ -3,13 +3,14 @@ import {
   LayoutDashboard, Users, User, ShoppingCart, Settings, 
   LogOut, Bell, Search, Activity, DollarSign, Package,
   Briefcase, CheckCircle2, XCircle, Edit, Trash2, MapPin, Gift,
-  Download, Menu, X
+  Download, Menu, X, FileText, Loader2
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { db } from "@/lib/firebase";
-import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, serverTimestamp } from "firebase/firestore";
-import jsPDF from "jspdf";
-import "jspdf-autotable";
+import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, getDocs } from "firebase/firestore";
+import { jsPDF } from "jspdf";
+import autoTable from "jspdf-autotable";
+import { motion, AnimatePresence } from "framer-motion";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
@@ -25,12 +26,17 @@ function AdminPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [showSuccess, setShowSuccess] = useState(false);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     if (email === "admin@gmail.com" && password === "admin") {
-      setIsAuthenticated(true);
+      setShowSuccess(true);
       setError("");
+      setTimeout(() => {
+        setIsAuthenticated(true);
+        setShowSuccess(false);
+      }, 1500);
     } else {
       setError("Invalid email or password");
     }
@@ -82,6 +88,27 @@ function AdminPage() {
             </button>
           </form>
         </div>
+
+        <AnimatePresence>
+          {showSuccess && (
+            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                className="bg-white rounded-[2rem] shadow-2xl p-8 max-w-sm w-full text-center space-y-6"
+              >
+                <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto text-emerald-600 animate-bounce">
+                  <CheckCircle2 className="h-10 w-10 animate-pulse" />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-black text-slate-800">Admin Authorized!</h3>
+                  <p className="text-slate-500 font-medium mt-2">Entering management control panel...</p>
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
       </div>
     );
   }
@@ -109,7 +136,12 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   const [offers, setOffers] = useState<any[]>([]);
   const [showOfferModal, setShowOfferModal] = useState(false);
   const [editingOfferId, setEditingOfferId] = useState<string | null>(null);
-  const [newOffer, setNewOffer] = useState({ title: "", description: "", discountCode: "", imageUrl: "", isActive: true });
+  const [newOffer, setNewOffer] = useState({ 
+    title: "", description: "", discountCode: "", imageUrl: "", 
+    isActive: true, themeColor: "#f97316", validityEnd: "", 
+    imageSize: "h-32 object-cover", targetCategory: "CCTV Cameras", 
+    discountType: "percentage", discountValue: 10 
+  });
 
   const [showRevenueModal, setShowRevenueModal] = useState(false);
   const [newRevenue, setNewRevenue] = useState({ amount: "", description: "", paymentStatus: "Received" });
@@ -123,6 +155,8 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   const [notificationsClearedAt, setNotificationsClearedAt] = useState<number>(() => {
     return Number(localStorage.getItem('adminNotificationsClearedAt') || '0');
   });
+
+  const [isDownloading, setIsDownloading] = useState<{ [key: string]: boolean }>({});
 
   useEffect(() => {
     const unsubscribeBookings = onSnapshot(collection(db, "bookings"), (snapshot) => {
@@ -270,35 +304,133 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
     }
   };
 
-  const downloadDealersPDF = () => {
-    const doc = new jsPDF();
-    doc.text("Vendor99 Dealer Network", 14, 15);
-    
-    const tableColumn = ["ID", "Business Name", "Contact Person", "Phone", "City", "Plan", "Status"];
-    const tableRows: any[][] = [];
+  const downloadDealersPDF = async () => {
+    setIsDownloading(prev => ({ ...prev, dealers: true }));
+    try {
+      if (!dealers || dealers.length === 0) {
+        alert("No dealer data available to download.");
+        return;
+      }
 
-    dealers.forEach(dealer => {
-      const dealerData = [
-        dealer.id,
-        dealer.businessName || dealer.name || "N/A",
-        dealer.ownerName || dealer.contact || "N/A",
-        dealer.phone || "N/A",
-        dealer.city || "N/A",
-        dealer.plan || "Basic",
-        dealer.status || "Pending"
-      ];
-      tableRows.push(dealerData);
-    });
+      const doc = new jsPDF();
+      doc.text("Vendor99 Dealer Network", 14, 15);
+      
+      const tableColumn = ["ID", "Business Name", "Contact Person", "Phone", "City", "Plan", "Status"];
+      const tableRows: any[][] = [];
 
-    (doc as any).autoTable({
-      head: [tableColumn],
-      body: tableRows,
-      startY: 20,
-      styles: { fontSize: 8 },
-      headStyles: { fillColor: [249, 115, 22] } // Brand color
-    });
+      dealers.forEach(dealer => {
+        const dealerData = [
+          dealer.id,
+          dealer.businessName || dealer.name || "N/A",
+          dealer.ownerName || dealer.contact || "N/A",
+          dealer.phone || "N/A",
+          dealer.city || "N/A",
+          dealer.plan || "Basic",
+          dealer.status || "Pending"
+        ];
+        tableRows.push(dealerData);
+      });
 
-    doc.save(`Vendor99_Dealers_${new Date().toISOString().split('T')[0]}.pdf`);
+      autoTable(doc, {
+        head: [tableColumn],
+        body: tableRows,
+        startY: 20,
+        styles: { fontSize: 8 },
+        headStyles: { fillColor: [249, 115, 22] } // Brand color
+      });
+
+      doc.save(`Vendor99_Dealers_${new Date().toISOString().split('T')[0]}.pdf`);
+    } catch (err) {
+      console.error("Failed to generate dealers PDF:", err);
+      alert("Failed to generate PDF. Please try again.");
+    } finally {
+      setIsDownloading(prev => ({ ...prev, dealers: false }));
+    }
+  };
+
+  const downloadCustomersPDF = async () => {
+    setIsDownloading(prev => ({ ...prev, customers: true }));
+    try {
+      if (!bookings || bookings.length === 0) {
+        alert("No customer data available to download.");
+        return;
+      }
+
+      const doc = new jsPDF();
+      doc.text("Vendor99 Customer List", 14, 15);
+      
+      const tableColumn = ["ID", "Name", "Phone", "City", "Service"];
+      const tableRows: any[][] = [];
+
+      bookings.forEach(b => {
+        tableRows.push([
+          b.bookingId || b.id || "N/A",
+          b.customerName || "N/A",
+          b.customerPhone || b.phone || "N/A",
+          b.customerAddress || b.city || "N/A",
+          b.serviceName || b.service || "N/A"
+        ]);
+      });
+
+      autoTable(doc, {
+        head: [tableColumn],
+        body: tableRows,
+        startY: 20,
+        styles: { fontSize: 8 },
+        headStyles: { fillColor: [249, 115, 22] }
+      });
+
+      doc.save(`Vendor99_Customers_${new Date().toISOString().split('T')[0]}.pdf`);
+    } catch (err) {
+      console.error("Failed to generate customers PDF:", err);
+      alert("Failed to generate PDF. Please try again.");
+    } finally {
+      setIsDownloading(prev => ({ ...prev, customers: false }));
+    }
+  };
+
+  const downloadBookingsPDF = async () => {
+    setIsDownloading(prev => ({ ...prev, bookings: true }));
+    try {
+      if (!bookings || bookings.length === 0) {
+        alert("No booking data available to download.");
+        return;
+      }
+
+      const doc = new jsPDF();
+      doc.text("Vendor99 Bookings List", 14, 15);
+      
+      const tableColumn = ["Booking ID", "Customer", "Service", "Status", "Amount", "Dealer Assigned", "Payment Status"];
+      const tableRows: any[][] = [];
+
+      bookings.forEach(b => {
+        const assignedDealer = dealers.find(d => d.id === b.dealerId);
+        tableRows.push([
+          b.bookingId || b.id || "N/A",
+          b.customerName || b.name || "N/A",
+          b.serviceName || b.service || "N/A",
+          b.status || "Pending",
+          b.amount || "N/A",
+          assignedDealer ? assignedDealer.name || assignedDealer.businessName || "Assigned" : "Unassigned",
+          b.paymentStatus || "Pending"
+        ]);
+      });
+
+      autoTable(doc, {
+        head: [tableColumn],
+        body: tableRows,
+        startY: 20,
+        styles: { fontSize: 8 },
+        headStyles: { fillColor: [249, 115, 22] }
+      });
+
+      doc.save(`Vendor99_Bookings_${new Date().toISOString().split('T')[0]}.pdf`);
+    } catch (err) {
+      console.error("Failed to generate bookings PDF:", err);
+      alert("Failed to generate PDF. Please try again.");
+    } finally {
+      setIsDownloading(prev => ({ ...prev, bookings: false }));
+    }
   };
 
   const convertDriveLink = (url: string) => {
@@ -388,7 +520,12 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   const closeOfferModal = () => {
     setShowOfferModal(false);
     setEditingOfferId(null);
-    setNewOffer({ title: "", description: "", discountCode: "", imageUrl: "", isActive: true });
+    setNewOffer({ 
+      title: "", description: "", discountCode: "", imageUrl: "", 
+      isActive: true, themeColor: "#f97316", validityEnd: "", 
+      imageSize: "h-32 object-cover", targetCategory: "CCTV Cameras", 
+      discountType: "percentage", discountValue: 10 
+    });
   };
 
   const openEditOfferModal = (offer: any) => {
@@ -397,7 +534,13 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
       description: offer.description, 
       discountCode: offer.discountCode || "",
       imageUrl: offer.imageUrl || "", 
-      isActive: offer.isActive !== undefined ? offer.isActive : true 
+      isActive: offer.isActive !== undefined ? offer.isActive : true,
+      themeColor: offer.themeColor || "#f97316",
+      validityEnd: offer.validityEnd || "",
+      imageSize: offer.imageSize || "h-32 object-cover",
+      targetCategory: offer.targetCategory || "CCTV Cameras",
+      discountType: offer.discountType || "percentage",
+      discountValue: offer.discountValue || 10
     });
     setEditingOfferId(offer.id);
     setShowOfferModal(true);
@@ -428,6 +571,32 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
       setNewRevenue({ amount: "", description: "", paymentStatus: "Received" });
     } catch (err) {
       console.error("Failed to add custom revenue:", err);
+    }
+  };
+
+  const handleResetStats = async () => {
+    if (window.confirm("Are you sure you want to reset all financial overview statistics? This will permanently delete all bookings, dealers, and custom revenues from the database.")) {
+      try {
+        const bookingsSnapshot = await getDocs(collection(db, "bookings"));
+        const bookingsDeletePromises = bookingsSnapshot.docs.map(d => deleteDoc(doc(db, "bookings", d.id)));
+        
+        const dealersSnapshot = await getDocs(collection(db, "dealers"));
+        const dealersDeletePromises = dealersSnapshot.docs.map(d => deleteDoc(doc(db, "dealers", d.id)));
+        
+        const customSnapshot = await getDocs(collection(db, "custom_revenues"));
+        const customDeletePromises = customSnapshot.docs.map(d => deleteDoc(doc(db, "custom_revenues", d.id)));
+        
+        await Promise.all([
+          ...bookingsDeletePromises,
+          ...dealersDeletePromises,
+          ...customDeletePromises
+        ]);
+        
+        alert("Database statistics successfully reset to zero!");
+      } catch (error) {
+        console.error("Failed to reset statistics:", error);
+        alert("Failed to reset statistics. Please try again.");
+      }
     }
   };
 
@@ -660,11 +829,16 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
         <div className="flex-1 p-8 overflow-y-auto">
           {activeTab === "Dashboard" ? (
             <div className="max-w-7xl mx-auto space-y-8">
-              <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center justify-between mb-4 flex-wrap gap-4">
                 <h2 className="text-xl font-bold text-slate-800">Financial Overview</h2>
-                <button onClick={() => setShowRevenueModal(true)} className="bg-brand hover:bg-brand-dark text-white px-4 py-2 rounded-xl font-bold transition-colors">
-                  + Log Custom Revenue
-                </button>
+                <div className="flex items-center gap-3">
+                  <button onClick={handleResetStats} className="bg-red-50 hover:bg-red-100 text-red-600 px-4 py-2 rounded-xl font-bold transition-colors border border-red-200 text-sm">
+                    Reset Statistics
+                  </button>
+                  <button onClick={() => setShowRevenueModal(true)} className="bg-brand hover:bg-brand-dark text-white px-4 py-2 rounded-xl font-bold transition-colors text-sm">
+                    + Log Custom Revenue
+                  </button>
+                </div>
               </div>
 
               {/* Stats Row */}
@@ -1013,6 +1187,56 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                 </div>
               </div>
             </div>
+          ) : activeTab === "Analytics" ? (
+            <div className="max-w-7xl mx-auto space-y-6">
+               <div className="flex items-center justify-between">
+                  <div>
+                     <h2 className="text-2xl font-bold text-slate-800">Reports & Analytics</h2>
+                     <p className="text-slate-500 mt-1">Download your business data reports professionally.</p>
+                  </div>
+               </div>
+               
+               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="bg-white rounded-3xl p-6 border border-border shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow">
+                     <div>
+                        <div className="h-12 w-12 bg-blue-100 rounded-xl flex items-center justify-center mb-4">
+                           <Briefcase className="h-6 w-6 text-blue-600" />
+                        </div>
+                        <h3 className="text-lg font-bold text-slate-800">Dealer Network Report</h3>
+                        <p className="text-sm text-slate-500 mt-2">Comprehensive list of all registered dealers, their plans, and statuses.</p>
+                     </div>
+                     <button disabled={isDownloading.dealers} onClick={downloadDealersPDF} className="mt-6 w-full flex items-center justify-center gap-2 bg-blue-50 hover:bg-blue-100 text-blue-600 font-bold py-3 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                        {isDownloading.dealers ? <><Loader2 className="h-4 w-4 animate-spin" /> Fetching...</> : <><Download className="h-4 w-4" /> Download PDF</>}
+                     </button>
+                  </div>
+
+                  <div className="bg-white rounded-3xl p-6 border border-border shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow">
+                     <div>
+                        <div className="h-12 w-12 bg-emerald-100 rounded-xl flex items-center justify-center mb-4">
+                           <Users className="h-6 w-6 text-emerald-600" />
+                        </div>
+                        <h3 className="text-lg font-bold text-slate-800">Customers Directory</h3>
+                        <p className="text-sm text-slate-500 mt-2">Database of all customers who have booked services through the platform.</p>
+                     </div>
+                     <button disabled={isDownloading.customers} onClick={downloadCustomersPDF} className="mt-6 w-full flex items-center justify-center gap-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 font-bold py-3 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                        {isDownloading.customers ? <><Loader2 className="h-4 w-4 animate-spin" /> Fetching...</> : <><Download className="h-4 w-4" /> Download PDF</>}
+                     </button>
+                  </div>
+
+                  <div className="bg-white rounded-3xl p-6 border border-border shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow">
+                     <div>
+                        <div className="h-12 w-12 bg-brand/10 rounded-xl flex items-center justify-center mb-4">
+                           <FileText className="h-6 w-6 text-brand" />
+                        </div>
+                        <h3 className="text-lg font-bold text-slate-800">Bookings & Orders</h3>
+                        <p className="text-sm text-slate-500 mt-2">Detailed log of all service requests, assigned dealers, and payment statuses.</p>
+                     </div>
+                     <button disabled={isDownloading.bookings} onClick={downloadBookingsPDF} className="mt-6 w-full flex items-center justify-center gap-2 bg-brand/10 hover:bg-brand/20 text-brand font-bold py-3 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                        {isDownloading.bookings ? <><Loader2 className="h-4 w-4 animate-spin" /> Fetching...</> : <><Download className="h-4 w-4" /> Download PDF</>}
+                     </button>
+                  </div>
+               </div>
+            </div>
           ) : (
             <div className="flex flex-col items-center justify-center h-full text-slate-400">
               <Package className="h-16 w-16 mb-4 opacity-20" />
@@ -1025,8 +1249,8 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
         {/* Log Custom Revenue Modal */}
         {showRevenueModal && (
            <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-              <div className="bg-white rounded-3xl w-full max-w-md shadow-xl overflow-hidden">
-                 <div className="p-6 border-b border-border flex justify-between items-center bg-slate-50">
+              <div className="bg-white rounded-3xl w-full max-w-md shadow-xl overflow-hidden max-h-[90vh] flex flex-col">
+                 <div className="p-6 border-b border-border flex justify-between items-center bg-slate-50 shrink-0">
                     <h3 className="font-bold text-xl text-slate-800">
                        Log Custom Revenue
                     </h3>
@@ -1034,7 +1258,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                        <XCircle className="h-6 w-6" />
                     </button>
                  </div>
-                 <form onSubmit={handleAddCustomRevenue} className="p-6 space-y-4">
+                 <form onSubmit={handleAddCustomRevenue} className="p-6 space-y-4 overflow-y-auto flex-1 custom-scrollbar">
                     <div>
                        <label className="text-sm font-bold text-slate-700 block mb-1">Amount (₹)</label>
                        <input required type="number" min="0" value={newRevenue.amount} onChange={(e) => setNewRevenue({...newRevenue, amount: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand font-bold text-lg" placeholder="5000" />
@@ -1064,8 +1288,8 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
         {/* Customer Details Modal */}
         {showCustomerModal && selectedCustomer && (
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-3xl w-full max-w-lg shadow-xl overflow-hidden">
-               <div className="p-6 border-b border-border flex justify-between items-center bg-slate-50">
+            <div className="bg-white rounded-3xl w-full max-w-lg shadow-xl overflow-hidden max-h-[90vh] flex flex-col">
+               <div className="p-6 border-b border-border flex justify-between items-center bg-slate-50 shrink-0">
                   <h3 className="font-bold text-xl text-slate-800">
                      Customer Details
                   </h3>
@@ -1073,7 +1297,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                      <XCircle className="h-6 w-6" />
                   </button>
                </div>
-               <div className="p-6 space-y-4 max-h-[60vh] overflow-y-auto">
+               <div className="p-6 space-y-4 overflow-y-auto flex-1 custom-scrollbar">
                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                    <div>
                      <p className="text-xs text-slate-500 font-bold uppercase">Booking ID</p>
@@ -1132,8 +1356,8 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
         {/* Add/Edit Dealer Modal */}
         {showAddModal && (
            <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-              <div className="bg-white rounded-3xl w-full max-w-xl shadow-xl overflow-hidden">
-                 <div className="p-6 border-b border-border flex justify-between items-center bg-slate-50">
+              <div className="bg-white rounded-3xl w-full max-w-xl shadow-xl overflow-hidden max-h-[90vh] flex flex-col">
+                 <div className="p-6 border-b border-border flex justify-between items-center bg-slate-50 shrink-0">
                     <h3 className="font-bold text-xl text-slate-800">
                        {editingDealerId ? "Edit Dealer Details" : "Add New Dealer"}
                     </h3>
@@ -1141,7 +1365,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                        <XCircle className="h-6 w-6" />
                     </button>
                  </div>
-                 <form onSubmit={handleSaveDealer} className="p-6 space-y-4">
+                 <form onSubmit={handleSaveDealer} className="p-6 space-y-4 overflow-y-auto flex-1 custom-scrollbar">
                     <div className="grid md:grid-cols-2 gap-4">
                        <div>
                           <label className="text-sm font-bold text-slate-700 block mb-1">Business Name</label>
@@ -1187,8 +1411,8 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
         {/* Add/Edit Service Modal */}
         {showServiceModal && (
            <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-              <div className="bg-white rounded-3xl w-full max-w-xl shadow-xl overflow-hidden">
-                 <div className="p-6 border-b border-border flex justify-between items-center bg-slate-50">
+              <div className="bg-white rounded-3xl w-full max-w-xl shadow-xl overflow-hidden max-h-[90vh] flex flex-col">
+                 <div className="p-6 border-b border-border flex justify-between items-center bg-slate-50 shrink-0">
                     <h3 className="font-bold text-xl text-slate-800">
                        {editingServiceId ? "Edit Service" : "Add New Service"}
                     </h3>
@@ -1196,7 +1420,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                        <XCircle className="h-6 w-6" />
                     </button>
                  </div>
-                 <form onSubmit={handleSaveService} className="p-6 space-y-4">
+                 <form onSubmit={handleSaveService} className="p-6 space-y-4 overflow-y-auto flex-1 custom-scrollbar">
                     <div>
                        <label className="text-sm font-bold text-slate-700 block mb-1">Service Title</label>
                        <input required type="text" value={newService.title} onChange={(e) => setNewService({...newService, title: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand" placeholder="e.g. Smart Home Automation setup" />
@@ -1233,8 +1457,8 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
          {/* Add/Edit Offer Modal */}
          {showOfferModal && (
             <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-               <div className="bg-white rounded-3xl w-full max-w-xl shadow-xl overflow-hidden">
-                  <div className="p-6 border-b border-border flex justify-between items-center bg-slate-50">
+               <div className="bg-white rounded-3xl w-full max-w-xl shadow-xl overflow-hidden max-h-[90vh] flex flex-col">
+                  <div className="p-6 border-b border-border flex justify-between items-center bg-slate-50 shrink-0">
                      <h3 className="font-bold text-xl text-slate-800">
                         {editingOfferId ? "Edit Festival Discount" : "Add New Discount"}
                      </h3>
@@ -1242,7 +1466,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                         <XCircle className="h-6 w-6" />
                      </button>
                   </div>
-                  <form onSubmit={handleSaveOffer} className="p-6 space-y-4">
+                  <form onSubmit={handleSaveOffer} className="p-6 space-y-4 overflow-y-auto flex-1 custom-scrollbar">
                      <div>
                         <label className="text-sm font-bold text-slate-700 block mb-1">Offer Title</label>
                         <input required type="text" value={newOffer.title} onChange={(e) => setNewOffer({...newOffer, title: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand" placeholder="e.g. Diwali Mega Sale! 50% Off" />
@@ -1250,16 +1474,69 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                      <div className="grid md:grid-cols-2 gap-4">
                         <div>
                            <label className="text-sm font-bold text-slate-700 block mb-1">Discount Code (Optional)</label>
-                           <input type="text" value={newOffer.discountCode} onChange={(e) => setNewOffer({...newOffer, discountCode: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 font-mono focus:outline-none focus:ring-2 focus:ring-brand" placeholder="DIWALI50" />
+                           <div className="flex items-center gap-2">
+                             <input type="text" value={newOffer.discountCode} onChange={(e) => setNewOffer({...newOffer, discountCode: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 font-mono focus:outline-none focus:ring-2 focus:ring-brand" placeholder="DIWALI50" />
+                             <button type="button" onClick={() => setNewOffer({...newOffer, discountCode: "VQ-" + Math.random().toString(36).substring(2, 8).toUpperCase()})} className="bg-slate-200 hover:bg-slate-300 text-slate-800 px-3 py-2.5 rounded-xl font-bold text-sm shrink-0 transition-colors">
+                               Generate
+                             </button>
+                           </div>
                         </div>
                         <div className="flex items-center gap-2 mt-7">
                            <input type="checkbox" id="isActive" checked={newOffer.isActive} onChange={(e) => setNewOffer({...newOffer, isActive: e.target.checked})} className="h-5 w-5 text-brand rounded focus:ring-brand" />
                            <label htmlFor="isActive" className="text-sm font-bold text-slate-700 cursor-pointer">Offer is Active</label>
                         </div>
                      </div>
-                     <div>
-                        <label className="text-sm font-bold text-slate-700 block mb-1">Image URL (Optional)</label>
-                        <input type="text" value={newOffer.imageUrl} onChange={(e) => setNewOffer({...newOffer, imageUrl: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand" placeholder="https://example.com/banner.png" />
+                     <div className="grid md:grid-cols-2 gap-4">
+                        <div>
+                           <label className="text-sm font-bold text-slate-700 block mb-1">Image URL (Optional)</label>
+                           <input type="text" value={newOffer.imageUrl} onChange={(e) => setNewOffer({...newOffer, imageUrl: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand" placeholder="https://example.com/banner.png" />
+                        </div>
+                        <div>
+                           <label className="text-sm font-bold text-slate-700 block mb-1">Theme Color</label>
+                           <div className="flex items-center gap-3 h-[46px]">
+                              <input type="color" value={newOffer.themeColor || "#f97316"} onChange={(e) => setNewOffer({...newOffer, themeColor: e.target.value})} className="h-full w-14 cursor-pointer rounded-lg border-2 border-slate-200 bg-white p-1" />
+                              <span className="text-xs text-slate-500">Pick a brand color for the popup</span>
+                           </div>
+                        </div>
+                     </div>
+                     <div className="grid md:grid-cols-2 gap-4">
+                        <div>
+                           <label className="text-sm font-bold text-slate-700 block mb-1">Validity End (Time Period)</label>
+                           <input type="datetime-local" value={newOffer.validityEnd} onChange={(e) => setNewOffer({...newOffer, validityEnd: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand" />
+                        </div>
+                        <div>
+                           <label className="text-sm font-bold text-slate-700 block mb-1">Image Size & Fit</label>
+                           <select value={newOffer.imageSize} onChange={(e) => setNewOffer({...newOffer, imageSize: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand">
+                              <option value="h-32 object-cover">Standard (h-32 cover)</option>
+                              <option value="h-48 object-cover">Large (h-48 cover)</option>
+                              <option value="h-24 object-contain">Compact (h-24 contain)</option>
+                              <option value="h-full w-full object-cover">Full Fill</option>
+                           </select>
+                        </div>
+                     </div>
+                     <div className="grid md:grid-cols-3 gap-4">
+                        <div>
+                           <label className="text-sm font-bold text-slate-700 block mb-1">Target Category</label>
+                           <select value={newOffer.targetCategory} onChange={(e) => setNewOffer({...newOffer, targetCategory: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand">
+                              <option value="All">All Categories</option>
+                              <option value="CCTV Cameras">CCTV Cameras</option>
+                              <option value="Smart Home Automation">Smart Home Automation</option>
+                              <option value="Electrical Work">Electrical Work</option>
+                              <option value="Painting Services">Painting Services</option>
+                              <option value="Home Interior">Home Interior</option>
+                           </select>
+                        </div>
+                        <div>
+                           <label className="text-sm font-bold text-slate-700 block mb-1">Discount Type</label>
+                           <select value={newOffer.discountType} onChange={(e) => setNewOffer({...newOffer, discountType: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand">
+                              <option value="percentage">Percentage (%)</option>
+                              <option value="flat">Flat Amount (₹)</option>
+                           </select>
+                        </div>
+                        <div>
+                           <label className="text-sm font-bold text-slate-700 block mb-1">Discount Value</label>
+                           <input type="number" value={newOffer.discountValue} onChange={(e) => setNewOffer({...newOffer, discountValue: Number(e.target.value)})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand" placeholder="e.g. 10 or 500" />
+                        </div>
                      </div>
                      <div>
                         <label className="text-sm font-bold text-slate-700 block mb-1">Offer Details / Terms</label>

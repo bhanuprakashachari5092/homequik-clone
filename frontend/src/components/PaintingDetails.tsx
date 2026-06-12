@@ -6,6 +6,7 @@ import {
   Paintbrush, Settings, Home, Target,
   Phone, CheckCircle2, Layers, Briefcase
 } from "lucide-react";
+import { DynamicPrice } from "@/components/DynamicPrice";
 
 export function PaintingDetails() {
   const WHATSAPP_NUMBER = "919141052539"; 
@@ -117,7 +118,7 @@ export function PaintingDetails() {
                   <h3 className="font-bold text-foreground">{item.name}</h3>
                   <p className="text-sm text-muted-foreground">{item.scope}</p>
                   <div className="text-sm font-semibold flex items-center gap-1"><Clock className="h-3 w-3" /> {item.time}</div>
-                  <div className="text-lg font-bold md:text-right whitespace-nowrap">{item.price}</div>
+                  <DynamicPrice originalPrice={item.price} category="Painting Services" className="md:justify-end" discountClassName="text-lg font-bold md:text-right whitespace-nowrap text-brand" />
                   <div className="md:text-center">
                     <button 
                       onClick={() => toggleSelection(`Modular: ${item.name}`)} 
@@ -310,7 +311,7 @@ export function PaintingDetails() {
               <div key={i} className="bg-card border border-border rounded-xl p-5 shadow-sm flex flex-col justify-between">
                 <div>
                   <h3 className="font-bold text-foreground leading-tight">{aux.title}</h3>
-                  <span className="text-lg font-bold text-brand block mt-2">{aux.price}</span>
+                  <DynamicPrice originalPrice={aux.price} category="Painting Services" className="mt-2" discountClassName="text-lg font-bold text-brand block" />
                 </div>
                 <button 
                   onClick={() => toggleSelection(`Auxiliary: ${aux.title}`)} 
