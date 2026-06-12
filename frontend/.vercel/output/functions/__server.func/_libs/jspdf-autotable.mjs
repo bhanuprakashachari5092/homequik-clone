@@ -1872,6 +1872,11 @@ function applyPlugin(jsPDF) {
   };
 }
 var _a;
+function autoTable(d, options) {
+  var input = parseInput(d, options);
+  var table = createTable(d, input);
+  drawTable(d, table);
+}
 try {
   if (typeof window !== "undefined" && window) {
     var anyWindow = window;
@@ -1883,3 +1888,6 @@ try {
 } catch (error) {
   console.error("Could not apply autoTable plugin", error);
 }
+export {
+  autoTable as a
+};

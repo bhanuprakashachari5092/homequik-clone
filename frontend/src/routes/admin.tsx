@@ -700,12 +700,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
           ))}
         </div>
 
-        <div className="p-4 border-t border-border">
-          <button onClick={onLogout} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-slate-500 hover:bg-red-50 hover:text-red-600 transition-all">
-            <LogOut className="h-5 w-5" />
-            Sign Out
-          </button>
-        </div>
+        {/* Removed Sign Out from sidebar bottom */}
       </aside>
 
       {/* Main Content */}
@@ -780,14 +775,24 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                 </div>
               )}
             </div>
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-brand/20 border border-brand/30 flex items-center justify-center overflow-hidden shrink-0">
-                 <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Admin&backgroundColor=f8fafc" alt="Admin" />
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3 md:border-r md:border-slate-200 md:pr-4">
+                <div className="h-10 w-10 rounded-full bg-brand/20 border border-brand/30 flex items-center justify-center overflow-hidden shrink-0">
+                   <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Admin&backgroundColor=f8fafc" alt="Admin" />
+                </div>
+                <div className="hidden sm:block">
+                  <p className="text-sm font-bold text-foreground">Super Admin</p>
+                  <p className="text-xs text-slate-500">santhoshmarketing.com@gmail.com</p>
+                </div>
               </div>
-              <div className="hidden sm:block">
-                <p className="text-sm font-bold text-foreground">Super Admin</p>
-                <p className="text-xs text-slate-500">santhoshmarketing.com@gmail.com</p>
-              </div>
+              <button 
+                onClick={onLogout} 
+                className="flex items-center gap-2 px-3 py-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl font-bold text-sm transition-all"
+                title="Sign Out"
+              >
+                <LogOut className="h-4 w-4" />
+                <span className="hidden md:inline">Sign Out</span>
+              </button>
             </div>
           </div>
         </header>

@@ -1,4 +1,4 @@
-import { c as commonjsGlobal, g as getDefaultExportFromCjs } from "./react.mjs";
+import { c as commonjsGlobal } from "./react.mjs";
 import { r as requireNode } from "./fflate.mjs";
 import { r as require$$1 } from "./fast-png.mjs";
 import require$$0 from "fs";
@@ -7304,7 +7304,6 @@ function requireJspdf_node_min() {
   return jspdf_node_min.exports;
 }
 var jspdf_node_minExports = requireJspdf_node_min();
-const jsPDF = /* @__PURE__ */ getDefaultExportFromCjs(jspdf_node_minExports);
 export {
-  jsPDF as j
+  jspdf_node_minExports as j
 };
