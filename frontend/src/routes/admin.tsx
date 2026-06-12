@@ -513,7 +513,6 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
             { icon: LayoutDashboard, label: "Dashboard" },
             { icon: Users, label: "Customers" },
             { icon: Briefcase, label: "Dealers" },
-            { icon: Package, label: "Services" },
             { icon: Gift, label: "Offers" },
             { icon: Activity, label: "Analytics" }
           ].map((item) => (
@@ -632,7 +631,6 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                 { icon: LayoutDashboard, label: "Dashboard" },
                 { icon: Users, label: "Customers" },
                 { icon: Briefcase, label: "Dealers" },
-                { icon: Package, label: "Services" },
                 { icon: Gift, label: "Offers" },
                 { icon: Activity, label: "Analytics" }
               ].map((item) => (
@@ -948,64 +946,6 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                           </td>
                         </tr>
                       )})}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          ) : activeTab === "Services" ? (
-            <div className="max-w-7xl mx-auto space-y-6">
-               <div className="flex items-center justify-between">
-                  <div>
-                     <h2 className="text-2xl font-bold text-slate-800">Manage Services & Posts</h2>
-                     <p className="text-slate-500 mt-1">Add or edit services that appear on the Home page dynamically.</p>
-                  </div>
-                  <button onClick={() => setShowServiceModal(true)} className="bg-brand hover:bg-brand-dark text-white px-4 py-2 rounded-xl font-bold transition-colors">
-                     + Add New Service
-                  </button>
-               </div>
-               
-               <div className="bg-white rounded-3xl border border-border shadow-sm overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse min-w-[800px]">
-                    <thead>
-                      <tr className="bg-slate-50 border-b border-border">
-                        <th className="py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider">Service Image</th>
-                        <th className="py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider">Title & Category</th>
-                        <th className="py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider">Description</th>
-                        <th className="py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border">
-                      {services.map((service, i) => (
-                        <tr key={i} className="hover:bg-slate-50 transition-colors">
-                          <td className="py-4 px-6">
-                             <div className="w-16 h-16 bg-slate-100 rounded-xl overflow-hidden border border-slate-200 flex items-center justify-center">
-                               {service.imageUrl ? <img src={service.imageUrl} alt={service.title} className="w-full h-full object-cover" /> : <Package className="h-6 w-6 text-slate-300" />}
-                             </div>
-                          </td>
-                          <td className="py-4 px-6">
-                             <div className="font-bold text-slate-800">{service.title}</div>
-                             <div className="text-xs text-brand font-bold bg-brand/10 inline-block px-2 py-0.5 rounded-full mt-1.5">{service.category}</div>
-                          </td>
-                          <td className="py-4 px-6">
-                             <div className="text-sm text-slate-600 line-clamp-2">{service.description}</div>
-                          </td>
-                          <td className="py-4 px-6 text-right space-x-2 whitespace-nowrap">
-                             <button onClick={() => openEditServiceModal(service)} className="p-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors" title="Edit">
-                                <Edit className="h-5 w-5" />
-                             </button>
-                             <button onClick={() => handleDeleteService(service.id)} className="p-1.5 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg transition-colors" title="Delete">
-                                <Trash2 className="h-5 w-5" />
-                             </button>
-                          </td>
-                        </tr>
-                      ))}
-                      {services.length === 0 && (
-                        <tr>
-                           <td colSpan={4} className="py-12 text-center text-slate-500 font-medium">No services added yet. Click "+ Add New Service" to create one.</td>
-                        </tr>
-                      )}
                     </tbody>
                   </table>
                 </div>

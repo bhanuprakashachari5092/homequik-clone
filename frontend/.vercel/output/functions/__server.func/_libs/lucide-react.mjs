@@ -512,10 +512,10 @@ export {
   UserPlus as r,
   LayoutDashboard as s,
   Users as t,
-  Package as u,
-  Activity as v,
-  Menu as w,
-  Bell as x,
-  Download as y,
-  SquarePen as z
+  Activity as u,
+  Menu as v,
+  Bell as w,
+  Download as x,
+  SquarePen as y,
+  Package as z
 };
