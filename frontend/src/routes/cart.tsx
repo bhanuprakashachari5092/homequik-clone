@@ -21,6 +21,7 @@ function CartPage() {
   const { user } = useAuth();
   const router = useRouter();
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [address, setAddress] = useState("");
 
   const handleCheckout = async () => {
     if (!user) {
@@ -28,17 +29,30 @@ function CartPage() {
       router.navigate({ to: "/login" });
       return;
     }
+
+    if (!address.trim()) {
+      toast.error("Please enter your service address.");
+      return;
+    }
     
     try {
       // Create Firestore document
       const userName = user.displayName || user.email || "Customer";
       
+      const totalNumericAmount = items.reduce((acc, i) => {
+        const priceNum = parseInt(i.price.replace(/[^0-9]/g, '')) || 0;
+        return acc + (priceNum * i.quantity);
+      }, 0);
+
       const bookingData = {
         customerName: userName,
         customerEmail: user.email,
         customerPhone: user.phoneNumber || "", // Fallback if no phone number
+        customerAddress: address,
         services: items.map(i => ({ title: i.title, quantity: i.quantity, price: i.price })),
         totalItems,
+        numericAmount: totalNumericAmount,
+        amount: `₹ ${totalNumericAmount.toLocaleString()}`,
         createdAt: serverTimestamp(),
         status: "pending",
       };
@@ -148,6 +162,18 @@ function CartPage() {
                   </span>
                 </div>
               </div>
+
+              <div className="mb-6">
+                 <label className="text-sm font-bold text-slate-700 block mb-2">Service Address *</label>
+                 <textarea 
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    placeholder="Enter full address for the service..."
+                    className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand resize-none"
+                    rows={3}
+                 />
+              </div>
+
               <p className="text-sm text-muted-foreground mb-8 leading-relaxed font-medium">
                 By proceeding, you agree to our terms. Your selected B2B services will be booked and our representative will call you to finalize the contract.
               </p>

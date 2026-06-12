@@ -127,26 +127,27 @@ function DealerDashboard({ currentDealer, onLogout }: { currentDealer: any, onLo
   const [bookings, setBookings] = useState<any[]>([]);
 
   useEffect(() => {
-    const storedBookings = localStorage.getItem("vendor99_bookings");
-    if (storedBookings) {
-      const allBookings = JSON.parse(storedBookings);
-      // Filter only bookings assigned to this dealer
-      const myBookings = allBookings.filter((b: any) => b.dealerId === currentDealer.id);
-      setBookings(myBookings);
-    }
+    import("firebase/firestore").then(({ collection, onSnapshot, query, where }) => {
+      const q = query(collection(db, "bookings"), where("dealerId", "==", currentDealer.id));
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        const fetched: any[] = [];
+        snapshot.forEach(d => fetched.push({ id: d.id, ...d.data() }));
+        setBookings(fetched);
+      });
+      return () => unsubscribe();
+    });
   }, [currentDealer.id]);
 
-  const updateBookingStatus = (bookingId: string, newStatus: string) => {
-    // Optimistic UI update
-    const updatedMyBookings = bookings.map(b => b.id === bookingId ? { ...b, status: newStatus } : b);
-    setBookings(updatedMyBookings);
-
-    // Persist to local storage
-    const storedBookings = localStorage.getItem("vendor99_bookings");
-    if (storedBookings) {
-      const allBookings = JSON.parse(storedBookings);
-      const updatedAll = allBookings.map((b: any) => b.id === bookingId ? { ...b, status: newStatus } : b);
-      localStorage.setItem("vendor99_bookings", JSON.stringify(updatedAll));
+  const updateBookingStatus = async (bookingId: string, newStatus: string) => {
+    // Optimistic UI update locally
+    setBookings(bookings.map(b => b.id === bookingId ? { ...b, status: newStatus } : b));
+    
+    // Update Firebase
+    try {
+      const { doc, updateDoc } = await import("firebase/firestore");
+      await updateDoc(doc(db, "bookings", bookingId), { status: newStatus });
+    } catch (err) {
+      console.error("Failed to update status:", err);
     }
   };
 
@@ -259,8 +260,8 @@ function DealerDashboard({ currentDealer, onLogout }: { currentDealer: any, onLo
                                  {booking.phone}
                               </div>
                               <div className="flex items-center gap-1.5 bg-slate-100 px-3 py-1.5 rounded-lg">
-                                 <MapPin className="h-4 w-4 text-slate-400" />
-                                 {booking.city}
+                                 <MapPin className="h-4 w-4 text-slate-400 shrink-0" />
+                                 <span className="truncate max-w-[200px] sm:max-w-xs">{booking.customerAddress || booking.city}</span>
                               </div>
                            </div>
                         </div>

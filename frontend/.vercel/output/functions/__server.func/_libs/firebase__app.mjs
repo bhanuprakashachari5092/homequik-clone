@@ -118,6 +118,9 @@ function _getProvider(app, name2) {
   }
   return app.container.getProvider(name2);
 }
+function _removeServiceInstance(app, name2, instanceIdentifier = DEFAULT_ENTRY_NAME) {
+  _getProvider(app, name2).clearInstance(instanceIdentifier);
+}
 function _isFirebaseServerApp(obj) {
   if (obj === null || obj === void 0) {
     return false;
@@ -596,7 +599,8 @@ export {
   _registerComponent as _,
   _getProvider as a,
   _isFirebaseServerApp as b,
-  getApps as c,
+  _removeServiceInstance as c,
+  getApps as d,
   getApp as g,
   initializeApp as i,
   registerVersion as r

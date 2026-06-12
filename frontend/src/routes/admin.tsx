@@ -3,7 +3,7 @@ import {
   LayoutDashboard, Users, User, ShoppingCart, Settings, 
   LogOut, Bell, Search, Activity, DollarSign, Package,
   Briefcase, CheckCircle2, XCircle, Edit, Trash2, MapPin, Gift,
-  Download
+  Download, Menu, X
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { db } from "@/lib/firebase";
@@ -114,6 +114,11 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   const [showRevenueModal, setShowRevenueModal] = useState(false);
   const [newRevenue, setNewRevenue] = useState({ amount: "", description: "", paymentStatus: "Received" });
 
+  const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
+  const [showCustomerModal, setShowCustomerModal] = useState(false);
+
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
+
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [notificationsClearedAt, setNotificationsClearedAt] = useState<number>(() => {
     return Number(localStorage.getItem('adminNotificationsClearedAt') || '0');
@@ -223,6 +228,22 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
     }
   };
 
+  const updateBookingPaymentStatus = async (bookingId: string, newPaymentStatus: string) => {
+    try {
+      const updateData: any = { paymentStatus: newPaymentStatus };
+      if (newPaymentStatus === "Paid") {
+        updateData.status = "Completed";
+        updateData.paidAt = Date.now();
+      } else if (newPaymentStatus === "Pending") {
+        updateData.status = "Pending";
+        updateData.paidAt = null;
+      }
+      await updateDoc(doc(db, "bookings", bookingId), updateData);
+    } catch (e) {
+      console.error("Failed to update booking payment status:", e);
+    }
+  };
+
   const handleDeleteBooking = async (bookingId: string) => {
     if (window.confirm("Are you sure you want to delete this customer booking?")) {
       try {
@@ -254,7 +275,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
     doc.text("Vendor99 Dealer Network", 14, 15);
     
     const tableColumn = ["ID", "Business Name", "Contact Person", "Phone", "City", "Plan", "Status"];
-    const tableRows = [];
+    const tableRows: any[][] = [];
 
     dealers.forEach(dealer => {
       const dealerData = [
@@ -285,7 +306,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
     try {
       const match = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) || url.match(/id=([a-zA-Z0-9_-]+)/);
       if (match && match[1]) {
-        return `https://drive.google.com/uc?export=view&id=${match[1]}`;
+        return `https://drive.google.com/thumbnail?id=${match[1]}&sz=w1000`;
       }
     } catch (e) {
       console.error("Error parsing Drive link:", e);
@@ -410,14 +431,6 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
     }
   };
 
-  const updateBookingPaymentStatus = async (bookingId: string, status: string) => {
-    try {
-      await updateDoc(doc(db, "bookings", bookingId), { paymentStatus: status });
-    } catch (err) {
-      console.error("Failed to update payment status:", err);
-    }
-  };
-
   const dealerRevenue = dealers.reduce((acc, d) => acc + (Number(d.amount) || 4999), 0);
   const bookingRevenue = bookings.reduce((acc, b) => acc + (Number(b.numericAmount) || 0), 0);
   const customRevTotal = customRevenues.reduce((acc, c) => acc + (Number(c.amount) || 0), 0);
@@ -502,8 +515,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
             { icon: Briefcase, label: "Dealers" },
             { icon: Package, label: "Services" },
             { icon: Gift, label: "Offers" },
-            { icon: Activity, label: "Analytics" },
-            { icon: Settings, label: "Settings" }
+            { icon: Activity, label: "Analytics" }
           ].map((item) => (
             <button 
               key={item.label}
@@ -531,9 +543,15 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
       {/* Main Content */}
       <main className="flex-1 flex flex-col overflow-hidden relative">
         {/* Topbar */}
-        <header className="h-20 bg-white border-b border-border flex items-center justify-between px-8 shrink-0">
-          <div className="flex items-center gap-4 flex-1">
-            <h1 className="text-2xl font-bold text-foreground">{activeTab}</h1>
+        <header className="h-20 bg-white border-b border-border flex items-center justify-between px-4 md:px-8 shrink-0">
+          <div className="flex items-center gap-3 flex-1">
+            <button 
+              className="md:hidden p-2 rounded-full hover:bg-slate-100 transition-colors"
+              onClick={() => setIsMobileNavOpen(!isMobileNavOpen)}
+            >
+              {isMobileNavOpen ? <X className="h-6 w-6 text-slate-700" /> : <Menu className="h-6 w-6 text-slate-700" />}
+            </button>
+            <h1 className="text-xl md:text-2xl font-bold text-foreground">{activeTab}</h1>
             <div className="hidden lg:flex items-center bg-slate-100 rounded-full px-4 py-2 w-96 ml-8">
               <Search className="h-5 w-5 text-slate-400" />
               <input 
@@ -595,7 +613,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
               )}
             </div>
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-brand/20 border border-brand/30 flex items-center justify-center overflow-hidden">
+              <div className="h-10 w-10 rounded-full bg-brand/20 border border-brand/30 flex items-center justify-center overflow-hidden shrink-0">
                  <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Admin&backgroundColor=f8fafc" alt="Admin" />
               </div>
               <div className="hidden sm:block">
@@ -605,6 +623,40 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
             </div>
           </div>
         </header>
+
+        {/* Mobile Navigation Menu */}
+        {isMobileNavOpen && (
+          <div className="md:hidden absolute top-20 left-0 w-full bg-white border-b border-border z-40 shadow-lg">
+            <div className="flex flex-col p-4 space-y-2">
+              {[
+                { icon: LayoutDashboard, label: "Dashboard" },
+                { icon: Users, label: "Customers" },
+                { icon: Briefcase, label: "Dealers" },
+                { icon: Package, label: "Services" },
+                { icon: Gift, label: "Offers" },
+                { icon: Activity, label: "Analytics" }
+              ].map((item) => (
+                <button 
+                  key={item.label}
+                  onClick={() => { setActiveTab(item.label); setIsMobileNavOpen(false); }}
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all ${
+                    activeTab === item.label 
+                      ? "bg-brand/10 text-brand font-bold" 
+                      : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
+                  }`}
+                >
+                  <item.icon className={`h-5 w-5 ${activeTab === item.label ? "text-brand" : ""}`} />
+                  {item.label}
+                </button>
+              ))}
+              <div className="w-full h-px bg-border my-2"></div>
+              <button onClick={onLogout} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-slate-500 hover:bg-red-50 hover:text-red-600 transition-all">
+                <LogOut className="h-5 w-5" />
+                Sign Out
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Dashboard Content */}
         <div className="flex-1 p-8 overflow-y-auto">
@@ -841,7 +893,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                       {bookings.map((booking, i) => {
                          const assignedDealer = dealers.find(d => d.id === booking.dealerId);
                          return (
-                        <tr key={i} className="hover:bg-slate-50 transition-colors">
+                        <tr key={i} className="hover:bg-slate-50 transition-colors cursor-pointer" onClick={() => { setSelectedCustomer(booking); setShowCustomerModal(true); }}>
                           <td className="py-4 px-6 text-sm font-bold text-slate-900">{booking.bookingId || booking.id}</td>
                           <td className="py-4 px-6">
                              <div className="font-bold text-slate-800">{booking.customerName}</div>
@@ -851,7 +903,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                              <div className="text-sm font-medium text-slate-700">{booking.serviceName || booking.service}</div>
                              <div className="text-xs text-slate-500 mt-0.5 flex items-center gap-1"><MapPin className="h-3 w-3"/> {booking.customerAddress || booking.city}</div>
                           </td>
-                          <td className="py-4 px-6">
+                          <td className="py-4 px-6" onClick={(e) => e.stopPropagation()}>
                              <select 
                                 value={booking.dealerId || ""}
                                 onChange={(e) => assignDealerToBooking(booking.id, e.target.value)}
@@ -863,7 +915,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                                 ))}
                              </select>
                           </td>
-                          <td className="py-4 px-6">
+                          <td className="py-4 px-6" onClick={(e) => e.stopPropagation()}>
                             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${
                               booking.status === 'Completed' ? 'bg-emerald-100 text-emerald-800' :
                               booking.status === 'In Progress' ? 'bg-brand/20 text-brand' :
@@ -872,17 +924,24 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                               {booking.status}
                             </span>
                           </td>
-                          <td className="py-4 px-6">
-                             <select 
-                                value={booking.paymentStatus || "Pending"}
-                                onChange={(e) => updateBookingPaymentStatus(booking.id, e.target.value)}
-                                className={`text-sm border rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-brand font-bold ${booking.paymentStatus === 'Paid' ? 'border-emerald-200 bg-emerald-50 text-emerald-600' : 'border-amber-200 bg-amber-50 text-amber-600'}`}
-                             >
-                                <option value="Pending">Pending</option>
-                                <option value="Paid">Paid</option>
-                             </select>
+                          <td className="py-4 px-6" onClick={(e) => e.stopPropagation()}>
+                             {(() => {
+                               const isLocked = booking.paymentStatus === 'Paid' && booking.paidAt && (Date.now() - booking.paidAt > 10 * 60 * 1000);
+                               return (
+                                 <select 
+                                    value={booking.paymentStatus || "Pending"}
+                                    onChange={(e) => updateBookingPaymentStatus(booking.id, e.target.value)}
+                                    disabled={isLocked}
+                                    className={`text-sm border rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-brand font-bold ${booking.paymentStatus === 'Paid' ? 'border-emerald-200 bg-emerald-50 text-emerald-600' : 'border-amber-200 bg-amber-50 text-amber-600'} ${isLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                    title={isLocked ? "Payment status locked (10 mins passed since payment)" : ""}
+                                 >
+                                    <option value="Pending">Pending</option>
+                                    <option value="Paid">Paid</option>
+                                 </select>
+                               );
+                             })()}
                           </td>
-                          <td className="py-4 px-6 text-right whitespace-nowrap">
+                          <td className="py-4 px-6 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                              <button onClick={() => handleDeleteBooking(booking.id)} className="p-1.5 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg transition-colors" title="Delete Booking">
                                 <Trash2 className="h-5 w-5" />
                              </button>
@@ -1060,6 +1119,74 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                  </form>
               </div>
            </div>
+        )}
+
+        {/* Customer Details Modal */}
+        {showCustomerModal && selectedCustomer && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-3xl w-full max-w-lg shadow-xl overflow-hidden">
+               <div className="p-6 border-b border-border flex justify-between items-center bg-slate-50">
+                  <h3 className="font-bold text-xl text-slate-800">
+                     Customer Details
+                  </h3>
+                  <button onClick={() => setShowCustomerModal(false)} className="text-slate-400 hover:text-red-500 transition-colors">
+                     <XCircle className="h-6 w-6" />
+                  </button>
+               </div>
+               <div className="p-6 space-y-4 max-h-[60vh] overflow-y-auto">
+                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                   <div>
+                     <p className="text-xs text-slate-500 font-bold uppercase">Booking ID</p>
+                     <p className="font-medium text-slate-800">{selectedCustomer.bookingId || selectedCustomer.id}</p>
+                   </div>
+                   <div>
+                     <p className="text-xs text-slate-500 font-bold uppercase">Status</p>
+                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                       selectedCustomer.status === 'Completed' ? 'bg-emerald-100 text-emerald-800' :
+                       selectedCustomer.status === 'In Progress' ? 'bg-brand/20 text-brand' :
+                       'bg-amber-100 text-amber-800'
+                     }`}>
+                       {selectedCustomer.status}
+                     </span>
+                   </div>
+                   {selectedCustomer.customerAddress && (
+                     <div className="col-span-1 sm:col-span-2 break-words">
+                       <p className="text-xs text-slate-500 font-bold uppercase">Customer Address</p>
+                       <p className="font-medium text-slate-800">{selectedCustomer.customerAddress}</p>
+                     </div>
+                   )}
+                   
+                   {Object.keys(selectedCustomer).filter(key => 
+                     !['id', 'status', 'bookingId', 'customerAddress'].includes(key) && 
+                     typeof selectedCustomer[key] !== 'object'
+                   ).map((key) => (
+                     <div key={key} className="col-span-1 sm:col-span-2 md:col-span-1 break-words">
+                       <p className="text-xs text-slate-500 font-bold uppercase">{key.replace(/([A-Z])/g, ' $1').trim()}</p>
+                       <p className="font-medium text-slate-800">{String(selectedCustomer[key])}</p>
+                     </div>
+                   ))}
+
+                   {selectedCustomer.selectedItems && Array.isArray(selectedCustomer.selectedItems) && (
+                     <div className="col-span-1 sm:col-span-2">
+                       <p className="text-xs text-slate-500 font-bold uppercase mb-1">Selected Items</p>
+                       <div className="flex flex-wrap gap-2">
+                         {selectedCustomer.selectedItems.map((item: string, idx: number) => (
+                           <span key={idx} className="bg-brand/10 text-brand text-xs font-bold px-2.5 py-1 rounded-lg border border-brand/20">
+                             {item}
+                           </span>
+                         ))}
+                       </div>
+                     </div>
+                   )}
+                 </div>
+               </div>
+               <div className="p-4 border-t border-border bg-slate-50 text-right">
+                  <button onClick={() => setShowCustomerModal(false)} className="bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold py-2 px-6 rounded-xl transition-colors">
+                     Close
+                  </button>
+               </div>
+            </div>
+          </div>
         )}
 
         {/* Add/Edit Dealer Modal */}

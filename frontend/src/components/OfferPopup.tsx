@@ -36,7 +36,7 @@ export function OfferPopup() {
                
                // Show Web Notification
                if (Notification.permission === "granted") {
-                  new Notification("🎉 Festival Discount!", {
+                  new Notification("Vendor99 🎉 Festival Discount!", {
                      body: newOfferData.title,
                      icon: newOfferData.imageUrl || "/logo.png"
                   });

@@ -418,6 +418,9 @@ function isReactNative() {
 function isSafari() {
   return !isNode() && !!navigator.userAgent && navigator.userAgent.includes("Safari") && !navigator.userAgent.includes("Chrome");
 }
+function isSafariOrWebkit() {
+  return !isNode() && !!navigator.userAgent && (navigator.userAgent.includes("Safari") || navigator.userAgent.includes("WebKit")) && !navigator.userAgent.includes("Chrome");
+}
 function isIndexedDBAvailable() {
   try {
     return typeof indexedDB === "object";
@@ -769,5 +772,7 @@ export {
   getDefaultEmulatorHostnameAndPort as u,
   validateIndexedDBOpenable as v,
   createMockUserToken as w,
-  isSafari as x
+  isSafari as x,
+  getGlobal as y,
+  isSafariOrWebkit as z
 };

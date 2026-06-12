@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { Search, MapPin, ShoppingBag, User, Briefcase } from "lucide-react";
+import { Search, MapPin, ShoppingBag, User, Briefcase, Menu, X } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useCart } from "@/context/CartContext";
@@ -24,6 +24,7 @@ export function SiteHeader() {
   const { location, isLocating, fetchDynamicLocation, updateLocation } = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const filteredServices = allServices
     .filter((s) => s.toLowerCase().includes(searchQuery.toLowerCase()))
@@ -116,29 +117,122 @@ export function SiteHeader() {
               </AnimatePresence>
             </Link>
           </motion.div>
-          {user ? (
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => signOut()}
-              className="flex items-center gap-2 rounded-full border border-border/50 bg-secondary/80 px-5 py-2 text-sm font-semibold text-foreground hover:bg-secondary transition-all shadow-sm cursor-pointer"
-            >
-              <User className="h-4 w-4 text-brand" />
-              <span className="hidden sm:inline">Logout</span>
-            </motion.button>
-          ) : (
-            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-              <Link
-                to="/login"
-                className="flex items-center gap-2 rounded-full bg-gradient-premium px-6 py-2.5 text-sm font-semibold text-white shadow-md hover:shadow-lg hover:opacity-90 transition-all"
+          
+          <div className="hidden md:flex items-center gap-3">
+            {user ? (
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => signOut()}
+                className="flex items-center gap-2 rounded-full border border-border/50 bg-secondary/80 px-5 py-2 text-sm font-semibold text-foreground hover:bg-secondary transition-all shadow-sm cursor-pointer"
               >
-                <User className="h-4 w-4" />
-                <span className="hidden sm:inline">Login</span>
-              </Link>
-            </motion.div>
-          )}
+                <User className="h-4 w-4 text-brand" />
+                <span>Logout</span>
+              </motion.button>
+            ) : (
+              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                <Link
+                  to="/login"
+                  className="flex items-center gap-2 rounded-full bg-gradient-premium px-6 py-2.5 text-sm font-semibold text-white shadow-md hover:shadow-lg hover:opacity-90 transition-all"
+                >
+                  <User className="h-4 w-4" />
+                  <span>Login</span>
+                </Link>
+              </motion.div>
+            )}
+          </div>
+
+          {/* Mobile Menu Toggle */}
+          <button 
+            className="md:hidden flex h-10 w-10 items-center justify-center rounded-full hover:bg-secondary transition-colors"
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          >
+            {isMobileMenuOpen ? <X className="h-6 w-6 text-foreground" /> : <Menu className="h-6 w-6 text-foreground" />}
+          </button>
         </div>
       </div>
+
+      {/* Mobile Navigation Dropdown */}
+      <AnimatePresence>
+        {isMobileMenuOpen && (
+          <motion.div 
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            className="md:hidden overflow-hidden bg-white/95 backdrop-blur-xl border-b border-border shadow-lg"
+          >
+            <div className="px-6 py-6 flex flex-col gap-4">
+              <button 
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  const newLoc = window.prompt("Please enter your correct location (or leave blank to auto-detect):", location);
+                  if (newLoc && newLoc.trim() !== "") {
+                     updateLocation(newLoc.trim());
+                  } else if (newLoc === "") {
+                     fetchDynamicLocation(false);
+                  }
+                }}
+                disabled={isLocating}
+                className="flex items-center gap-3 p-3 rounded-xl bg-secondary/50 border border-border/50 hover:bg-secondary transition-colors text-left"
+              >
+                <div className="bg-brand/10 p-2 rounded-lg"><MapPin className="h-5 w-5 text-brand" /></div>
+                <div>
+                  <div className="text-xs text-muted-foreground font-semibold">Current Location</div>
+                  <div className="text-sm font-bold">{isLocating ? "Locating..." : location}</div>
+                </div>
+              </button>
+
+              <div className="w-full h-px bg-border my-2"></div>
+
+              {nav.map((n) => (
+                <Link
+                  key={n.to}
+                  to={n.to === "/services" ? "/" : n.to}
+                  onClick={(e) => {
+                     setIsMobileMenuOpen(false);
+                     if (n.label === "Services") {
+                        e.preventDefault();
+                        if (window.location.pathname !== "/") {
+                           window.location.href = "/#services";
+                        } else {
+                           document.getElementById('services')?.scrollIntoView({ behavior: 'smooth' });
+                        }
+                     }
+                  }}
+                  className="flex items-center gap-3 p-3 rounded-xl hover:bg-secondary transition-colors font-bold text-foreground"
+                >
+                  {n.label === "Services" && <Briefcase className="h-5 w-5 text-brand" />}
+                  {n.label}
+                </Link>
+              ))}
+
+              <div className="w-full h-px bg-border my-2"></div>
+
+              {user ? (
+                <button
+                  onClick={() => {
+                    setIsMobileMenuOpen(false);
+                    signOut();
+                  }}
+                  className="flex items-center justify-center gap-2 rounded-xl border border-border/50 bg-secondary/80 px-5 py-3 text-sm font-bold text-foreground hover:bg-secondary transition-all w-full"
+                >
+                  <User className="h-4 w-4 text-brand" />
+                  Logout
+                </button>
+              ) : (
+                <Link
+                  to="/login"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="flex items-center justify-center gap-2 rounded-xl bg-gradient-premium px-6 py-3 text-sm font-bold text-white shadow-md w-full"
+                >
+                  <User className="h-4 w-4" />
+                  Login
+                </Link>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.header>
   );
 }

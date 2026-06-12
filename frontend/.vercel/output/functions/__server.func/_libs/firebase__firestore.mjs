@@ -1,9 +1,9 @@
-import { g as getApp, a as _getProvider, b as _isFirebaseServerApp, _ as _registerComponent, r as registerVersion, S as SDK_VERSION$1 } from "./firebase__app.mjs";
+import { g as getApp, a as _getProvider, b as _isFirebaseServerApp, c as _removeServiceInstance, _ as _registerComponent, r as registerVersion, S as SDK_VERSION$1 } from "./firebase__app.mjs";
 import { a as Component } from "./firebase__component.mjs";
-import { a as getModularInstance, F as FirebaseError, u as getDefaultEmulatorHostnameAndPort, j as isCloudWorkstation, p as pingServer, d as deepEqual, w as createMockUserToken, x as isSafari, l as getUA } from "./firebase__util.mjs";
+import { a as getModularInstance, F as FirebaseError, u as getDefaultEmulatorHostnameAndPort, j as isCloudWorkstation, p as pingServer, d as deepEqual, w as createMockUserToken, x as isSafari, l as getUA, y as getGlobal, i as isIndexedDBAvailable, z as isSafariOrWebkit } from "./firebase__util.mjs";
 import { I as Integer, M as Md5 } from "./firebase__webchannel-wrapper.mjs";
 import { L as Logger, a as LogLevel } from "./firebase__logger.mjs";
-import { inspect, TextEncoder } from "util";
+import { inspect, TextEncoder, TextDecoder } from "util";
 import { randomBytes as randomBytes$1 } from "crypto";
 import { s as srcExports$1 } from "./@grpc/grpc-js.mjs";
 import { s as srcExports } from "./@grpc/proto-loader.mjs";
@@ -44,6 +44,9 @@ function formatJSON(value) {
 const logClient = new Logger("@firebase/firestore");
 function getLogLevel() {
   return logClient.logLevel;
+}
+function setLogLevel(logLevel) {
+  logClient.setLogLevel(logLevel);
 }
 function logDebug(msg, ...obj) {
   if (logClient.logLevel <= LogLevel.DEBUG) {
@@ -105,6 +108,11 @@ function hardAssert(assertion, id, messageOrContext, context) {
   }
   if (!assertion) {
     _fail(id, message, context);
+  }
+}
+function debugAssert(assertion, message) {
+  if (!assertion) {
+    fail(57014, message);
   }
 }
 function debugCast(obj, constructor) {
@@ -506,6 +514,17 @@ class FirebaseAppCheckTokenProvider {
     this.tokenListener = void 0;
   }
 }
+class EmptyAppCheckTokenProvider {
+  getToken() {
+    return Promise.resolve(new AppCheckToken(""));
+  }
+  invalidateToken() {
+  }
+  start(asyncQueue, changeListener) {
+  }
+  shutdown() {
+  }
+}
 function makeAuthCredentialsProvider(credentials) {
   if (!credentials) {
     return new EmptyAuthCredentialsProvider();
@@ -570,6 +589,9 @@ function arrayEquals(left, right, comparator) {
     return false;
   }
   return left.every((value, index) => comparator(value, right[index]));
+}
+function immediateSuccessor(s) {
+  return s + "\0";
 }
 const DOCUMENT_KEY_NAME = "__name__";
 class BasePath {
@@ -950,6 +972,11 @@ function cast(obj, constructor) {
   }
   return obj;
 }
+function validatePositiveNumber(functionName, n) {
+  if (n <= 0) {
+    throw new FirestoreError(Code.INVALID_ARGUMENT, `Function ${functionName}() requires a positive number, but it was: ${n}.`);
+  }
+}
 function property(typeString, optionalValue) {
   const result = {
     typeString
@@ -1154,6 +1181,71 @@ class SnapshotVersion {
   }
 }
 const INITIAL_LARGEST_BATCH_ID = -1;
+const INITIAL_SEQUENCE_NUMBER = 0;
+class FieldIndex {
+  constructor(indexId, collectionGroup2, fields, indexState) {
+    this.indexId = indexId;
+    this.collectionGroup = collectionGroup2;
+    this.fields = fields;
+    this.indexState = indexState;
+  }
+}
+FieldIndex.UNKNOWN_ID = -1;
+function fieldIndexGetArraySegment(fieldIndex) {
+  return fieldIndex.fields.find(
+    (s) => s.kind === 2
+    /* IndexKind.CONTAINS */
+  );
+}
+function fieldIndexGetDirectionalSegments(fieldIndex) {
+  return fieldIndex.fields.filter(
+    (s) => s.kind !== 2
+    /* IndexKind.CONTAINS */
+  );
+}
+function fieldIndexGetKeyOrder(fieldIndex) {
+  const directionalSegments = fieldIndexGetDirectionalSegments(fieldIndex);
+  return directionalSegments.length === 0 ? 0 : directionalSegments[directionalSegments.length - 1].kind;
+}
+function fieldIndexSemanticComparator(left, right) {
+  let cmp = primitiveComparator(left.collectionGroup, right.collectionGroup);
+  if (cmp !== 0) {
+    return cmp;
+  }
+  for (let i = 0; i < Math.min(left.fields.length, right.fields.length); ++i) {
+    cmp = indexSegmentComparator(left.fields[i], right.fields[i]);
+    if (cmp !== 0) {
+      return cmp;
+    }
+  }
+  return primitiveComparator(left.fields.length, right.fields.length);
+}
+function fieldIndexToString(fieldIndex) {
+  return `id=${fieldIndex.indexId}|cg=${fieldIndex.collectionGroup}|f=${fieldIndex.fields.map((f) => `${f.fieldPath}:${f.kind}`).join(",")}`;
+}
+class IndexSegment {
+  constructor(fieldPath, kind) {
+    this.fieldPath = fieldPath;
+    this.kind = kind;
+  }
+}
+function indexSegmentComparator(left, right) {
+  const cmp = FieldPath$1.comparator(left.fieldPath, right.fieldPath);
+  if (cmp !== 0) {
+    return cmp;
+  }
+  return primitiveComparator(left.kind, right.kind);
+}
+class IndexState {
+  constructor(sequenceNumber, offset) {
+    this.sequenceNumber = sequenceNumber;
+    this.offset = offset;
+  }
+  /** The state of an index that has not yet been backfilled. */
+  static empty() {
+    return new IndexState(INITIAL_SEQUENCE_NUMBER, IndexOffset.min());
+  }
+}
 function newIndexOffsetSuccessorFromReadTime(readTime, largestBatchId) {
   const successorSeconds = readTime.toTimestamp().seconds;
   const successorNanos = readTime.toTimestamp().nanoseconds + 1;
@@ -1383,13 +1475,595 @@ class PersistencePromise {
     });
   }
 }
+const LOG_TAG$i = "SimpleDb";
+const TRANSACTION_RETRY_COUNT = 3;
+class SimpleDbTransaction {
+  static open(db, action, mode, objectStoreNames) {
+    try {
+      return new SimpleDbTransaction(action, db.transaction(objectStoreNames, mode));
+    } catch (e) {
+      throw new IndexedDbTransactionError(action, e);
+    }
+  }
+  constructor(action, transaction) {
+    this.action = action;
+    this.transaction = transaction;
+    this.aborted = false;
+    this.completionDeferred = new Deferred();
+    this.transaction.oncomplete = () => {
+      this.completionDeferred.resolve();
+    };
+    this.transaction.onabort = () => {
+      if (transaction.error) {
+        this.completionDeferred.reject(new IndexedDbTransactionError(action, transaction.error));
+      } else {
+        this.completionDeferred.resolve();
+      }
+    };
+    this.transaction.onerror = (event) => {
+      const error = checkForAndReportiOSError(event.target.error);
+      this.completionDeferred.reject(new IndexedDbTransactionError(action, error));
+    };
+  }
+  get completionPromise() {
+    return this.completionDeferred.promise;
+  }
+  abort(error) {
+    if (error) {
+      this.completionDeferred.reject(error);
+    }
+    if (!this.aborted) {
+      logDebug(LOG_TAG$i, "Aborting transaction:", error ? error.message : "Client-initiated abort");
+      this.aborted = true;
+      this.transaction.abort();
+    }
+  }
+  maybeCommit() {
+    const maybeV3IndexedDb = this.transaction;
+    if (!this.aborted && typeof maybeV3IndexedDb.commit === "function") {
+      maybeV3IndexedDb.commit();
+    }
+  }
+  /**
+   * Returns a SimpleDbStore<KeyType, ValueType> for the specified store. All
+   * operations performed on the SimpleDbStore happen within the context of this
+   * transaction and it cannot be used anymore once the transaction is
+   * completed.
+   *
+   * Note that we can't actually enforce that the KeyType and ValueType are
+   * correct, but they allow type safety through the rest of the consuming code.
+   */
+  store(storeName) {
+    const store = this.transaction.objectStore(storeName);
+    return new SimpleDbStore(store);
+  }
+}
+class SimpleDb {
+  /** Deletes the specified database. */
+  static delete(name2) {
+    logDebug(LOG_TAG$i, "Removing database:", name2);
+    const globals = getGlobal();
+    return wrapRequest(globals.indexedDB.deleteDatabase(name2)).toPromise();
+  }
+  /** Returns true if IndexedDB is available in the current environment. */
+  static isAvailable() {
+    if (!isIndexedDBAvailable()) {
+      return false;
+    }
+    if (SimpleDb.isMockPersistence()) {
+      return true;
+    }
+    const ua = getUA();
+    const iOSVersion = SimpleDb.getIOSVersion(ua);
+    const isUnsupportedIOS = 0 < iOSVersion && iOSVersion < 10;
+    const androidVersion = getAndroidVersion(ua);
+    const isUnsupportedAndroid = 0 < androidVersion && androidVersion < 4.5;
+    if (ua.indexOf("MSIE ") > 0 || ua.indexOf("Trident/") > 0 || ua.indexOf("Edge/") > 0 || isUnsupportedIOS || isUnsupportedAndroid) {
+      return false;
+    } else {
+      return true;
+    }
+  }
+  /**
+   * Returns true if the backing IndexedDB store is the Node IndexedDBShim
+   * (see https://github.com/axemclion/IndexedDBShim).
+   */
+  static isMockPersistence() {
+    return typeof process !== "undefined" && process.env?.USE_MOCK_PERSISTENCE === "YES";
+  }
+  /** Helper to get a typed SimpleDbStore from a transaction. */
+  static getStore(txn, store) {
+    return txn.store(store);
+  }
+  // visible for testing
+  /** Parse User Agent to determine iOS version. Returns -1 if not found. */
+  static getIOSVersion(ua) {
+    const iOSVersionRegex = ua.match(/i(?:phone|pad|pod) os ([\d_]+)/i);
+    const version2 = iOSVersionRegex ? iOSVersionRegex[1].split("_").slice(0, 2).join(".") : "-1";
+    return Number(version2);
+  }
+  /*
+   * Creates a new SimpleDb wrapper for IndexedDb database `name`.
+   *
+   * Note that `version` must not be a downgrade. IndexedDB does not support
+   * downgrading the schema version. We currently do not support any way to do
+   * versioning outside of IndexedDB's versioning mechanism, as only
+   * version-upgrade transactions are allowed to do things like create
+   * objectstores.
+   */
+  constructor(name2, version2, schemaConverter) {
+    this.name = name2;
+    this.version = version2;
+    this.schemaConverter = schemaConverter;
+    this.lastClosedDbVersion = null;
+    const iOSVersion = SimpleDb.getIOSVersion(getUA());
+    if (iOSVersion === 12.2) {
+      logError("Firestore persistence suffers from a bug in iOS 12.2 Safari that may cause your app to stop working. See https://stackoverflow.com/q/56496296/110915 for details and a potential workaround.");
+    }
+  }
+  /**
+   * Opens the specified database, creating or upgrading it if necessary.
+   */
+  async ensureDb(action) {
+    if (!this.db) {
+      logDebug(LOG_TAG$i, "Opening database:", this.name);
+      this.db = await new Promise((resolve, reject) => {
+        const request = indexedDB.open(this.name, this.version);
+        request.onsuccess = (event) => {
+          const db = event.target.result;
+          resolve(db);
+        };
+        request.onblocked = () => {
+          reject(new IndexedDbTransactionError(action, "Cannot upgrade IndexedDB schema while another tab is open. Close all tabs that access Firestore and reload this page to proceed."));
+        };
+        request.onerror = (event) => {
+          const error = event.target.error;
+          if (error.name === "VersionError") {
+            reject(new FirestoreError(Code.FAILED_PRECONDITION, "A newer version of the Firestore SDK was previously used and so the persisted data is not compatible with the version of the SDK you are now using. The SDK will operate with persistence disabled. If you need persistence, please re-upgrade to a newer version of the SDK or else clear the persisted IndexedDB data for your app to start fresh."));
+          } else if (error.name === "InvalidStateError") {
+            reject(new FirestoreError(Code.FAILED_PRECONDITION, "Unable to open an IndexedDB connection. This could be due to running in a private browsing session on a browser whose private browsing sessions do not support IndexedDB: " + error));
+          } else {
+            reject(new IndexedDbTransactionError(action, error));
+          }
+        };
+        request.onupgradeneeded = (event) => {
+          logDebug(LOG_TAG$i, 'Database "' + this.name + '" requires upgrade from version:', event.oldVersion);
+          const db = event.target.result;
+          this.schemaConverter.createOrUpgrade(db, request.transaction, event.oldVersion, this.version).next(() => {
+            logDebug(LOG_TAG$i, "Database upgrade to version " + this.version + " complete");
+          });
+        };
+      });
+    }
+    if (this.versionchangelistener) {
+      this.db.onversionchange = (event) => this.versionchangelistener(event);
+    }
+    return this.db;
+  }
+  setVersionChangeListener(versionChangeListener) {
+    this.versionchangelistener = versionChangeListener;
+    if (this.db) {
+      this.db.onversionchange = (event) => {
+        return versionChangeListener(event);
+      };
+    }
+  }
+  async runTransaction(action, mode, objectStores, transactionFn) {
+    const readonly = mode === "readonly";
+    let attemptNumber = 0;
+    while (true) {
+      ++attemptNumber;
+      try {
+        this.db = await this.ensureDb(action);
+        const transaction = SimpleDbTransaction.open(this.db, action, readonly ? "readonly" : "readwrite", objectStores);
+        const transactionFnResult = transactionFn(transaction).next((result) => {
+          transaction.maybeCommit();
+          return result;
+        }).catch((error) => {
+          transaction.abort(error);
+          return PersistencePromise.reject(error);
+        }).toPromise();
+        transactionFnResult.catch(() => {
+        });
+        await transaction.completionPromise;
+        return transactionFnResult;
+      } catch (e) {
+        const error = e;
+        const retryable = error.name !== "FirebaseError" && attemptNumber < TRANSACTION_RETRY_COUNT;
+        logDebug(LOG_TAG$i, "Transaction failed with error:", error.message, "Retrying:", retryable);
+        this.close();
+        if (!retryable) {
+          return Promise.reject(error);
+        }
+      }
+    }
+  }
+  close() {
+    if (this.db) {
+      this.db.close();
+    }
+    this.db = void 0;
+  }
+}
 function getAndroidVersion(ua) {
   const androidVersionRegex = ua.match(/Android ([\d.]+)/i);
   const version2 = androidVersionRegex ? androidVersionRegex[1].split(".").slice(0, 2).join(".") : "-1";
   return Number(version2);
 }
+class IterationController {
+  constructor(dbCursor) {
+    this.dbCursor = dbCursor;
+    this.shouldStop = false;
+    this.nextKey = null;
+  }
+  get isDone() {
+    return this.shouldStop;
+  }
+  get skipToKey() {
+    return this.nextKey;
+  }
+  set cursor(value) {
+    this.dbCursor = value;
+  }
+  /**
+   * This function can be called to stop iteration at any point.
+   */
+  done() {
+    this.shouldStop = true;
+  }
+  /**
+   * This function can be called to skip to that next key, which could be
+   * an index or a primary key.
+   */
+  skip(key) {
+    this.nextKey = key;
+  }
+  /**
+   * Delete the current cursor value from the object store.
+   *
+   * NOTE: You CANNOT do this with a keysOnly query.
+   */
+  delete() {
+    return wrapRequest(this.dbCursor.delete());
+  }
+}
+class IndexedDbTransactionError extends FirestoreError {
+  constructor(actionName, cause) {
+    super(Code.UNAVAILABLE, `IndexedDB transaction '${actionName}' failed: ${cause}`);
+    this.name = "IndexedDbTransactionError";
+  }
+}
 function isIndexedDbTransactionError(e) {
   return e.name === "IndexedDbTransactionError";
+}
+class SimpleDbStore {
+  constructor(store) {
+    this.store = store;
+  }
+  put(keyOrValue, value) {
+    let request;
+    if (value !== void 0) {
+      logDebug(LOG_TAG$i, "PUT", this.store.name, keyOrValue, value);
+      request = this.store.put(value, keyOrValue);
+    } else {
+      logDebug(LOG_TAG$i, "PUT", this.store.name, "<auto-key>", keyOrValue);
+      request = this.store.put(keyOrValue);
+    }
+    return wrapRequest(request);
+  }
+  /**
+   * Adds a new value into an Object Store and returns the new key. Similar to
+   * IndexedDb's `add()`, this method will fail on primary key collisions.
+   *
+   * @param value - The object to write.
+   * @returns The key of the value to add.
+   */
+  add(value) {
+    logDebug(LOG_TAG$i, "ADD", this.store.name, value, value);
+    const request = this.store.add(value);
+    return wrapRequest(request);
+  }
+  /**
+   * Gets the object with the specified key from the specified store, or null
+   * if no object exists with the specified key.
+   *
+   * @key The key of the object to get.
+   * @returns The object with the specified key or null if no object exists.
+   */
+  get(key) {
+    const request = this.store.get(key);
+    return wrapRequest(request).next((result) => {
+      if (result === void 0) {
+        result = null;
+      }
+      logDebug(LOG_TAG$i, "GET", this.store.name, key, result);
+      return result;
+    });
+  }
+  delete(key) {
+    logDebug(LOG_TAG$i, "DELETE", this.store.name, key);
+    const request = this.store.delete(key);
+    return wrapRequest(request);
+  }
+  /**
+   * If we ever need more of the count variants, we can add overloads. For now,
+   * all we need is to count everything in a store.
+   *
+   * Returns the number of rows in the store.
+   */
+  count() {
+    logDebug(LOG_TAG$i, "COUNT", this.store.name);
+    const request = this.store.count();
+    return wrapRequest(request);
+  }
+  loadAll(indexOrRange, range) {
+    const iterateOptions = this.options(indexOrRange, range);
+    const store = iterateOptions.index ? this.store.index(iterateOptions.index) : this.store;
+    if (typeof store.getAll === "function") {
+      const request = store.getAll(iterateOptions.range);
+      return new PersistencePromise((resolve, reject) => {
+        request.onerror = (event) => {
+          reject(event.target.error);
+        };
+        request.onsuccess = (event) => {
+          resolve(event.target.result);
+        };
+      });
+    } else {
+      const cursor = this.cursor(iterateOptions);
+      const results = [];
+      return this.iterateCursor(cursor, (key, value) => {
+        results.push(value);
+      }).next(() => {
+        return results;
+      });
+    }
+  }
+  /**
+   * Loads the first `count` elements from the provided index range. Loads all
+   * elements if no limit is provided.
+   */
+  loadFirst(range, count2) {
+    const request = this.store.getAll(range, count2 === null ? void 0 : count2);
+    return new PersistencePromise((resolve, reject) => {
+      request.onerror = (event) => {
+        reject(event.target.error);
+      };
+      request.onsuccess = (event) => {
+        resolve(event.target.result);
+      };
+    });
+  }
+  deleteAll(indexOrRange, range) {
+    logDebug(LOG_TAG$i, "DELETE ALL", this.store.name);
+    const options2 = this.options(indexOrRange, range);
+    options2.keysOnly = false;
+    const cursor = this.cursor(options2);
+    return this.iterateCursor(cursor, (key, value, control) => {
+      return control.delete();
+    });
+  }
+  iterate(optionsOrCallback, callback) {
+    let options2;
+    if (!callback) {
+      options2 = {};
+      callback = optionsOrCallback;
+    } else {
+      options2 = optionsOrCallback;
+    }
+    const cursor = this.cursor(options2);
+    return this.iterateCursor(cursor, callback);
+  }
+  /**
+   * Iterates over a store, but waits for the given callback to complete for
+   * each entry before iterating the next entry. This allows the callback to do
+   * asynchronous work to determine if this iteration should continue.
+   *
+   * The provided callback should return `true` to continue iteration, and
+   * `false` otherwise.
+   */
+  iterateSerial(callback) {
+    const cursorRequest = this.cursor({});
+    return new PersistencePromise((resolve, reject) => {
+      cursorRequest.onerror = (event) => {
+        const error = checkForAndReportiOSError(event.target.error);
+        reject(error);
+      };
+      cursorRequest.onsuccess = (event) => {
+        const cursor = event.target.result;
+        if (!cursor) {
+          resolve();
+          return;
+        }
+        callback(cursor.primaryKey, cursor.value).next((shouldContinue) => {
+          if (shouldContinue) {
+            cursor.continue();
+          } else {
+            resolve();
+          }
+        });
+      };
+    });
+  }
+  iterateCursor(cursorRequest, fn) {
+    const results = [];
+    return new PersistencePromise((resolve, reject) => {
+      cursorRequest.onerror = (event) => {
+        reject(event.target.error);
+      };
+      cursorRequest.onsuccess = (event) => {
+        const cursor = event.target.result;
+        if (!cursor) {
+          resolve();
+          return;
+        }
+        const controller = new IterationController(cursor);
+        const userResult = fn(cursor.primaryKey, cursor.value, controller);
+        if (userResult instanceof PersistencePromise) {
+          const userPromise = userResult.catch((err) => {
+            controller.done();
+            return PersistencePromise.reject(err);
+          });
+          results.push(userPromise);
+        }
+        if (controller.isDone) {
+          resolve();
+        } else if (controller.skipToKey === null) {
+          cursor.continue();
+        } else {
+          cursor.continue(controller.skipToKey);
+        }
+      };
+    }).next(() => PersistencePromise.waitFor(results));
+  }
+  options(indexOrRange, range) {
+    let indexName = void 0;
+    if (indexOrRange !== void 0) {
+      if (typeof indexOrRange === "string") {
+        indexName = indexOrRange;
+      } else {
+        range = indexOrRange;
+      }
+    }
+    return { index: indexName, range };
+  }
+  cursor(options2) {
+    let direction = "next";
+    if (options2.reverse) {
+      direction = "prev";
+    }
+    if (options2.index) {
+      const index = this.store.index(options2.index);
+      if (options2.keysOnly) {
+        return index.openKeyCursor(options2.range, direction);
+      } else {
+        return index.openCursor(options2.range, direction);
+      }
+    } else {
+      return this.store.openCursor(options2.range, direction);
+    }
+  }
+}
+function wrapRequest(request) {
+  return new PersistencePromise((resolve, reject) => {
+    request.onsuccess = (event) => {
+      const result = event.target.result;
+      resolve(result);
+    };
+    request.onerror = (event) => {
+      const error = checkForAndReportiOSError(event.target.error);
+      reject(error);
+    };
+  });
+}
+let reportedIOSError = false;
+function checkForAndReportiOSError(error) {
+  const iOSVersion = SimpleDb.getIOSVersion(getUA());
+  if (iOSVersion >= 12.2 && iOSVersion < 13) {
+    const IOS_ERROR = "An internal error was encountered in the Indexed Database server";
+    if (error.message.indexOf(IOS_ERROR) >= 0) {
+      const newError = new FirestoreError("internal", `IOS_INDEXEDDB_BUG1: IndexedDb has thrown '${IOS_ERROR}'. This is likely due to an unavoidable bug in iOS. See https://stackoverflow.com/q/56496296/110915 for details and a potential workaround.`);
+      if (!reportedIOSError) {
+        reportedIOSError = true;
+        setTimeout(() => {
+          throw newError;
+        }, 0);
+      }
+      return newError;
+    }
+  }
+  return error;
+}
+const LOG_TAG$h = "IndexBackfiller";
+const INITIAL_BACKFILL_DELAY_MS = 15 * 1e3;
+const REGULAR_BACKFILL_DELAY_MS = 60 * 1e3;
+const MAX_DOCUMENTS_TO_PROCESS = 50;
+class IndexBackfillerScheduler {
+  constructor(asyncQueue, backfiller) {
+    this.asyncQueue = asyncQueue;
+    this.backfiller = backfiller;
+    this.task = null;
+  }
+  start() {
+    this.schedule(INITIAL_BACKFILL_DELAY_MS);
+  }
+  stop() {
+    if (this.task) {
+      this.task.cancel();
+      this.task = null;
+    }
+  }
+  get started() {
+    return this.task !== null;
+  }
+  schedule(delay) {
+    logDebug(LOG_TAG$h, `Scheduled in ${delay}ms`);
+    this.task = this.asyncQueue.enqueueAfterDelay("index_backfill", delay, async () => {
+      this.task = null;
+      try {
+        const documentsProcessed = await this.backfiller.backfill();
+        logDebug(LOG_TAG$h, `Documents written: ${documentsProcessed}`);
+      } catch (e) {
+        if (isIndexedDbTransactionError(e)) {
+          logDebug(LOG_TAG$h, "Ignoring IndexedDB error during index backfill: ", e);
+        } else {
+          await ignoreIfPrimaryLeaseLoss(e);
+        }
+      }
+      await this.schedule(REGULAR_BACKFILL_DELAY_MS);
+    });
+  }
+}
+class IndexBackfiller {
+  constructor(localStore, persistence) {
+    this.localStore = localStore;
+    this.persistence = persistence;
+  }
+  async backfill(maxDocumentsToProcess = MAX_DOCUMENTS_TO_PROCESS) {
+    return this.persistence.runTransaction("Backfill Indexes", "readwrite-primary", (txn) => this.writeIndexEntries(txn, maxDocumentsToProcess));
+  }
+  /** Writes index entries until the cap is reached. Returns the number of documents processed. */
+  writeIndexEntries(transaction, maxDocumentsToProcess) {
+    const processedCollectionGroups = /* @__PURE__ */ new Set();
+    let documentsRemaining = maxDocumentsToProcess;
+    let continueLoop = true;
+    return PersistencePromise.doWhile(() => continueLoop === true && documentsRemaining > 0, () => {
+      return this.localStore.indexManager.getNextCollectionGroupToUpdate(transaction).next((collectionGroup2) => {
+        if (collectionGroup2 === null || processedCollectionGroups.has(collectionGroup2)) {
+          continueLoop = false;
+        } else {
+          logDebug(LOG_TAG$h, `Processing collection: ${collectionGroup2}`);
+          return this.writeEntriesForCollectionGroup(transaction, collectionGroup2, documentsRemaining).next((documentsProcessed) => {
+            documentsRemaining -= documentsProcessed;
+            processedCollectionGroups.add(collectionGroup2);
+          });
+        }
+      });
+    }).next(() => maxDocumentsToProcess - documentsRemaining);
+  }
+  /**
+   * Writes entries for the provided collection group. Returns the number of documents processed.
+   */
+  writeEntriesForCollectionGroup(transaction, collectionGroup2, documentsRemainingUnderCap) {
+    return this.localStore.indexManager.getMinOffsetFromCollectionGroup(transaction, collectionGroup2).next((existingOffset) => this.localStore.localDocuments.getNextDocuments(transaction, collectionGroup2, existingOffset, documentsRemainingUnderCap).next((nextBatch) => {
+      const docs = nextBatch.changes;
+      return this.localStore.indexManager.updateIndexEntries(transaction, docs).next(() => this.getNewOffset(existingOffset, nextBatch)).next((newOffset) => {
+        logDebug(LOG_TAG$h, `Updating offset: ${newOffset}`);
+        return this.localStore.indexManager.updateCollectionGroup(transaction, collectionGroup2, newOffset);
+      }).next(() => docs.size);
+    }));
+  }
+  /** Returns the next offset based on the provided documents. */
+  getNewOffset(existingOffset, lookupResult) {
+    let maxOffset = existingOffset;
+    lookupResult.changes.forEach((key, document) => {
+      const newOffset = newIndexOffsetFromDocument(document);
+      if (indexOffsetComparator(newOffset, maxOffset) > 0) {
+        maxOffset = newOffset;
+      }
+    });
+    return new IndexOffset(maxOffset.readTime, maxOffset.documentKey, Math.max(lookupResult.batchId, existingOffset.largestBatchId));
+  }
 }
 class ListenSequence {
   constructor(previousValue, sequenceNumberSyncer) {
@@ -1447,14 +2121,234 @@ function encodeSegment(segment, resultBuf) {
 function encodeSeparator(result) {
   return result + escapeChar + encodedSeparatorChar;
 }
+function decodeResourcePath(path) {
+  const length = path.length;
+  hardAssert(length >= 2, 64408, { path });
+  if (length === 2) {
+    hardAssert(path.charAt(0) === escapeChar && path.charAt(1) === encodedSeparatorChar, 56145, { path });
+    return ResourcePath.emptyPath();
+  }
+  const lastReasonableEscapeIndex = length - 2;
+  const segments = [];
+  let segmentBuilder = "";
+  for (let start = 0; start < length; ) {
+    const end = path.indexOf(escapeChar, start);
+    if (end < 0 || end > lastReasonableEscapeIndex) {
+      fail(50515, { path });
+    }
+    const next = path.charAt(end + 1);
+    switch (next) {
+      case encodedSeparatorChar:
+        const currentPiece = path.substring(start, end);
+        let segment;
+        if (segmentBuilder.length === 0) {
+          segment = currentPiece;
+        } else {
+          segmentBuilder += currentPiece;
+          segment = segmentBuilder;
+          segmentBuilder = "";
+        }
+        segments.push(segment);
+        break;
+      case encodedNul:
+        segmentBuilder += path.substring(start, end);
+        segmentBuilder += "\0";
+        break;
+      case encodedEscape:
+        segmentBuilder += path.substring(start, end + 1);
+        break;
+      default:
+        fail(61167, { path });
+    }
+    start = end + 2;
+  }
+  return new ResourcePath(segments);
+}
+const DbRemoteDocumentStore$1 = "remoteDocuments";
+const DbPrimaryClientStore = "owner";
+const DbPrimaryClientKey = "owner";
+const DbMutationQueueStore = "mutationQueues";
+const DbMutationQueueKeyPath = "userId";
+const DbMutationBatchStore = "mutations";
+const DbMutationBatchKeyPath = "batchId";
+const DbMutationBatchUserMutationsIndex = "userMutationsIndex";
+const DbMutationBatchUserMutationsKeyPath = ["userId", "batchId"];
+function newDbDocumentMutationPrefixForUser(userId) {
+  return [userId];
+}
+function newDbDocumentMutationPrefixForPath(userId, path) {
+  return [userId, encodeResourcePath(path)];
+}
+function newDbDocumentMutationKey(userId, path, batchId) {
+  return [userId, encodeResourcePath(path), batchId];
+}
+const DbDocumentMutationPlaceholder = {};
+const DbDocumentMutationStore = "documentMutations";
+const DbRemoteDocumentStore = "remoteDocumentsV14";
+const DbRemoteDocumentKeyPath = [
+  "prefixPath",
+  "collectionGroup",
+  "readTime",
+  "documentId"
+];
+const DbRemoteDocumentDocumentKeyIndex = "documentKeyIndex";
+const DbRemoteDocumentDocumentKeyIndexPath = [
+  "prefixPath",
+  "collectionGroup",
+  "documentId"
+];
+const DbRemoteDocumentCollectionGroupIndex = "collectionGroupIndex";
+const DbRemoteDocumentCollectionGroupIndexPath = [
+  "collectionGroup",
+  "readTime",
+  "prefixPath",
+  "documentId"
+];
+const DbRemoteDocumentGlobalStore = "remoteDocumentGlobal";
+const DbRemoteDocumentGlobalKey = "remoteDocumentGlobalKey";
+const DbTargetStore = "targets";
+const DbTargetKeyPath = "targetId";
+const DbTargetQueryTargetsIndexName = "queryTargetsIndex";
+const DbTargetQueryTargetsKeyPath = ["canonicalId", "targetId"];
+const DbTargetDocumentStore = "targetDocuments";
+const DbTargetDocumentKeyPath = ["targetId", "path"];
+const DbTargetDocumentDocumentTargetsIndex = "documentTargetsIndex";
+const DbTargetDocumentDocumentTargetsKeyPath = ["path", "targetId"];
+const DbTargetGlobalKey = "targetGlobalKey";
+const DbTargetGlobalStore = "targetGlobal";
+const DbCollectionParentStore = "collectionParents";
+const DbCollectionParentKeyPath = ["collectionId", "parent"];
+const DbClientMetadataStore = "clientMetadata";
+const DbClientMetadataKeyPath = "clientId";
+const DbBundleStore = "bundles";
+const DbBundleKeyPath = "bundleId";
+const DbNamedQueryStore = "namedQueries";
+const DbNamedQueryKeyPath = "name";
+const DbIndexConfigurationStore = "indexConfiguration";
+const DbIndexConfigurationKeyPath = "indexId";
+const DbIndexConfigurationCollectionGroupIndex = "collectionGroupIndex";
+const DbIndexConfigurationCollectionGroupIndexPath = "collectionGroup";
+const DbIndexStateStore = "indexState";
+const DbIndexStateKeyPath = ["indexId", "uid"];
+const DbIndexStateSequenceNumberIndex = "sequenceNumberIndex";
+const DbIndexStateSequenceNumberIndexPath = ["uid", "sequenceNumber"];
+const DbIndexEntryStore = "indexEntries";
+const DbIndexEntryKeyPath = [
+  "indexId",
+  "uid",
+  "arrayValue",
+  "directionalValue",
+  "orderedDocumentKey",
+  "documentKey"
+];
+const DbIndexEntryDocumentKeyIndex = "documentKeyIndex";
+const DbIndexEntryDocumentKeyIndexPath = [
+  "indexId",
+  "uid",
+  "orderedDocumentKey"
+];
+const DbDocumentOverlayStore = "documentOverlays";
+const DbDocumentOverlayKeyPath = [
+  "userId",
+  "collectionPath",
+  "documentId"
+];
+const DbDocumentOverlayCollectionPathOverlayIndex = "collectionPathOverlayIndex";
+const DbDocumentOverlayCollectionPathOverlayIndexPath = [
+  "userId",
+  "collectionPath",
+  "largestBatchId"
+];
+const DbDocumentOverlayCollectionGroupOverlayIndex = "collectionGroupOverlayIndex";
+const DbDocumentOverlayCollectionGroupOverlayIndexPath = [
+  "userId",
+  "collectionGroup",
+  "largestBatchId"
+];
+const DbGlobalsStore = "globals";
+const DbGlobalsKeyPath = "name";
+const V1_STORES = [
+  DbMutationQueueStore,
+  DbMutationBatchStore,
+  DbDocumentMutationStore,
+  DbRemoteDocumentStore$1,
+  DbTargetStore,
+  DbPrimaryClientStore,
+  DbTargetGlobalStore,
+  DbTargetDocumentStore
+];
+const V3_STORES = V1_STORES;
+const V4_STORES = [...V3_STORES, DbClientMetadataStore];
+const V6_STORES = [...V4_STORES, DbRemoteDocumentGlobalStore];
+const V8_STORES = [...V6_STORES, DbCollectionParentStore];
+const V11_STORES = [...V8_STORES, DbBundleStore, DbNamedQueryStore];
+const V12_STORES = [...V11_STORES, DbDocumentOverlayStore];
+const V13_STORES = [
+  DbMutationQueueStore,
+  DbMutationBatchStore,
+  DbDocumentMutationStore,
+  DbRemoteDocumentStore,
+  DbTargetStore,
+  DbPrimaryClientStore,
+  DbTargetGlobalStore,
+  DbTargetDocumentStore,
+  DbClientMetadataStore,
+  DbRemoteDocumentGlobalStore,
+  DbCollectionParentStore,
+  DbBundleStore,
+  DbNamedQueryStore,
+  DbDocumentOverlayStore
+];
+const V14_STORES = V13_STORES;
+const V15_STORES = [
+  ...V14_STORES,
+  DbIndexConfigurationStore,
+  DbIndexStateStore,
+  DbIndexEntryStore
+];
+const V16_STORES = V15_STORES;
+const V17_STORES = [...V15_STORES, DbGlobalsStore];
+const V18_STORES = V17_STORES;
+function getObjectStores(schemaVersion) {
+  if (schemaVersion === 18) {
+    return V18_STORES;
+  } else if (schemaVersion === 17) {
+    return V17_STORES;
+  } else if (schemaVersion === 16) {
+    return V16_STORES;
+  } else if (schemaVersion === 15) {
+    return V15_STORES;
+  } else if (schemaVersion === 14) {
+    return V14_STORES;
+  } else if (schemaVersion === 13) {
+    return V13_STORES;
+  } else if (schemaVersion === 12) {
+    return V12_STORES;
+  } else if (schemaVersion === 11) {
+    return V11_STORES;
+  } else {
+    fail(60245);
+  }
+}
+class IndexedDbTransaction extends PersistenceTransaction {
+  constructor(simpleDbTransaction, currentSequenceNumber) {
+    super();
+    this.simpleDbTransaction = simpleDbTransaction;
+    this.currentSequenceNumber = currentSequenceNumber;
+  }
+}
+function getStore(txn, store) {
+  const indexedDbTransaction = debugCast(txn);
+  return SimpleDb.getStore(indexedDbTransaction.simpleDbTransaction, store);
+}
 function objectSize(obj) {
-  let count = 0;
+  let count2 = 0;
   for (const key in obj) {
     if (Object.prototype.hasOwnProperty.call(obj, key)) {
-      count++;
+      count2++;
     }
   }
-  return count;
+  return count2;
 }
 function forEach(obj, fn) {
   for (const key in obj) {
@@ -1462,6 +2356,15 @@ function forEach(obj, fn) {
       fn(key, obj[key]);
     }
   }
+}
+function mapToArray(obj, fn) {
+  const result = [];
+  for (const key in obj) {
+    if (Object.prototype.hasOwnProperty.call(obj, key)) {
+      result.push(fn(obj[key], key, obj));
+    }
+  }
+  return result;
 }
 function isEmpty(obj) {
   for (const key in obj) {
@@ -2014,6 +2917,41 @@ class SortedSetIterator {
     return this.iter.hasNext();
   }
 }
+function diffSortedSets(before, after, comparator, onAdd, onRemove) {
+  const beforeIt = before.getIterator();
+  const afterIt = after.getIterator();
+  let beforeValue = advanceIterator(beforeIt);
+  let afterValue = advanceIterator(afterIt);
+  while (beforeValue || afterValue) {
+    let added = false;
+    let removed = false;
+    if (beforeValue && afterValue) {
+      const cmp = comparator(beforeValue, afterValue);
+      if (cmp < 0) {
+        removed = true;
+      } else if (cmp > 0) {
+        added = true;
+      }
+    } else if (beforeValue != null) {
+      removed = true;
+    } else {
+      added = true;
+    }
+    if (added) {
+      onAdd(afterValue);
+      afterValue = advanceIterator(afterIt);
+    } else if (removed) {
+      onRemove(beforeValue);
+      beforeValue = advanceIterator(beforeIt);
+    } else {
+      beforeValue = advanceIterator(beforeIt);
+      afterValue = advanceIterator(afterIt);
+    }
+  }
+}
+function advanceIterator(it) {
+  return it.hasNext() ? it.getNext() : void 0;
+}
 class FieldMask {
   constructor(fields) {
     this.fields = fields;
@@ -2059,6 +2997,9 @@ function decodeBase64(encoded) {
 }
 function encodeBase64(raw) {
   return Buffer.from(raw, "binary").toString("base64");
+}
+function isBase64Available() {
+  return true;
 }
 class ByteString {
   constructor(binaryString) {
@@ -2263,10 +3204,17 @@ function isSafeInteger(value) {
 const TYPE_KEY = "__type__";
 const MAX_VALUE_TYPE = "__max__";
 const MAX_VALUE = {
-  mapValue: {}
+  mapValue: {
+    fields: {
+      "__type__": { stringValue: MAX_VALUE_TYPE }
+    }
+  }
 };
 const VECTOR_VALUE_SENTINEL = "__vector__";
 const VECTOR_MAP_VECTORS_KEY = "value";
+const MIN_VALUE = {
+  nullValue: "NULL_VALUE"
+};
 function typeOrder(value) {
   if ("nullValue" in value) {
     return 0;
@@ -2685,6 +3633,96 @@ function deepClone(source) {
 function isMaxValue(value) {
   return (((value.mapValue || {}).fields || {})["__type__"] || {}).stringValue === MAX_VALUE_TYPE;
 }
+const MIN_VECTOR_VALUE = {
+  mapValue: {
+    fields: {
+      [TYPE_KEY]: { stringValue: VECTOR_VALUE_SENTINEL },
+      [VECTOR_MAP_VECTORS_KEY]: {
+        arrayValue: {}
+      }
+    }
+  }
+};
+function valuesGetLowerBound(value) {
+  if ("nullValue" in value) {
+    return MIN_VALUE;
+  } else if ("booleanValue" in value) {
+    return { booleanValue: false };
+  } else if ("integerValue" in value || "doubleValue" in value) {
+    return { doubleValue: NaN };
+  } else if ("timestampValue" in value) {
+    return { timestampValue: { seconds: Number.MIN_SAFE_INTEGER } };
+  } else if ("stringValue" in value) {
+    return { stringValue: "" };
+  } else if ("bytesValue" in value) {
+    return { bytesValue: "" };
+  } else if ("referenceValue" in value) {
+    return refValue(DatabaseId.empty(), DocumentKey.empty());
+  } else if ("geoPointValue" in value) {
+    return { geoPointValue: { latitude: -90, longitude: -180 } };
+  } else if ("arrayValue" in value) {
+    return { arrayValue: {} };
+  } else if ("mapValue" in value) {
+    if (isVectorValue(value)) {
+      return MIN_VECTOR_VALUE;
+    }
+    return { mapValue: {} };
+  } else {
+    return fail(35942, { value });
+  }
+}
+function valuesGetUpperBound(value) {
+  if ("nullValue" in value) {
+    return { booleanValue: false };
+  } else if ("booleanValue" in value) {
+    return { doubleValue: NaN };
+  } else if ("integerValue" in value || "doubleValue" in value) {
+    return { timestampValue: { seconds: Number.MIN_SAFE_INTEGER } };
+  } else if ("timestampValue" in value) {
+    return { stringValue: "" };
+  } else if ("stringValue" in value) {
+    return { bytesValue: "" };
+  } else if ("bytesValue" in value) {
+    return refValue(DatabaseId.empty(), DocumentKey.empty());
+  } else if ("referenceValue" in value) {
+    return { geoPointValue: { latitude: -90, longitude: -180 } };
+  } else if ("geoPointValue" in value) {
+    return { arrayValue: {} };
+  } else if ("arrayValue" in value) {
+    return MIN_VECTOR_VALUE;
+  } else if ("mapValue" in value) {
+    if (isVectorValue(value)) {
+      return { mapValue: {} };
+    }
+    return MAX_VALUE;
+  } else {
+    return fail(61959, { value });
+  }
+}
+function lowerBoundCompare(left, right) {
+  const cmp = valueCompare(left.value, right.value);
+  if (cmp !== 0) {
+    return cmp;
+  }
+  if (left.inclusive && !right.inclusive) {
+    return -1;
+  } else if (!left.inclusive && right.inclusive) {
+    return 1;
+  }
+  return 0;
+}
+function upperBoundCompare(left, right) {
+  const cmp = valueCompare(left.value, right.value);
+  if (cmp !== 0) {
+    return cmp;
+  }
+  if (left.inclusive && !right.inclusive) {
+    return 1;
+  } else if (!left.inclusive && right.inclusive) {
+    return -1;
+  }
+  return 0;
+}
 class ObjectValue {
   constructor(value) {
     this.value = value;
@@ -2997,10 +4035,10 @@ class Bound {
     this.inclusive = inclusive;
   }
 }
-function boundCompareToDocument(bound, orderBy, doc3) {
+function boundCompareToDocument(bound, orderBy2, doc3) {
   let comparison = 0;
   for (let i = 0; i < bound.position.length; i++) {
-    const orderByComponent = orderBy[i];
+    const orderByComponent = orderBy2[i];
     const component = bound.position[i];
     if (orderByComponent.field.isKeyField()) {
       comparison = DocumentKey.comparator(DocumentKey.fromName(component.referenceValue), doc3.key);
@@ -3017,12 +4055,12 @@ function boundCompareToDocument(bound, orderBy, doc3) {
   }
   return comparison;
 }
-function boundSortsAfterDocument(bound, orderBy, doc3) {
-  const comparison = boundCompareToDocument(bound, orderBy, doc3);
+function boundSortsAfterDocument(bound, orderBy2, doc3) {
+  const comparison = boundCompareToDocument(bound, orderBy2, doc3);
   return bound.inclusive ? comparison >= 0 : comparison > 0;
 }
-function boundSortsBeforeDocument(bound, orderBy, doc3) {
-  const comparison = boundCompareToDocument(bound, orderBy, doc3);
+function boundSortsBeforeDocument(bound, orderBy2, doc3) {
+  const comparison = boundCompareToDocument(bound, orderBy2, doc3);
   return bound.inclusive ? comparison <= 0 : comparison < 0;
 }
 function boundEquals(left, right) {
@@ -3049,11 +4087,11 @@ class OrderBy {
     this.dir = dir;
   }
 }
-function canonifyOrderBy(orderBy) {
-  return orderBy.field.canonicalString() + orderBy.dir;
+function canonifyOrderBy(orderBy2) {
+  return orderBy2.field.canonicalString() + orderBy2.dir;
 }
-function stringifyOrderBy(orderBy) {
-  return `${orderBy.field.canonicalString()} (${orderBy.dir})`;
+function stringifyOrderBy(orderBy2) {
+  return `${orderBy2.field.canonicalString()} (${orderBy2.dir})`;
 }
 function orderByEquals(left, right) {
   return left.dir === right.dir && left.field.isEqual(right.field);
@@ -3174,6 +4212,9 @@ class CompositeFilter extends Filter {
 function compositeFilterIsConjunction(compositeFilter) {
   return compositeFilter.op === "and";
 }
+function compositeFilterIsDisjunction(compositeFilter) {
+  return compositeFilter.op === "or";
+}
 function compositeFilterIsFlatConjunction(compositeFilter) {
   return compositeFilterIsFlat(compositeFilter) && compositeFilterIsConjunction(compositeFilter);
 }
@@ -3213,6 +4254,10 @@ function compositeFilterEquals(f1, f2) {
     return subFiltersMatch;
   }
   return false;
+}
+function compositeFilterWithAddedFilters(compositeFilter, otherFilters) {
+  const mergedFilters = compositeFilter.filters.concat(otherFilters);
+  return CompositeFilter.create(mergedFilters, compositeFilter.op);
 }
 function stringifyFilter(filter) {
   if (filter instanceof FieldFilter) {
@@ -3305,19 +4350,19 @@ class ArrayContainsAnyFilter extends FieldFilter {
   }
 }
 class TargetImpl {
-  constructor(path, collectionGroup = null, orderBy = [], filters = [], limit = null, startAt = null, endAt = null) {
+  constructor(path, collectionGroup2 = null, orderBy2 = [], filters = [], limit2 = null, startAt2 = null, endAt2 = null) {
     this.path = path;
-    this.collectionGroup = collectionGroup;
-    this.orderBy = orderBy;
+    this.collectionGroup = collectionGroup2;
+    this.orderBy = orderBy2;
     this.filters = filters;
-    this.limit = limit;
-    this.startAt = startAt;
-    this.endAt = endAt;
+    this.limit = limit2;
+    this.startAt = startAt2;
+    this.endAt = endAt2;
     this.memoizedCanonicalId = null;
   }
 }
-function newTarget(path, collectionGroup = null, orderBy = [], filters = [], limit = null, startAt = null, endAt = null) {
-  return new TargetImpl(path, collectionGroup, orderBy, filters, limit, startAt, endAt);
+function newTarget(path, collectionGroup2 = null, orderBy2 = [], filters = [], limit2 = null, startAt2 = null, endAt2 = null) {
+  return new TargetImpl(path, collectionGroup2, orderBy2, filters, limit2, startAt2, endAt2);
 }
 function canonifyTarget(target) {
   const targetImpl = debugCast(target);
@@ -3408,20 +4453,192 @@ function targetEquals(left, right) {
 function targetIsDocumentTarget(target) {
   return DocumentKey.isDocumentKey(target.path) && target.collectionGroup === null && target.filters.length === 0;
 }
+function targetGetFieldFiltersForPath(target, path) {
+  return target.filters.filter((f) => f instanceof FieldFilter && f.field.isEqual(path));
+}
+function targetGetArrayValues(target, fieldIndex) {
+  const segment = fieldIndexGetArraySegment(fieldIndex);
+  if (segment === void 0) {
+    return null;
+  }
+  for (const fieldFilter of targetGetFieldFiltersForPath(target, segment.fieldPath)) {
+    switch (fieldFilter.op) {
+      case "array-contains-any":
+        return fieldFilter.value.arrayValue.values || [];
+      case "array-contains":
+        return [fieldFilter.value];
+    }
+  }
+  return null;
+}
+function targetGetNotInValues(target, fieldIndex) {
+  const values = /* @__PURE__ */ new Map();
+  for (const segment of fieldIndexGetDirectionalSegments(fieldIndex)) {
+    for (const fieldFilter of targetGetFieldFiltersForPath(target, segment.fieldPath)) {
+      switch (fieldFilter.op) {
+        case "==":
+        case "in":
+          values.set(segment.fieldPath.canonicalString(), fieldFilter.value);
+          break;
+        case "not-in":
+        case "!=":
+          values.set(segment.fieldPath.canonicalString(), fieldFilter.value);
+          return Array.from(values.values());
+      }
+    }
+  }
+  return null;
+}
+function targetGetLowerBound(target, fieldIndex) {
+  const values = [];
+  let inclusive = true;
+  for (const segment of fieldIndexGetDirectionalSegments(fieldIndex)) {
+    const segmentBound = segment.kind === 0 ? targetGetAscendingBound(target, segment.fieldPath, target.startAt) : targetGetDescendingBound(target, segment.fieldPath, target.startAt);
+    values.push(segmentBound.value);
+    inclusive && (inclusive = segmentBound.inclusive);
+  }
+  return new Bound(values, inclusive);
+}
+function targetGetUpperBound(target, fieldIndex) {
+  const values = [];
+  let inclusive = true;
+  for (const segment of fieldIndexGetDirectionalSegments(fieldIndex)) {
+    const segmentBound = segment.kind === 0 ? targetGetDescendingBound(target, segment.fieldPath, target.endAt) : targetGetAscendingBound(target, segment.fieldPath, target.endAt);
+    values.push(segmentBound.value);
+    inclusive && (inclusive = segmentBound.inclusive);
+  }
+  return new Bound(values, inclusive);
+}
+function targetGetAscendingBound(target, fieldPath, bound) {
+  let value = MIN_VALUE;
+  let inclusive = true;
+  for (const fieldFilter of targetGetFieldFiltersForPath(target, fieldPath)) {
+    let filterValue = MIN_VALUE;
+    let filterInclusive = true;
+    switch (fieldFilter.op) {
+      case "<":
+      case "<=":
+        filterValue = valuesGetLowerBound(fieldFilter.value);
+        break;
+      case "==":
+      case "in":
+      case ">=":
+        filterValue = fieldFilter.value;
+        break;
+      case ">":
+        filterValue = fieldFilter.value;
+        filterInclusive = false;
+        break;
+      case "!=":
+      case "not-in":
+        filterValue = MIN_VALUE;
+        break;
+    }
+    if (lowerBoundCompare({ value, inclusive }, { value: filterValue, inclusive: filterInclusive }) < 0) {
+      value = filterValue;
+      inclusive = filterInclusive;
+    }
+  }
+  if (bound !== null) {
+    for (let i = 0; i < target.orderBy.length; ++i) {
+      const orderBy2 = target.orderBy[i];
+      if (orderBy2.field.isEqual(fieldPath)) {
+        const cursorValue = bound.position[i];
+        if (lowerBoundCompare({ value, inclusive }, { value: cursorValue, inclusive: bound.inclusive }) < 0) {
+          value = cursorValue;
+          inclusive = bound.inclusive;
+        }
+        break;
+      }
+    }
+  }
+  return { value, inclusive };
+}
+function targetGetDescendingBound(target, fieldPath, bound) {
+  let value = MAX_VALUE;
+  let inclusive = true;
+  for (const fieldFilter of targetGetFieldFiltersForPath(target, fieldPath)) {
+    let filterValue = MAX_VALUE;
+    let filterInclusive = true;
+    switch (fieldFilter.op) {
+      case ">=":
+      case ">":
+        filterValue = valuesGetUpperBound(fieldFilter.value);
+        filterInclusive = false;
+        break;
+      case "==":
+      case "in":
+      case "<=":
+        filterValue = fieldFilter.value;
+        break;
+      case "<":
+        filterValue = fieldFilter.value;
+        filterInclusive = false;
+        break;
+      case "!=":
+      case "not-in":
+        filterValue = MAX_VALUE;
+        break;
+    }
+    if (upperBoundCompare({ value, inclusive }, { value: filterValue, inclusive: filterInclusive }) > 0) {
+      value = filterValue;
+      inclusive = filterInclusive;
+    }
+  }
+  if (bound !== null) {
+    for (let i = 0; i < target.orderBy.length; ++i) {
+      const orderBy2 = target.orderBy[i];
+      if (orderBy2.field.isEqual(fieldPath)) {
+        const cursorValue = bound.position[i];
+        if (upperBoundCompare({ value, inclusive }, { value: cursorValue, inclusive: bound.inclusive }) > 0) {
+          value = cursorValue;
+          inclusive = bound.inclusive;
+        }
+        break;
+      }
+    }
+  }
+  return { value, inclusive };
+}
+function targetGetSegmentCount(target) {
+  let fields = new SortedSet(FieldPath$1.comparator);
+  let hasArraySegment = false;
+  for (const filter of target.filters) {
+    for (const subFilter of filter.getFlattenedFilters()) {
+      if (subFilter.field.isKeyField()) {
+        continue;
+      }
+      if (subFilter.op === "array-contains" || subFilter.op === "array-contains-any") {
+        hasArraySegment = true;
+      } else {
+        fields = fields.add(subFilter.field);
+      }
+    }
+  }
+  for (const orderBy2 of target.orderBy) {
+    if (!orderBy2.field.isKeyField()) {
+      fields = fields.add(orderBy2.field);
+    }
+  }
+  return fields.size + (hasArraySegment ? 1 : 0);
+}
+function targetHasLimit(target) {
+  return target.limit !== null;
+}
 class QueryImpl {
   /**
    * Initializes a Query with a path and optional additional query constraints.
    * Path must currently be empty if this is a collection group query.
    */
-  constructor(path, collectionGroup = null, explicitOrderBy = [], filters = [], limit = null, limitType = "F", startAt = null, endAt = null) {
+  constructor(path, collectionGroup2 = null, explicitOrderBy = [], filters = [], limit2 = null, limitType = "F", startAt2 = null, endAt2 = null) {
     this.path = path;
-    this.collectionGroup = collectionGroup;
+    this.collectionGroup = collectionGroup2;
     this.explicitOrderBy = explicitOrderBy;
     this.filters = filters;
-    this.limit = limit;
+    this.limit = limit2;
     this.limitType = limitType;
-    this.startAt = startAt;
-    this.endAt = endAt;
+    this.startAt = startAt2;
+    this.endAt = endAt2;
     this.memoizedNormalizedOrderBy = null;
     this.memoizedTarget = null;
     this.memoizedAggregateTarget = null;
@@ -3429,8 +4646,8 @@ class QueryImpl {
     if (this.endAt) ;
   }
 }
-function newQuery(path, collectionGroup, explicitOrderBy, filters, limit, limitType, startAt, endAt) {
-  return new QueryImpl(path, collectionGroup, explicitOrderBy, filters, limit, limitType, startAt, endAt);
+function newQuery(path, collectionGroup2, explicitOrderBy, filters, limit2, limitType, startAt2, endAt2) {
+  return new QueryImpl(path, collectionGroup2, explicitOrderBy, filters, limit2, limitType, startAt2, endAt2);
 }
 function newQueryForPath(path) {
   return new QueryImpl(path);
@@ -3463,6 +4680,9 @@ function getInequalityFilterFields(query2) {
   });
   return result;
 }
+function newQueryForCollectionGroup(collectionId) {
+  return new QueryImpl(ResourcePath.emptyPath(), collectionId);
+}
 function isDocumentQuery$1(query2) {
   return DocumentKey.isDocumentKey(query2.path) && query2.collectionGroup === null && query2.filters.length === 0;
 }
@@ -3474,9 +4694,9 @@ function queryNormalizedOrderBy(query2) {
   if (queryImpl.memoizedNormalizedOrderBy === null) {
     queryImpl.memoizedNormalizedOrderBy = [];
     const fieldsNormalized = /* @__PURE__ */ new Set();
-    for (const orderBy of queryImpl.explicitOrderBy) {
-      queryImpl.memoizedNormalizedOrderBy.push(orderBy);
-      fieldsNormalized.add(orderBy.field.canonicalString());
+    for (const orderBy2 of queryImpl.explicitOrderBy) {
+      queryImpl.memoizedNormalizedOrderBy.push(orderBy2);
+      fieldsNormalized.add(orderBy2.field.canonicalString());
     }
     const lastDirection = queryImpl.explicitOrderBy.length > 0 ? queryImpl.explicitOrderBy[queryImpl.explicitOrderBy.length - 1].dir : "asc";
     const inequalityFields = getInequalityFilterFields(queryImpl);
@@ -3498,25 +4718,42 @@ function queryToTarget(query2) {
   }
   return queryImpl.memoizedTarget;
 }
+function queryToAggregateTarget(query2) {
+  const queryImpl = debugCast(query2);
+  if (!queryImpl.memoizedAggregateTarget) {
+    queryImpl.memoizedAggregateTarget = _queryToTarget(queryImpl, query2.explicitOrderBy);
+  }
+  return queryImpl.memoizedAggregateTarget;
+}
 function _queryToTarget(queryImpl, orderBys) {
   if (queryImpl.limitType === "F") {
     return newTarget(queryImpl.path, queryImpl.collectionGroup, orderBys, queryImpl.filters, queryImpl.limit, queryImpl.startAt, queryImpl.endAt);
   } else {
-    orderBys = orderBys.map((orderBy) => {
-      const dir = orderBy.dir === "desc" ? "asc" : "desc";
-      return new OrderBy(orderBy.field, dir);
+    orderBys = orderBys.map((orderBy2) => {
+      const dir = orderBy2.dir === "desc" ? "asc" : "desc";
+      return new OrderBy(orderBy2.field, dir);
     });
-    const startAt = queryImpl.endAt ? new Bound(queryImpl.endAt.position, queryImpl.endAt.inclusive) : null;
-    const endAt = queryImpl.startAt ? new Bound(queryImpl.startAt.position, queryImpl.startAt.inclusive) : null;
-    return newTarget(queryImpl.path, queryImpl.collectionGroup, orderBys, queryImpl.filters, queryImpl.limit, startAt, endAt);
+    const startAt2 = queryImpl.endAt ? new Bound(queryImpl.endAt.position, queryImpl.endAt.inclusive) : null;
+    const endAt2 = queryImpl.startAt ? new Bound(queryImpl.startAt.position, queryImpl.startAt.inclusive) : null;
+    return newTarget(queryImpl.path, queryImpl.collectionGroup, orderBys, queryImpl.filters, queryImpl.limit, startAt2, endAt2);
   }
 }
 function queryWithAddedFilter(query2, filter) {
   const newFilters = query2.filters.concat([filter]);
   return new QueryImpl(query2.path, query2.collectionGroup, query2.explicitOrderBy.slice(), newFilters, query2.limit, query2.limitType, query2.startAt, query2.endAt);
 }
-function queryWithLimit(query2, limit, limitType) {
-  return new QueryImpl(query2.path, query2.collectionGroup, query2.explicitOrderBy.slice(), query2.filters.slice(), limit, limitType, query2.startAt, query2.endAt);
+function queryWithAddedOrderBy(query2, orderBy2) {
+  const newOrderBy = query2.explicitOrderBy.concat([orderBy2]);
+  return new QueryImpl(query2.path, query2.collectionGroup, newOrderBy, query2.filters.slice(), query2.limit, query2.limitType, query2.startAt, query2.endAt);
+}
+function queryWithLimit(query2, limit2, limitType) {
+  return new QueryImpl(query2.path, query2.collectionGroup, query2.explicitOrderBy.slice(), query2.filters.slice(), limit2, limitType, query2.startAt, query2.endAt);
+}
+function queryWithStartAt(query2, bound) {
+  return new QueryImpl(query2.path, query2.collectionGroup, query2.explicitOrderBy.slice(), query2.filters.slice(), query2.limit, query2.limitType, bound, query2.endAt);
+}
+function queryWithEndAt(query2, bound) {
+  return new QueryImpl(query2.path, query2.collectionGroup, query2.explicitOrderBy.slice(), query2.filters.slice(), query2.limit, query2.limitType, query2.startAt, bound);
 }
 function queryEquals(left, right) {
   return targetEquals(queryToTarget(left), queryToTarget(right)) && left.limitType === right.limitType;
@@ -3541,8 +4778,8 @@ function queryMatchesPathAndCollectionGroup(query2, doc3) {
   }
 }
 function queryMatchesOrderBy(query2, doc3) {
-  for (const orderBy of queryNormalizedOrderBy(query2)) {
-    if (!orderBy.field.isKeyField() && doc3.data.field(orderBy.field) === null) {
+  for (const orderBy2 of queryNormalizedOrderBy(query2)) {
+    if (!orderBy2.field.isKeyField() && doc3.data.field(orderBy2.field) === null) {
       return false;
     }
   }
@@ -3571,25 +4808,25 @@ function queryCollectionGroup(query2) {
 function newQueryComparator(query2) {
   return (d1, d2) => {
     let comparedOnKeyField = false;
-    for (const orderBy of queryNormalizedOrderBy(query2)) {
-      const comp = compareDocs(orderBy, d1, d2);
+    for (const orderBy2 of queryNormalizedOrderBy(query2)) {
+      const comp = compareDocs(orderBy2, d1, d2);
       if (comp !== 0) {
         return comp;
       }
-      comparedOnKeyField = comparedOnKeyField || orderBy.field.isKeyField();
+      comparedOnKeyField = comparedOnKeyField || orderBy2.field.isKeyField();
     }
     return 0;
   };
 }
-function compareDocs(orderBy, d1, d2) {
-  const comparison = orderBy.field.isKeyField() ? DocumentKey.comparator(d1.key, d2.key) : compareDocumentsByField(orderBy.field, d1, d2);
-  switch (orderBy.dir) {
+function compareDocs(orderBy2, d1, d2) {
+  const comparison = orderBy2.field.isKeyField() ? DocumentKey.comparator(d1.key, d2.key) : compareDocumentsByField(orderBy2.field, d1, d2);
+  switch (orderBy2.dir) {
     case "asc":
       return comparison;
     case "desc":
       return -1 * comparison;
     default:
-      return fail(19790, { direction: orderBy.dir });
+      return fail(19790, { direction: orderBy2.dir });
   }
 }
 class ObjectMap {
@@ -3826,11 +5063,11 @@ class NumericMaximumTransformOperation extends NumericTransformOperation {
 }
 function applyNumericIncrementTransformOperationToLocalView(transform, previousValue) {
   const baseValue = computeTransformOperationBaseValue(transform, previousValue);
-  const sum = asNumber(baseValue) + asNumber(transform.operand);
+  const sum2 = asNumber(baseValue) + asNumber(transform.operand);
   if (isInteger(baseValue) && isInteger(transform.operand)) {
-    return toInteger(sum);
+    return toInteger(sum2);
   } else {
-    return toDouble(transform.serializer, sum);
+    return toDouble(transform.serializer, sum2);
   }
 }
 function applyNumericTransformOperationToLocalView(operation, previousValue, transform) {
@@ -4268,8 +5505,8 @@ class Overlay {
   }
 }
 class ExistenceFilter {
-  constructor(count, unchangedNames) {
-    this.count = count;
+  constructor(count2, unchangedNames) {
+    this.count = count2;
     this.unchangedNames = unchangedNames;
   }
 }
@@ -4377,8 +5614,18 @@ class Base64DecodeError extends Error {
     this.name = "Base64DecodeError";
   }
 }
+let testingHooksSpi = null;
+function setTestingHooksSpi(instance) {
+  if (testingHooksSpi) {
+    throw new Error("a TestingHooksSpi instance is already set");
+  }
+  testingHooksSpi = instance;
+}
 function newTextEncoder() {
   return new TextEncoder();
+}
+function newTextDecoder() {
+  return new TextDecoder("utf-8");
 }
 const MAX_64_BIT_UNSIGNED_INTEGER = new Integer([4294967295, 4294967295], 0);
 function getMd5HashValue(value) {
@@ -4767,6 +6014,7 @@ class WatchChangeAggregator {
             const purpose = status === 2 ? "TargetPurposeExistenceFilterMismatchBloom" : "TargetPurposeExistenceFilterMismatch";
             this.pendingTargetResets = this.pendingTargetResets.insert(targetId, purpose);
           }
+          testingHooksSpi?.notifyOnExistenceFilterMismatch(createExistenceFilterMismatchInfoForTestingHooks(currentSize, watchChange.existenceFilter, this.metadataProvider.getDatabaseId(), bloomFilter, status));
         }
       }
     }
@@ -5026,6 +6274,25 @@ function documentTargetMap() {
 function snapshotChangesMap() {
   return new SortedMap(DocumentKey.comparator);
 }
+function createExistenceFilterMismatchInfoForTestingHooks(localCacheCount, existenceFilter, databaseId, bloomFilter, bloomFilterStatus) {
+  const result = {
+    localCacheCount,
+    existenceFilterCount: existenceFilter.count,
+    databaseId: databaseId.database,
+    projectId: databaseId.projectId
+  };
+  const unchangedNames = existenceFilter.unchangedNames;
+  if (unchangedNames) {
+    result.bloomFilter = {
+      applied: bloomFilterStatus === 0,
+      hashCount: unchangedNames?.hashCount ?? 0,
+      bitmapLength: unchangedNames?.bits?.bitmap?.length ?? 0,
+      padding: unchangedNames?.bits?.padding ?? 0,
+      mightContain: (value) => bloomFilter?.mightContain(value) ?? false
+    };
+  }
+  return result;
+}
 const DIRECTIONS = (() => {
   const dirs = {};
   dirs[
@@ -5229,6 +6496,50 @@ function toMutationDocument(serializer, key, fields) {
     fields: fields.value.mapValue.fields
   };
 }
+function toDocument(serializer, document) {
+  return {
+    name: toName(serializer, document.key),
+    fields: document.data.value.mapValue.fields,
+    updateTime: toTimestamp(serializer, document.version.toTimestamp()),
+    createTime: toTimestamp(serializer, document.createTime.toTimestamp())
+  };
+}
+function fromDocument(serializer, document, hasCommittedMutations) {
+  const key = fromName(serializer, document.name);
+  const version2 = fromVersion(document.updateTime);
+  const createTime = document.createTime ? fromVersion(document.createTime) : SnapshotVersion.min();
+  const data = new ObjectValue({ mapValue: { fields: document.fields } });
+  const result = MutableDocument.newFoundDocument(key, version2, createTime, data);
+  if (hasCommittedMutations) {
+    result.setHasCommittedMutations();
+  }
+  return hasCommittedMutations ? result.setHasCommittedMutations() : result;
+}
+function fromFound(serializer, doc3) {
+  hardAssert(!!doc3.found, 43571);
+  assertPresent(doc3.found.name);
+  assertPresent(doc3.found.updateTime);
+  const key = fromName(serializer, doc3.found.name);
+  const version2 = fromVersion(doc3.found.updateTime);
+  const createTime = doc3.found.createTime ? fromVersion(doc3.found.createTime) : SnapshotVersion.min();
+  const data = new ObjectValue({ mapValue: { fields: doc3.found.fields } });
+  return MutableDocument.newFoundDocument(key, version2, createTime, data);
+}
+function fromMissing(serializer, result) {
+  hardAssert(!!result.missing, 3894);
+  hardAssert(!!result.readTime, 22933);
+  const key = fromName(serializer, result.missing);
+  const version2 = fromVersion(result.readTime);
+  return MutableDocument.newNoDocument(key, version2);
+}
+function fromBatchGetDocumentsResponse(serializer, result) {
+  if ("found" in result) {
+    return fromFound(serializer, result);
+  } else if ("missing" in result) {
+    return fromMissing(serializer, result);
+  }
+  return fail(7234, { result });
+}
 function fromWatchChange(serializer, change) {
   let watchChange;
   if ("targetChange" in change) {
@@ -5275,8 +6586,8 @@ function fromWatchChange(serializer, change) {
     assertPresent(change.filter);
     const filter = change.filter;
     assertPresent(filter.targetId);
-    const { count = 0, unchangedNames } = filter;
-    const existenceFilter = new ExistenceFilter(count, unchangedNames);
+    const { count: count2 = 0, unchangedNames } = filter;
+    const existenceFilter = new ExistenceFilter(count2, unchangedNames);
     const targetId = filter.targetId;
     watchChange = new ExistenceFilterChange(targetId, existenceFilter);
   } else {
@@ -5342,6 +6653,31 @@ function toMutation(serializer, mutation) {
   }
   return result;
 }
+function fromMutation(serializer, proto) {
+  const precondition = proto.currentDocument ? fromPrecondition(proto.currentDocument) : Precondition.none();
+  const fieldTransforms = proto.updateTransforms ? proto.updateTransforms.map((transform) => fromFieldTransform(serializer, transform)) : [];
+  if (proto.update) {
+    assertPresent(proto.update.name);
+    const key = fromName(serializer, proto.update.name);
+    const value = new ObjectValue({
+      mapValue: { fields: proto.update.fields }
+    });
+    if (proto.updateMask) {
+      const fieldMask = fromDocumentMask(proto.updateMask);
+      return new PatchMutation(key, value, fieldMask, precondition, fieldTransforms);
+    } else {
+      return new SetMutation(key, value, precondition, fieldTransforms);
+    }
+  } else if (proto.delete) {
+    const key = fromName(serializer, proto.delete);
+    return new DeleteMutation(key, precondition);
+  } else if (proto.verify) {
+    const key = fromName(serializer, proto.verify);
+    return new VerifyMutation(key, precondition);
+  } else {
+    return fail(1463, { proto });
+  }
+}
 function toPrecondition(serializer, precondition) {
   if (precondition.updateTime !== void 0) {
     return {
@@ -5351,6 +6687,15 @@ function toPrecondition(serializer, precondition) {
     return { exists: precondition.exists };
   } else {
     return fail(27497);
+  }
+}
+function fromPrecondition(precondition) {
+  if (precondition.updateTime !== void 0) {
+    return Precondition.updateTime(fromVersion(precondition.updateTime));
+  } else if (precondition.exists !== void 0) {
+    return Precondition.exists(precondition.exists);
+  } else {
+    return Precondition.none();
   }
 }
 function fromWriteResult(proto, commitTime) {
@@ -5410,8 +6755,39 @@ function toFieldTransform(serializer, fieldTransform) {
     });
   }
 }
+function fromFieldTransform(serializer, proto) {
+  let transform = null;
+  if ("setToServerValue" in proto) {
+    hardAssert(proto.setToServerValue === "REQUEST_TIME", 16630, { proto });
+    transform = new ServerTimestampTransform();
+  } else if ("appendMissingElements" in proto) {
+    const values = proto.appendMissingElements.values || [];
+    transform = new ArrayUnionTransformOperation(values);
+  } else if ("removeAllFromArray" in proto) {
+    const values = proto.removeAllFromArray.values || [];
+    transform = new ArrayRemoveTransformOperation(values);
+  } else if ("increment" in proto) {
+    transform = new NumericIncrementTransformOperation(serializer, proto.increment);
+  } else if ("minimum" in proto) {
+    transform = new NumericMinimumTransformOperation(serializer, proto.minimum);
+  } else if ("maximum" in proto) {
+    transform = new NumericMaximumTransformOperation(serializer, proto.maximum);
+  } else {
+    fail(16584, { proto });
+  }
+  const fieldPath = FieldPath$1.fromServerFormat(proto.fieldPath);
+  return new FieldTransform(fieldPath, transform);
+}
 function toDocumentsTarget(serializer, target) {
   return { documents: [toQueryPath(serializer, target.path)] };
+}
+function fromDocumentsTarget(documentsTarget) {
+  const count2 = documentsTarget.documents.length;
+  hardAssert(count2 === 1, 1966, {
+    count: count2
+  });
+  const name2 = documentsTarget.documents[0];
+  return queryToTarget(newQueryForPath(fromQueryPath(name2)));
 }
 function toQueryTarget(serializer, target) {
   const queryTarget = { structuredQuery: {} };
@@ -5434,13 +6810,13 @@ function toQueryTarget(serializer, target) {
   if (where2) {
     queryTarget.structuredQuery.where = where2;
   }
-  const orderBy = toOrder(target.orderBy);
-  if (orderBy) {
-    queryTarget.structuredQuery.orderBy = orderBy;
+  const orderBy2 = toOrder(target.orderBy);
+  if (orderBy2) {
+    queryTarget.structuredQuery.orderBy = orderBy2;
   }
-  const limit = toInt32Proto(serializer, target.limit);
-  if (limit !== null) {
-    queryTarget.structuredQuery.limit = limit;
+  const limit2 = toInt32Proto(serializer, target.limit);
+  if (limit2 !== null) {
+    queryTarget.structuredQuery.limit = limit2;
   }
   if (target.startAt) {
     queryTarget.structuredQuery.startAt = toStartAtCursor(target.startAt);
@@ -5450,16 +6826,57 @@ function toQueryTarget(serializer, target) {
   }
   return { queryTarget, parent };
 }
+function toRunAggregationQueryRequest(serializer, target, aggregates, skipAliasing) {
+  const { queryTarget, parent } = toQueryTarget(serializer, target);
+  const aliasMap = {};
+  const aggregations = [];
+  let aggregationNum = 0;
+  aggregates.forEach((aggregate) => {
+    const serverAlias = skipAliasing ? aggregate.alias : `aggregate_${aggregationNum++}`;
+    aliasMap[serverAlias] = aggregate.alias;
+    if (aggregate.aggregateType === "count") {
+      aggregations.push({
+        alias: serverAlias,
+        count: {}
+      });
+    } else if (aggregate.aggregateType === "avg") {
+      aggregations.push({
+        alias: serverAlias,
+        avg: {
+          field: toFieldPathReference(aggregate.fieldPath)
+        }
+      });
+    } else if (aggregate.aggregateType === "sum") {
+      aggregations.push({
+        alias: serverAlias,
+        sum: {
+          field: toFieldPathReference(aggregate.fieldPath)
+        }
+      });
+    }
+  });
+  return {
+    request: {
+      structuredAggregationQuery: {
+        aggregations,
+        structuredQuery: queryTarget.structuredQuery
+      },
+      parent: queryTarget.parent
+    },
+    aliasMap,
+    parent
+  };
+}
 function convertQueryTargetToQuery(target) {
   let path = fromQueryPath(target.parent);
   const query2 = target.structuredQuery;
   const fromCount = query2.from ? query2.from.length : 0;
-  let collectionGroup = null;
+  let collectionGroup2 = null;
   if (fromCount > 0) {
     hardAssert(fromCount === 1, 65062);
     const from = query2.from[0];
     if (from.allDescendants) {
-      collectionGroup = from.collectionId;
+      collectionGroup2 = from.collectionId;
     } else {
       path = path.child(from.collectionId);
     }
@@ -5468,23 +6885,26 @@ function convertQueryTargetToQuery(target) {
   if (query2.where) {
     filterBy = fromFilters(query2.where);
   }
-  let orderBy = [];
+  let orderBy2 = [];
   if (query2.orderBy) {
-    orderBy = fromOrder(query2.orderBy);
+    orderBy2 = fromOrder(query2.orderBy);
   }
-  let limit = null;
+  let limit2 = null;
   if (query2.limit) {
-    limit = fromInt32Proto(query2.limit);
+    limit2 = fromInt32Proto(query2.limit);
   }
-  let startAt = null;
+  let startAt2 = null;
   if (query2.startAt) {
-    startAt = fromStartAtCursor(query2.startAt);
+    startAt2 = fromStartAtCursor(query2.startAt);
   }
-  let endAt = null;
+  let endAt2 = null;
   if (query2.endAt) {
-    endAt = fromEndAtCursor(query2.endAt);
+    endAt2 = fromEndAtCursor(query2.endAt);
   }
-  return newQuery(path, collectionGroup, orderBy, filterBy, limit, "F", startAt, endAt);
+  return newQuery(path, collectionGroup2, orderBy2, filterBy, limit2, "F", startAt2, endAt2);
+}
+function fromQueryTarget(target) {
+  return queryToTarget(convertQueryTargetToQuery(target));
 }
 function toListenRequestLabels(serializer, targetData) {
   const value = toLabel(targetData.purpose);
@@ -5656,14 +7076,14 @@ function toFieldPathReference(path) {
 function fromFieldPathReference(fieldReference) {
   return FieldPath$1.fromServerFormat(fieldReference.fieldPath);
 }
-function toPropertyOrder(orderBy) {
+function toPropertyOrder(orderBy2) {
   return {
-    field: toFieldPathReference(orderBy.field),
-    direction: toDirection(orderBy.dir)
+    field: toFieldPathReference(orderBy2.field),
+    direction: toDirection(orderBy2.dir)
   };
 }
-function fromPropertyOrder(orderBy) {
-  return new OrderBy(fromFieldPathReference(orderBy.field), fromDirection(orderBy.direction));
+function fromPropertyOrder(orderBy2) {
+  return new OrderBy(fromFieldPathReference(orderBy2.field), fromDirection(orderBy2.direction));
 }
 function toFilter(filter) {
   if (filter instanceof FieldFilter) {
@@ -5769,6 +7189,10 @@ function toDocumentMask(fieldMask) {
     fieldPaths: canonicalFields
   };
 }
+function fromDocumentMask(proto) {
+  const paths = proto.fieldPaths || [];
+  return new FieldMask(paths.map((path) => FieldPath$1.fromServerFormat(path)));
+}
 function isValidResourceName(path) {
   return path.length >= 4 && path.get(0) === "projects" && path.get(2) === "databases";
 }
@@ -5826,6 +7250,160 @@ class LocalSerializer {
     this.remoteSerializer = remoteSerializer;
   }
 }
+function fromDbRemoteDocument(localSerializer, remoteDoc) {
+  let doc3;
+  if (remoteDoc.document) {
+    doc3 = fromDocument(localSerializer.remoteSerializer, remoteDoc.document, !!remoteDoc.hasCommittedMutations);
+  } else if (remoteDoc.noDocument) {
+    const key = DocumentKey.fromSegments(remoteDoc.noDocument.path);
+    const version2 = fromDbTimestamp(remoteDoc.noDocument.readTime);
+    doc3 = MutableDocument.newNoDocument(key, version2);
+    if (remoteDoc.hasCommittedMutations) {
+      doc3.setHasCommittedMutations();
+    }
+  } else if (remoteDoc.unknownDocument) {
+    const key = DocumentKey.fromSegments(remoteDoc.unknownDocument.path);
+    const version2 = fromDbTimestamp(remoteDoc.unknownDocument.version);
+    doc3 = MutableDocument.newUnknownDocument(key, version2);
+  } else {
+    return fail(56709);
+  }
+  if (remoteDoc.readTime) {
+    doc3.setReadTime(fromDbTimestampKey(remoteDoc.readTime));
+  }
+  return doc3;
+}
+function toDbRemoteDocument(localSerializer, document) {
+  const key = document.key;
+  const remoteDoc = {
+    prefixPath: key.getCollectionPath().popLast().toArray(),
+    collectionGroup: key.collectionGroup,
+    documentId: key.path.lastSegment(),
+    readTime: toDbTimestampKey(document.readTime),
+    hasCommittedMutations: document.hasCommittedMutations
+  };
+  if (document.isFoundDocument()) {
+    remoteDoc.document = toDocument(localSerializer.remoteSerializer, document);
+  } else if (document.isNoDocument()) {
+    remoteDoc.noDocument = {
+      path: key.path.toArray(),
+      readTime: toDbTimestamp(document.version)
+    };
+  } else if (document.isUnknownDocument()) {
+    remoteDoc.unknownDocument = {
+      path: key.path.toArray(),
+      version: toDbTimestamp(document.version)
+    };
+  } else {
+    return fail(57904, { document });
+  }
+  return remoteDoc;
+}
+function toDbTimestampKey(snapshotVersion) {
+  const timestamp = snapshotVersion.toTimestamp();
+  return [timestamp.seconds, timestamp.nanoseconds];
+}
+function fromDbTimestampKey(dbTimestampKey) {
+  const timestamp = new Timestamp(dbTimestampKey[0], dbTimestampKey[1]);
+  return SnapshotVersion.fromTimestamp(timestamp);
+}
+function toDbTimestamp(snapshotVersion) {
+  const timestamp = snapshotVersion.toTimestamp();
+  return { seconds: timestamp.seconds, nanoseconds: timestamp.nanoseconds };
+}
+function fromDbTimestamp(dbTimestamp) {
+  const timestamp = new Timestamp(dbTimestamp.seconds, dbTimestamp.nanoseconds);
+  return SnapshotVersion.fromTimestamp(timestamp);
+}
+function toDbMutationBatch(localSerializer, userId, batch) {
+  const serializedBaseMutations = batch.baseMutations.map((m) => toMutation(localSerializer.remoteSerializer, m));
+  const serializedMutations = batch.mutations.map((m) => toMutation(localSerializer.remoteSerializer, m));
+  return {
+    userId,
+    batchId: batch.batchId,
+    localWriteTimeMs: batch.localWriteTime.toMillis(),
+    baseMutations: serializedBaseMutations,
+    mutations: serializedMutations
+  };
+}
+function fromDbMutationBatch(localSerializer, dbBatch) {
+  const baseMutations = (dbBatch.baseMutations || []).map((m) => fromMutation(localSerializer.remoteSerializer, m));
+  for (let i = 0; i < dbBatch.mutations.length - 1; ++i) {
+    const currentMutation = dbBatch.mutations[i];
+    const hasTransform = i + 1 < dbBatch.mutations.length && dbBatch.mutations[i + 1].transform !== void 0;
+    if (hasTransform) {
+      const transformMutation = dbBatch.mutations[i + 1];
+      currentMutation.updateTransforms = transformMutation.transform.fieldTransforms;
+      dbBatch.mutations.splice(i + 1, 1);
+      ++i;
+    }
+  }
+  const mutations = dbBatch.mutations.map((m) => fromMutation(localSerializer.remoteSerializer, m));
+  const timestamp = Timestamp.fromMillis(dbBatch.localWriteTimeMs);
+  return new MutationBatch(dbBatch.batchId, timestamp, baseMutations, mutations);
+}
+function fromDbTarget(dbTarget) {
+  const version2 = fromDbTimestamp(dbTarget.readTime);
+  const lastLimboFreeSnapshotVersion = dbTarget.lastLimboFreeSnapshotVersion !== void 0 ? fromDbTimestamp(dbTarget.lastLimboFreeSnapshotVersion) : SnapshotVersion.min();
+  let target;
+  if (isDocumentQuery(dbTarget.query)) {
+    target = fromDocumentsTarget(dbTarget.query);
+  } else {
+    target = fromQueryTarget(dbTarget.query);
+  }
+  return new TargetData(target, dbTarget.targetId, "TargetPurposeListen", dbTarget.lastListenSequenceNumber, version2, lastLimboFreeSnapshotVersion, ByteString.fromBase64String(dbTarget.resumeToken));
+}
+function toDbTarget(localSerializer, targetData) {
+  const dbTimestamp = toDbTimestamp(targetData.snapshotVersion);
+  const dbLastLimboFreeTimestamp = toDbTimestamp(targetData.lastLimboFreeSnapshotVersion);
+  let queryProto;
+  if (targetIsDocumentTarget(targetData.target)) {
+    queryProto = toDocumentsTarget(localSerializer.remoteSerializer, targetData.target);
+  } else {
+    queryProto = toQueryTarget(localSerializer.remoteSerializer, targetData.target).queryTarget;
+  }
+  const resumeToken = targetData.resumeToken.toBase64();
+  return {
+    targetId: targetData.targetId,
+    canonicalId: canonifyTarget(targetData.target),
+    readTime: dbTimestamp,
+    resumeToken,
+    lastListenSequenceNumber: targetData.sequenceNumber,
+    lastLimboFreeSnapshotVersion: dbLastLimboFreeTimestamp,
+    query: queryProto
+  };
+}
+function isDocumentQuery(dbQuery) {
+  return dbQuery.documents !== void 0;
+}
+function fromDbBundle(dbBundle) {
+  return {
+    id: dbBundle.bundleId,
+    createTime: fromDbTimestamp(dbBundle.createTime),
+    version: dbBundle.version
+  };
+}
+function toDbBundle(metadata) {
+  return {
+    bundleId: metadata.id,
+    createTime: toDbTimestamp(fromVersion(metadata.createTime)),
+    version: metadata.version
+  };
+}
+function fromDbNamedQuery(dbNamedQuery) {
+  return {
+    name: dbNamedQuery.name,
+    query: fromBundledQuery(dbNamedQuery.bundledQuery),
+    readTime: fromDbTimestamp(dbNamedQuery.readTime)
+  };
+}
+function toDbNamedQuery(query2) {
+  return {
+    name: query2.name,
+    readTime: toDbTimestamp(fromVersion(query2.readTime)),
+    bundledQuery: query2.bundledQuery
+  };
+}
 function fromBundledQuery(bundledQuery) {
   const query2 = convertQueryTargetToQuery({
     parent: bundledQuery.parent,
@@ -5841,11 +7419,11 @@ function fromBundledQuery(bundledQuery) {
   }
   return query2;
 }
-function fromProtoNamedQuery(namedQuery) {
+function fromProtoNamedQuery(namedQuery2) {
   return {
-    name: namedQuery.name,
-    query: fromBundledQuery(namedQuery.bundledQuery),
-    readTime: fromVersion(namedQuery.readTime)
+    name: namedQuery2.name,
+    query: fromBundledQuery(namedQuery2.bundledQuery),
+    readTime: fromVersion(namedQuery2.readTime)
   };
 }
 function fromBundleMetadata(metadata) {
@@ -5854,6 +7432,1032 @@ function fromBundleMetadata(metadata) {
     version: metadata.version,
     createTime: fromVersion(metadata.createTime)
   };
+}
+function fromDbDocumentOverlay(localSerializer, dbDocumentOverlay) {
+  return new Overlay(dbDocumentOverlay.largestBatchId, fromMutation(localSerializer.remoteSerializer, dbDocumentOverlay.overlayMutation));
+}
+function toDbDocumentOverlay(localSerializer, userId, overlay) {
+  const [_, collectionPath, documentId2] = toDbDocumentOverlayKey(userId, overlay.mutation.key);
+  return {
+    userId,
+    collectionPath,
+    documentId: documentId2,
+    collectionGroup: overlay.mutation.key.getCollectionGroup(),
+    largestBatchId: overlay.largestBatchId,
+    overlayMutation: toMutation(localSerializer.remoteSerializer, overlay.mutation)
+  };
+}
+function toDbDocumentOverlayKey(userId, docKey) {
+  const docId = docKey.path.lastSegment();
+  const collectionPath = encodeResourcePath(docKey.path.popLast());
+  return [userId, collectionPath, docId];
+}
+function toDbIndexConfiguration(index) {
+  return {
+    indexId: index.indexId,
+    collectionGroup: index.collectionGroup,
+    fields: index.fields.map((s) => [s.fieldPath.canonicalString(), s.kind])
+  };
+}
+function fromDbIndexConfiguration(index, state) {
+  const decodedState = state ? new IndexState(state.sequenceNumber, new IndexOffset(fromDbTimestamp(state.readTime), new DocumentKey(decodeResourcePath(state.documentKey)), state.largestBatchId)) : IndexState.empty();
+  const decodedSegments = index.fields.map(([fieldPath, kind]) => new IndexSegment(FieldPath$1.fromServerFormat(fieldPath), kind));
+  return new FieldIndex(index.indexId, index.collectionGroup, decodedSegments, decodedState);
+}
+function toDbIndexState(indexId, uid, sequenceNumber, offset) {
+  return {
+    indexId,
+    uid,
+    sequenceNumber,
+    readTime: toDbTimestamp(offset.readTime),
+    documentKey: encodeResourcePath(offset.documentKey.path),
+    largestBatchId: offset.largestBatchId
+  };
+}
+class IndexedDbBundleCache {
+  getBundleMetadata(transaction, bundleId) {
+    return bundlesStore(transaction).get(bundleId).next((bundle) => {
+      if (bundle) {
+        return fromDbBundle(bundle);
+      }
+      return void 0;
+    });
+  }
+  saveBundleMetadata(transaction, bundleMetadata) {
+    return bundlesStore(transaction).put(toDbBundle(bundleMetadata));
+  }
+  getNamedQuery(transaction, queryName) {
+    return namedQueriesStore(transaction).get(queryName).next((query2) => {
+      if (query2) {
+        return fromDbNamedQuery(query2);
+      }
+      return void 0;
+    });
+  }
+  saveNamedQuery(transaction, query2) {
+    return namedQueriesStore(transaction).put(toDbNamedQuery(query2));
+  }
+}
+function bundlesStore(txn) {
+  return getStore(txn, DbBundleStore);
+}
+function namedQueriesStore(txn) {
+  return getStore(txn, DbNamedQueryStore);
+}
+class IndexedDbDocumentOverlayCache {
+  /**
+   * @param serializer - The document serializer.
+   * @param userId - The userId for which we are accessing overlays.
+   */
+  constructor(serializer, userId) {
+    this.serializer = serializer;
+    this.userId = userId;
+  }
+  static forUser(serializer, user) {
+    const userId = user.uid || "";
+    return new IndexedDbDocumentOverlayCache(serializer, userId);
+  }
+  getOverlay(transaction, key) {
+    return documentOverlayStore(transaction).get(toDbDocumentOverlayKey(this.userId, key)).next((dbOverlay) => {
+      if (dbOverlay) {
+        return fromDbDocumentOverlay(this.serializer, dbOverlay);
+      }
+      return null;
+    });
+  }
+  getOverlays(transaction, keys) {
+    const result = newOverlayMap();
+    return PersistencePromise.forEach(keys, (key) => {
+      return this.getOverlay(transaction, key).next((overlay) => {
+        if (overlay !== null) {
+          result.set(key, overlay);
+        }
+      });
+    }).next(() => result);
+  }
+  saveOverlays(transaction, largestBatchId, overlays) {
+    const promises = [];
+    overlays.forEach((_, mutation) => {
+      const overlay = new Overlay(largestBatchId, mutation);
+      promises.push(this.saveOverlay(transaction, overlay));
+    });
+    return PersistencePromise.waitFor(promises);
+  }
+  removeOverlaysForBatchId(transaction, documentKeys, batchId) {
+    const collectionPaths = /* @__PURE__ */ new Set();
+    documentKeys.forEach((key) => collectionPaths.add(encodeResourcePath(key.getCollectionPath())));
+    const promises = [];
+    collectionPaths.forEach((collectionPath) => {
+      const range = IDBKeyRange.bound(
+        [this.userId, collectionPath, batchId],
+        [this.userId, collectionPath, batchId + 1],
+        /*lowerOpen=*/
+        false,
+        /*upperOpen=*/
+        true
+      );
+      promises.push(documentOverlayStore(transaction).deleteAll(DbDocumentOverlayCollectionPathOverlayIndex, range));
+    });
+    return PersistencePromise.waitFor(promises);
+  }
+  getOverlaysForCollection(transaction, collection2, sinceBatchId) {
+    const result = newOverlayMap();
+    const collectionPath = encodeResourcePath(collection2);
+    const range = IDBKeyRange.bound(
+      [this.userId, collectionPath, sinceBatchId],
+      [this.userId, collectionPath, Number.POSITIVE_INFINITY],
+      /*lowerOpen=*/
+      true
+    );
+    return documentOverlayStore(transaction).loadAll(DbDocumentOverlayCollectionPathOverlayIndex, range).next((dbOverlays) => {
+      for (const dbOverlay of dbOverlays) {
+        const overlay = fromDbDocumentOverlay(this.serializer, dbOverlay);
+        result.set(overlay.getKey(), overlay);
+      }
+      return result;
+    });
+  }
+  getOverlaysForCollectionGroup(transaction, collectionGroup2, sinceBatchId, count2) {
+    const result = newOverlayMap();
+    let currentBatchId = void 0;
+    const range = IDBKeyRange.bound(
+      [this.userId, collectionGroup2, sinceBatchId],
+      [this.userId, collectionGroup2, Number.POSITIVE_INFINITY],
+      /*lowerOpen=*/
+      true
+    );
+    return documentOverlayStore(transaction).iterate({
+      index: DbDocumentOverlayCollectionGroupOverlayIndex,
+      range
+    }, (_, dbOverlay, control) => {
+      const overlay = fromDbDocumentOverlay(this.serializer, dbOverlay);
+      if (result.size() < count2 || overlay.largestBatchId === currentBatchId) {
+        result.set(overlay.getKey(), overlay);
+        currentBatchId = overlay.largestBatchId;
+      } else {
+        control.done();
+      }
+    }).next(() => result);
+  }
+  saveOverlay(transaction, overlay) {
+    return documentOverlayStore(transaction).put(toDbDocumentOverlay(this.serializer, this.userId, overlay));
+  }
+}
+function documentOverlayStore(txn) {
+  return getStore(txn, DbDocumentOverlayStore);
+}
+class IndexedDbGlobalsCache {
+  globalsStore(txn) {
+    return getStore(txn, DbGlobalsStore);
+  }
+  getSessionToken(txn) {
+    const globals = this.globalsStore(txn);
+    return globals.get("sessionToken").next((global) => {
+      const value = global?.value;
+      return value ? ByteString.fromUint8Array(value) : ByteString.EMPTY_BYTE_STRING;
+    });
+  }
+  setSessionToken(txn, sessionToken) {
+    const globals = this.globalsStore(txn);
+    return globals.put({
+      name: "sessionToken",
+      value: sessionToken.toUint8Array()
+    });
+  }
+}
+const INDEX_TYPE_NULL = 5;
+const INDEX_TYPE_BOOLEAN = 10;
+const INDEX_TYPE_NAN = 13;
+const INDEX_TYPE_NUMBER = 15;
+const INDEX_TYPE_TIMESTAMP = 20;
+const INDEX_TYPE_STRING = 25;
+const INDEX_TYPE_BLOB = 30;
+const INDEX_TYPE_REFERENCE = 37;
+const INDEX_TYPE_GEOPOINT = 45;
+const INDEX_TYPE_ARRAY = 50;
+const INDEX_TYPE_VECTOR = 53;
+const INDEX_TYPE_MAP = 55;
+const INDEX_TYPE_REFERENCE_SEGMENT = 60;
+const NOT_TRUNCATED = 2;
+class FirestoreIndexValueWriter {
+  constructor() {
+  }
+  // The write methods below short-circuit writing terminators for values
+  // containing a (terminating) truncated value.
+  //
+  // As an example, consider the resulting encoding for:
+  //
+  // ["bar", [2, "foo"]] -> (STRING, "bar", TERM, ARRAY, NUMBER, 2, STRING, "foo", TERM, TERM, TERM)
+  // ["bar", [2, truncated("foo")]] -> (STRING, "bar", TERM, ARRAY, NUMBER, 2, STRING, "foo", TRUNC)
+  // ["bar", truncated(["foo"])] -> (STRING, "bar", TERM, ARRAY. STRING, "foo", TERM, TRUNC)
+  /** Writes an index value.  */
+  writeIndexValue(value, encoder2) {
+    this.writeIndexValueAux(value, encoder2);
+    encoder2.writeInfinity();
+  }
+  writeIndexValueAux(indexValue, encoder2) {
+    if ("nullValue" in indexValue) {
+      this.writeValueTypeLabel(encoder2, INDEX_TYPE_NULL);
+    } else if ("booleanValue" in indexValue) {
+      this.writeValueTypeLabel(encoder2, INDEX_TYPE_BOOLEAN);
+      encoder2.writeNumber(indexValue.booleanValue ? 1 : 0);
+    } else if ("integerValue" in indexValue) {
+      this.writeValueTypeLabel(encoder2, INDEX_TYPE_NUMBER);
+      encoder2.writeNumber(normalizeNumber(indexValue.integerValue));
+    } else if ("doubleValue" in indexValue) {
+      const n = normalizeNumber(indexValue.doubleValue);
+      if (isNaN(n)) {
+        this.writeValueTypeLabel(encoder2, INDEX_TYPE_NAN);
+      } else {
+        this.writeValueTypeLabel(encoder2, INDEX_TYPE_NUMBER);
+        if (isNegativeZero(n)) {
+          encoder2.writeNumber(0);
+        } else {
+          encoder2.writeNumber(n);
+        }
+      }
+    } else if ("timestampValue" in indexValue) {
+      let timestamp = indexValue.timestampValue;
+      this.writeValueTypeLabel(encoder2, INDEX_TYPE_TIMESTAMP);
+      if (typeof timestamp === "string") {
+        timestamp = normalizeTimestamp(timestamp);
+      }
+      encoder2.writeString(`${timestamp.seconds || ""}`);
+      encoder2.writeNumber(timestamp.nanos || 0);
+    } else if ("stringValue" in indexValue) {
+      this.writeIndexString(indexValue.stringValue, encoder2);
+      this.writeTruncationMarker(encoder2);
+    } else if ("bytesValue" in indexValue) {
+      this.writeValueTypeLabel(encoder2, INDEX_TYPE_BLOB);
+      encoder2.writeBytes(normalizeByteString(indexValue.bytesValue));
+      this.writeTruncationMarker(encoder2);
+    } else if ("referenceValue" in indexValue) {
+      this.writeIndexEntityRef(indexValue.referenceValue, encoder2);
+    } else if ("geoPointValue" in indexValue) {
+      const geoPoint = indexValue.geoPointValue;
+      this.writeValueTypeLabel(encoder2, INDEX_TYPE_GEOPOINT);
+      encoder2.writeNumber(geoPoint.latitude || 0);
+      encoder2.writeNumber(geoPoint.longitude || 0);
+    } else if ("mapValue" in indexValue) {
+      if (isMaxValue(indexValue)) {
+        this.writeValueTypeLabel(encoder2, Number.MAX_SAFE_INTEGER);
+      } else if (isVectorValue(indexValue)) {
+        this.writeIndexVector(indexValue.mapValue, encoder2);
+      } else {
+        this.writeIndexMap(indexValue.mapValue, encoder2);
+        this.writeTruncationMarker(encoder2);
+      }
+    } else if ("arrayValue" in indexValue) {
+      this.writeIndexArray(indexValue.arrayValue, encoder2);
+      this.writeTruncationMarker(encoder2);
+    } else {
+      fail(19022, { indexValue });
+    }
+  }
+  writeIndexString(stringIndexValue, encoder2) {
+    this.writeValueTypeLabel(encoder2, INDEX_TYPE_STRING);
+    this.writeUnlabeledIndexString(stringIndexValue, encoder2);
+  }
+  writeUnlabeledIndexString(stringIndexValue, encoder2) {
+    encoder2.writeString(stringIndexValue);
+  }
+  writeIndexMap(mapIndexValue, encoder2) {
+    const map = mapIndexValue.fields || {};
+    this.writeValueTypeLabel(encoder2, INDEX_TYPE_MAP);
+    for (const key of Object.keys(map)) {
+      this.writeIndexString(key, encoder2);
+      this.writeIndexValueAux(map[key], encoder2);
+    }
+  }
+  writeIndexVector(mapIndexValue, encoder2) {
+    const map = mapIndexValue.fields || {};
+    this.writeValueTypeLabel(encoder2, INDEX_TYPE_VECTOR);
+    const key = VECTOR_MAP_VECTORS_KEY;
+    const length = map[key].arrayValue?.values?.length || 0;
+    this.writeValueTypeLabel(encoder2, INDEX_TYPE_NUMBER);
+    encoder2.writeNumber(normalizeNumber(length));
+    this.writeIndexString(key, encoder2);
+    this.writeIndexValueAux(map[key], encoder2);
+  }
+  writeIndexArray(arrayIndexValue, encoder2) {
+    const values = arrayIndexValue.values || [];
+    this.writeValueTypeLabel(encoder2, INDEX_TYPE_ARRAY);
+    for (const element of values) {
+      this.writeIndexValueAux(element, encoder2);
+    }
+  }
+  writeIndexEntityRef(referenceValue, encoder2) {
+    this.writeValueTypeLabel(encoder2, INDEX_TYPE_REFERENCE);
+    const path = DocumentKey.fromName(referenceValue).path;
+    path.forEach((segment) => {
+      this.writeValueTypeLabel(encoder2, INDEX_TYPE_REFERENCE_SEGMENT);
+      this.writeUnlabeledIndexString(segment, encoder2);
+    });
+  }
+  writeValueTypeLabel(encoder2, typeOrder2) {
+    encoder2.writeNumber(typeOrder2);
+  }
+  writeTruncationMarker(encoder2) {
+    encoder2.writeNumber(NOT_TRUNCATED);
+  }
+}
+FirestoreIndexValueWriter.INSTANCE = new FirestoreIndexValueWriter();
+const MIN_SURROGATE = "\uD800";
+const MAX_SURROGATE = "\uDBFF";
+const ESCAPE1 = 0;
+const NULL_BYTE = 255;
+const SEPARATOR = 1;
+const ESCAPE2 = 255;
+const INFINITY = 255;
+const FF_BYTE = 0;
+const LONG_SIZE = 64;
+const BYTE_SIZE = 8;
+const DEFAULT_BUFFER_SIZE = 1024;
+function doubleToLongBits(value) {
+  const dv = new DataView(new ArrayBuffer(8));
+  dv.setFloat64(
+    0,
+    value,
+    /* littleEndian= */
+    false
+  );
+  return new Uint8Array(dv.buffer);
+}
+function numberOfLeadingZerosInByte(x) {
+  if (x === 0) {
+    return 8;
+  }
+  let zeros = 0;
+  if (x >> 4 === 0) {
+    zeros += 4;
+    x = x << 4;
+  }
+  if (x >> 6 === 0) {
+    zeros += 2;
+    x = x << 2;
+  }
+  if (x >> 7 === 0) {
+    zeros += 1;
+  }
+  return zeros;
+}
+function numberOfLeadingZeros(bytes) {
+  let leadingZeros = 0;
+  for (let i = 0; i < 8; ++i) {
+    const zeros = numberOfLeadingZerosInByte(bytes[i] & 255);
+    leadingZeros += zeros;
+    if (zeros !== 8) {
+      break;
+    }
+  }
+  return leadingZeros;
+}
+function unsignedNumLength(value) {
+  const numBits = LONG_SIZE - numberOfLeadingZeros(value);
+  return Math.ceil(numBits / BYTE_SIZE);
+}
+class OrderedCodeWriter {
+  constructor() {
+    this.buffer = new Uint8Array(DEFAULT_BUFFER_SIZE);
+    this.position = 0;
+  }
+  writeBytesAscending(value) {
+    const it = value[Symbol.iterator]();
+    let byte = it.next();
+    while (!byte.done) {
+      this.writeByteAscending(byte.value);
+      byte = it.next();
+    }
+    this.writeSeparatorAscending();
+  }
+  writeBytesDescending(value) {
+    const it = value[Symbol.iterator]();
+    let byte = it.next();
+    while (!byte.done) {
+      this.writeByteDescending(byte.value);
+      byte = it.next();
+    }
+    this.writeSeparatorDescending();
+  }
+  /** Writes utf8 bytes into this byte sequence, ascending. */
+  writeUtf8Ascending(sequence) {
+    for (const c of sequence) {
+      const charCode = c.charCodeAt(0);
+      if (charCode < 128) {
+        this.writeByteAscending(charCode);
+      } else if (charCode < 2048) {
+        this.writeByteAscending(15 << 6 | charCode >>> 6);
+        this.writeByteAscending(128 | 63 & charCode);
+      } else if (c < MIN_SURROGATE || MAX_SURROGATE < c) {
+        this.writeByteAscending(15 << 5 | charCode >>> 12);
+        this.writeByteAscending(128 | 63 & charCode >>> 6);
+        this.writeByteAscending(128 | 63 & charCode);
+      } else {
+        const codePoint = c.codePointAt(0);
+        this.writeByteAscending(15 << 4 | codePoint >>> 18);
+        this.writeByteAscending(128 | 63 & codePoint >>> 12);
+        this.writeByteAscending(128 | 63 & codePoint >>> 6);
+        this.writeByteAscending(128 | 63 & codePoint);
+      }
+    }
+    this.writeSeparatorAscending();
+  }
+  /** Writes utf8 bytes into this byte sequence, descending */
+  writeUtf8Descending(sequence) {
+    for (const c of sequence) {
+      const charCode = c.charCodeAt(0);
+      if (charCode < 128) {
+        this.writeByteDescending(charCode);
+      } else if (charCode < 2048) {
+        this.writeByteDescending(15 << 6 | charCode >>> 6);
+        this.writeByteDescending(128 | 63 & charCode);
+      } else if (c < MIN_SURROGATE || MAX_SURROGATE < c) {
+        this.writeByteDescending(15 << 5 | charCode >>> 12);
+        this.writeByteDescending(128 | 63 & charCode >>> 6);
+        this.writeByteDescending(128 | 63 & charCode);
+      } else {
+        const codePoint = c.codePointAt(0);
+        this.writeByteDescending(15 << 4 | codePoint >>> 18);
+        this.writeByteDescending(128 | 63 & codePoint >>> 12);
+        this.writeByteDescending(128 | 63 & codePoint >>> 6);
+        this.writeByteDescending(128 | 63 & codePoint);
+      }
+    }
+    this.writeSeparatorDescending();
+  }
+  writeNumberAscending(val) {
+    const value = this.toOrderedBits(val);
+    const len = unsignedNumLength(value);
+    this.ensureAvailable(1 + len);
+    this.buffer[this.position++] = len & 255;
+    for (let i = value.length - len; i < value.length; ++i) {
+      this.buffer[this.position++] = value[i] & 255;
+    }
+  }
+  writeNumberDescending(val) {
+    const value = this.toOrderedBits(val);
+    const len = unsignedNumLength(value);
+    this.ensureAvailable(1 + len);
+    this.buffer[this.position++] = ~(len & 255);
+    for (let i = value.length - len; i < value.length; ++i) {
+      this.buffer[this.position++] = ~(value[i] & 255);
+    }
+  }
+  /**
+   * Writes the "infinity" byte sequence that sorts after all other byte
+   * sequences written in ascending order.
+   */
+  writeInfinityAscending() {
+    this.writeEscapedByteAscending(ESCAPE2);
+    this.writeEscapedByteAscending(INFINITY);
+  }
+  /**
+   * Writes the "infinity" byte sequence that sorts before all other byte
+   * sequences written in descending order.
+   */
+  writeInfinityDescending() {
+    this.writeEscapedByteDescending(ESCAPE2);
+    this.writeEscapedByteDescending(INFINITY);
+  }
+  /**
+   * Resets the buffer such that it is the same as when it was newly
+   * constructed.
+   */
+  reset() {
+    this.position = 0;
+  }
+  seed(encodedBytes) {
+    this.ensureAvailable(encodedBytes.length);
+    this.buffer.set(encodedBytes, this.position);
+    this.position += encodedBytes.length;
+  }
+  /** Makes a copy of the encoded bytes in this buffer.  */
+  encodedBytes() {
+    return this.buffer.slice(0, this.position);
+  }
+  /**
+   * Encodes `val` into an encoding so that the order matches the IEEE 754
+   * floating-point comparison results with the following exceptions:
+   *   -0.0 < 0.0
+   *   all non-NaN < NaN
+   *   NaN = NaN
+   */
+  toOrderedBits(val) {
+    const value = doubleToLongBits(val);
+    const isNegative = (value[0] & 128) !== 0;
+    value[0] ^= isNegative ? 255 : 128;
+    for (let i = 1; i < value.length; ++i) {
+      value[i] ^= isNegative ? 255 : 0;
+    }
+    return value;
+  }
+  /** Writes a single byte ascending to the buffer. */
+  writeByteAscending(b) {
+    const masked = b & 255;
+    if (masked === ESCAPE1) {
+      this.writeEscapedByteAscending(ESCAPE1);
+      this.writeEscapedByteAscending(NULL_BYTE);
+    } else if (masked === ESCAPE2) {
+      this.writeEscapedByteAscending(ESCAPE2);
+      this.writeEscapedByteAscending(FF_BYTE);
+    } else {
+      this.writeEscapedByteAscending(masked);
+    }
+  }
+  /** Writes a single byte descending to the buffer.  */
+  writeByteDescending(b) {
+    const masked = b & 255;
+    if (masked === ESCAPE1) {
+      this.writeEscapedByteDescending(ESCAPE1);
+      this.writeEscapedByteDescending(NULL_BYTE);
+    } else if (masked === ESCAPE2) {
+      this.writeEscapedByteDescending(ESCAPE2);
+      this.writeEscapedByteDescending(FF_BYTE);
+    } else {
+      this.writeEscapedByteDescending(b);
+    }
+  }
+  writeSeparatorAscending() {
+    this.writeEscapedByteAscending(ESCAPE1);
+    this.writeEscapedByteAscending(SEPARATOR);
+  }
+  writeSeparatorDescending() {
+    this.writeEscapedByteDescending(ESCAPE1);
+    this.writeEscapedByteDescending(SEPARATOR);
+  }
+  writeEscapedByteAscending(b) {
+    this.ensureAvailable(1);
+    this.buffer[this.position++] = b;
+  }
+  writeEscapedByteDescending(b) {
+    this.ensureAvailable(1);
+    this.buffer[this.position++] = ~b;
+  }
+  ensureAvailable(bytes) {
+    const minCapacity = bytes + this.position;
+    if (minCapacity <= this.buffer.length) {
+      return;
+    }
+    let newLength = this.buffer.length * 2;
+    if (newLength < minCapacity) {
+      newLength = minCapacity;
+    }
+    const newBuffer = new Uint8Array(newLength);
+    newBuffer.set(this.buffer);
+    this.buffer = newBuffer;
+  }
+}
+class AscendingIndexByteEncoder {
+  constructor(orderedCode) {
+    this.orderedCode = orderedCode;
+  }
+  writeBytes(value) {
+    this.orderedCode.writeBytesAscending(value);
+  }
+  writeString(value) {
+    this.orderedCode.writeUtf8Ascending(value);
+  }
+  writeNumber(value) {
+    this.orderedCode.writeNumberAscending(value);
+  }
+  writeInfinity() {
+    this.orderedCode.writeInfinityAscending();
+  }
+}
+class DescendingIndexByteEncoder {
+  constructor(orderedCode) {
+    this.orderedCode = orderedCode;
+  }
+  writeBytes(value) {
+    this.orderedCode.writeBytesDescending(value);
+  }
+  writeString(value) {
+    this.orderedCode.writeUtf8Descending(value);
+  }
+  writeNumber(value) {
+    this.orderedCode.writeNumberDescending(value);
+  }
+  writeInfinity() {
+    this.orderedCode.writeInfinityDescending();
+  }
+}
+class IndexByteEncoder {
+  constructor() {
+    this.orderedCode = new OrderedCodeWriter();
+    this.ascending = new AscendingIndexByteEncoder(this.orderedCode);
+    this.descending = new DescendingIndexByteEncoder(this.orderedCode);
+  }
+  seed(encodedBytes) {
+    this.orderedCode.seed(encodedBytes);
+  }
+  forKind(kind) {
+    return kind === 0 ? this.ascending : this.descending;
+  }
+  encodedBytes() {
+    return this.orderedCode.encodedBytes();
+  }
+  reset() {
+    this.orderedCode.reset();
+  }
+}
+class IndexEntry {
+  constructor(_indexId, _documentKey, _arrayValue, _directionalValue) {
+    this._indexId = _indexId;
+    this._documentKey = _documentKey;
+    this._arrayValue = _arrayValue;
+    this._directionalValue = _directionalValue;
+  }
+  /**
+   * Returns an IndexEntry entry that sorts immediately after the current
+   * directional value.
+   */
+  successor() {
+    const currentLength = this._directionalValue.length;
+    const newLength = currentLength === 0 || this._directionalValue[currentLength - 1] === 255 ? currentLength + 1 : currentLength;
+    const successor = new Uint8Array(newLength);
+    successor.set(this._directionalValue, 0);
+    if (newLength !== currentLength) {
+      successor.set([0], this._directionalValue.length);
+    } else {
+      ++successor[successor.length - 1];
+    }
+    return new IndexEntry(this._indexId, this._documentKey, this._arrayValue, successor);
+  }
+  // Create a representation of the Index Entry as a DbIndexEntry
+  dbIndexEntry(uid, orderedDocumentKey, documentKey) {
+    return {
+      indexId: this._indexId,
+      uid,
+      arrayValue: encodeKeySafeBytes(this._arrayValue),
+      directionalValue: encodeKeySafeBytes(this._directionalValue),
+      orderedDocumentKey: encodeKeySafeBytes(orderedDocumentKey),
+      documentKey: documentKey.path.toArray()
+    };
+  }
+  // Create a representation of the Index Entry as a DbIndexEntryKey
+  dbIndexEntryKey(uid, orderedDocumentKey, documentKey) {
+    const entry = this.dbIndexEntry(uid, orderedDocumentKey, documentKey);
+    return [
+      entry.indexId,
+      entry.uid,
+      entry.arrayValue,
+      entry.directionalValue,
+      entry.orderedDocumentKey,
+      entry.documentKey
+    ];
+  }
+}
+function indexEntryComparator(left, right) {
+  let cmp = left._indexId - right._indexId;
+  if (cmp !== 0) {
+    return cmp;
+  }
+  cmp = compareByteArrays(left._arrayValue, right._arrayValue);
+  if (cmp !== 0) {
+    return cmp;
+  }
+  cmp = compareByteArrays(left._directionalValue, right._directionalValue);
+  if (cmp !== 0) {
+    return cmp;
+  }
+  return DocumentKey.comparator(left._documentKey, right._documentKey);
+}
+function compareByteArrays(left, right) {
+  for (let i = 0; i < left.length && i < right.length; ++i) {
+    const compare = left[i] - right[i];
+    if (compare !== 0) {
+      return compare;
+    }
+  }
+  return left.length - right.length;
+}
+function encodeKeySafeBytes(array) {
+  if (isSafariOrWebkit()) {
+    return encodeUint8ArrayToSortableString(array);
+  }
+  return array;
+}
+function decodeKeySafeBytes(input) {
+  if (typeof input !== "string") {
+    return input;
+  }
+  return decodeSortableStringToUint8Array(input);
+}
+function encodeUint8ArrayToSortableString(array) {
+  let byteString = "";
+  for (let i = 0; i < array.length; i++) {
+    byteString += String.fromCharCode(array[i]);
+  }
+  return byteString;
+}
+function decodeSortableStringToUint8Array(byteString) {
+  const uint8array = new Uint8Array(byteString.length);
+  for (let i = 0; i < byteString.length; i++) {
+    uint8array[i] = byteString.charCodeAt(i);
+  }
+  return uint8array;
+}
+class TargetIndexMatcher {
+  constructor(target) {
+    this.inequalityFilters = new SortedSet((lhs, rhs) => FieldPath$1.comparator(lhs.field, rhs.field));
+    this.collectionId = target.collectionGroup != null ? target.collectionGroup : target.path.lastSegment();
+    this.orderBys = target.orderBy;
+    this.equalityFilters = [];
+    for (const filter of target.filters) {
+      const fieldFilter = filter;
+      if (fieldFilter.isInequality()) {
+        this.inequalityFilters = this.inequalityFilters.add(fieldFilter);
+      } else {
+        this.equalityFilters.push(fieldFilter);
+      }
+    }
+  }
+  get hasMultipleInequality() {
+    return this.inequalityFilters.size > 1;
+  }
+  /**
+   * Returns whether the index can be used to serve the TargetIndexMatcher's
+   * target.
+   *
+   * An index is considered capable of serving the target when:
+   * - The target uses all index segments for its filters and orderBy clauses.
+   *   The target can have additional filter and orderBy clauses, but not
+   *   fewer.
+   * - If an ArrayContains/ArrayContainsAnyfilter is used, the index must also
+   *   have a corresponding `CONTAINS` segment.
+   * - All directional index segments can be mapped to the target as a series of
+   *   equality filters, a single inequality filter and a series of orderBy
+   *   clauses.
+   * - The segments that represent the equality filters may appear out of order.
+   * - The optional segment for the inequality filter must appear after all
+   *   equality segments.
+   * - The segments that represent that orderBy clause of the target must appear
+   *   in order after all equality and inequality segments. Single orderBy
+   *   clauses cannot be skipped, but a continuous orderBy suffix may be
+   *   omitted.
+   */
+  servedByIndex(index) {
+    hardAssert(index.collectionGroup === this.collectionId, 49279);
+    if (this.hasMultipleInequality) {
+      return false;
+    }
+    const arraySegment = fieldIndexGetArraySegment(index);
+    if (arraySegment !== void 0 && !this.hasMatchingEqualityFilter(arraySegment)) {
+      return false;
+    }
+    const segments = fieldIndexGetDirectionalSegments(index);
+    let equalitySegments = /* @__PURE__ */ new Set();
+    let segmentIndex = 0;
+    let orderBysIndex = 0;
+    for (; segmentIndex < segments.length; ++segmentIndex) {
+      if (this.hasMatchingEqualityFilter(segments[segmentIndex])) {
+        equalitySegments = equalitySegments.add(segments[segmentIndex].fieldPath.canonicalString());
+      } else {
+        break;
+      }
+    }
+    if (segmentIndex === segments.length) {
+      return true;
+    }
+    if (this.inequalityFilters.size > 0) {
+      const inequalityFilter = this.inequalityFilters.getIterator().getNext();
+      if (!equalitySegments.has(inequalityFilter.field.canonicalString())) {
+        const segment = segments[segmentIndex];
+        if (!this.matchesFilter(inequalityFilter, segment) || !this.matchesOrderBy(this.orderBys[orderBysIndex++], segment)) {
+          return false;
+        }
+      }
+      ++segmentIndex;
+    }
+    for (; segmentIndex < segments.length; ++segmentIndex) {
+      const segment = segments[segmentIndex];
+      if (orderBysIndex >= this.orderBys.length || !this.matchesOrderBy(this.orderBys[orderBysIndex++], segment)) {
+        return false;
+      }
+    }
+    return true;
+  }
+  /**
+   * Returns a full matched field index for this target. Currently multiple
+   * inequality query is not supported so function returns null.
+   */
+  buildTargetIndex() {
+    if (this.hasMultipleInequality) {
+      return null;
+    }
+    let uniqueFields = new SortedSet(FieldPath$1.comparator);
+    const segments = [];
+    for (const filter of this.equalityFilters) {
+      if (filter.field.isKeyField()) {
+        continue;
+      }
+      const isArrayOperator = filter.op === "array-contains" || filter.op === "array-contains-any";
+      if (isArrayOperator) {
+        segments.push(new IndexSegment(
+          filter.field,
+          2
+          /* IndexKind.CONTAINS */
+        ));
+      } else {
+        if (uniqueFields.has(filter.field)) {
+          continue;
+        }
+        uniqueFields = uniqueFields.add(filter.field);
+        segments.push(new IndexSegment(
+          filter.field,
+          0
+          /* IndexKind.ASCENDING */
+        ));
+      }
+    }
+    for (const orderBy2 of this.orderBys) {
+      if (orderBy2.field.isKeyField()) {
+        continue;
+      }
+      if (uniqueFields.has(orderBy2.field)) {
+        continue;
+      }
+      uniqueFields = uniqueFields.add(orderBy2.field);
+      segments.push(new IndexSegment(
+        orderBy2.field,
+        orderBy2.dir === "asc" ? 0 : 1
+        /* IndexKind.DESCENDING */
+      ));
+    }
+    return new FieldIndex(FieldIndex.UNKNOWN_ID, this.collectionId, segments, IndexState.empty());
+  }
+  hasMatchingEqualityFilter(segment) {
+    for (const filter of this.equalityFilters) {
+      if (this.matchesFilter(filter, segment)) {
+        return true;
+      }
+    }
+    return false;
+  }
+  matchesFilter(filter, segment) {
+    if (filter === void 0 || !filter.field.isEqual(segment.fieldPath)) {
+      return false;
+    }
+    const isArrayOperator = filter.op === "array-contains" || filter.op === "array-contains-any";
+    return segment.kind === 2 === isArrayOperator;
+  }
+  matchesOrderBy(orderBy2, segment) {
+    if (!orderBy2.field.isEqual(segment.fieldPath)) {
+      return false;
+    }
+    return segment.kind === 0 && orderBy2.dir === "asc" || segment.kind === 1 && orderBy2.dir === "desc";
+  }
+}
+function computeInExpansion(filter) {
+  hardAssert(filter instanceof FieldFilter || filter instanceof CompositeFilter, 20012);
+  if (filter instanceof FieldFilter) {
+    if (filter instanceof InFilter) {
+      const expandedFilters2 = filter.value.arrayValue?.values?.map((value) => FieldFilter.create(filter.field, "==", value)) || [];
+      return CompositeFilter.create(
+        expandedFilters2,
+        "or"
+        /* CompositeOperator.OR */
+      );
+    } else {
+      return filter;
+    }
+  }
+  const expandedFilters = filter.filters.map((subfilter) => computeInExpansion(subfilter));
+  return CompositeFilter.create(expandedFilters, filter.op);
+}
+function getDnfTerms(filter) {
+  if (filter.getFilters().length === 0) {
+    return [];
+  }
+  const result = computeDistributedNormalForm(computeInExpansion(filter));
+  hardAssert(isDisjunctiveNormalForm(result), 7391);
+  if (isSingleFieldFilter(result) || isFlatConjunction(result)) {
+    return [result];
+  }
+  return result.getFilters();
+}
+function isSingleFieldFilter(filter) {
+  return filter instanceof FieldFilter;
+}
+function isFlatConjunction(filter) {
+  return filter instanceof CompositeFilter && compositeFilterIsFlatConjunction(filter);
+}
+function isDisjunctiveNormalForm(filter) {
+  return isSingleFieldFilter(filter) || isFlatConjunction(filter) || isDisjunctionOfFieldFiltersAndFlatConjunctions(filter);
+}
+function isDisjunctionOfFieldFiltersAndFlatConjunctions(filter) {
+  if (filter instanceof CompositeFilter) {
+    if (compositeFilterIsDisjunction(filter)) {
+      for (const subFilter of filter.getFilters()) {
+        if (!isSingleFieldFilter(subFilter) && !isFlatConjunction(subFilter)) {
+          return false;
+        }
+      }
+      return true;
+    }
+  }
+  return false;
+}
+function computeDistributedNormalForm(filter) {
+  hardAssert(filter instanceof FieldFilter || filter instanceof CompositeFilter, 34018);
+  if (filter instanceof FieldFilter) {
+    return filter;
+  }
+  if (filter.filters.length === 1) {
+    return computeDistributedNormalForm(filter.filters[0]);
+  }
+  const result = filter.filters.map((subfilter) => computeDistributedNormalForm(subfilter));
+  let newFilter = CompositeFilter.create(result, filter.op);
+  newFilter = applyAssociation(newFilter);
+  if (isDisjunctiveNormalForm(newFilter)) {
+    return newFilter;
+  }
+  hardAssert(newFilter instanceof CompositeFilter, 64498);
+  hardAssert(compositeFilterIsConjunction(newFilter), 40251);
+  hardAssert(newFilter.filters.length > 1, 57927);
+  return newFilter.filters.reduce((runningResult, filter2) => applyDistribution(runningResult, filter2));
+}
+function applyDistribution(lhs, rhs) {
+  hardAssert(lhs instanceof FieldFilter || lhs instanceof CompositeFilter, 38388);
+  hardAssert(rhs instanceof FieldFilter || rhs instanceof CompositeFilter, 25473);
+  let result;
+  if (lhs instanceof FieldFilter) {
+    if (rhs instanceof FieldFilter) {
+      result = applyDistributionFieldFilters(lhs, rhs);
+    } else {
+      result = applyDistributionFieldAndCompositeFilters(lhs, rhs);
+    }
+  } else {
+    if (rhs instanceof FieldFilter) {
+      result = applyDistributionFieldAndCompositeFilters(rhs, lhs);
+    } else {
+      result = applyDistributionCompositeFilters(lhs, rhs);
+    }
+  }
+  return applyAssociation(result);
+}
+function applyDistributionFieldFilters(lhs, rhs) {
+  return CompositeFilter.create(
+    [lhs, rhs],
+    "and"
+    /* CompositeOperator.AND */
+  );
+}
+function applyDistributionCompositeFilters(lhs, rhs) {
+  hardAssert(lhs.filters.length > 0 && rhs.filters.length > 0, 48005);
+  if (compositeFilterIsConjunction(lhs) && compositeFilterIsConjunction(rhs)) {
+    return compositeFilterWithAddedFilters(lhs, rhs.getFilters());
+  }
+  const disjunctionSide = compositeFilterIsDisjunction(lhs) ? lhs : rhs;
+  const otherSide = compositeFilterIsDisjunction(lhs) ? rhs : lhs;
+  const results = disjunctionSide.filters.map((subfilter) => applyDistribution(subfilter, otherSide));
+  return CompositeFilter.create(
+    results,
+    "or"
+    /* CompositeOperator.OR */
+  );
+}
+function applyDistributionFieldAndCompositeFilters(fieldFilter, compositeFilter) {
+  if (compositeFilterIsConjunction(compositeFilter)) {
+    return compositeFilterWithAddedFilters(compositeFilter, fieldFilter.getFilters());
+  } else {
+    const newFilters = compositeFilter.filters.map((subfilter) => applyDistribution(fieldFilter, subfilter));
+    return CompositeFilter.create(
+      newFilters,
+      "or"
+      /* CompositeOperator.OR */
+    );
+  }
+}
+function applyAssociation(filter) {
+  hardAssert(filter instanceof FieldFilter || filter instanceof CompositeFilter, 11850);
+  if (filter instanceof FieldFilter) {
+    return filter;
+  }
+  const filters = filter.getFilters();
+  if (filters.length === 1) {
+    return applyAssociation(filters[0]);
+  }
+  if (compositeFilterIsFlat(filter)) {
+    return filter;
+  }
+  const updatedFilters = filters.map((subfilter) => applyAssociation(subfilter));
+  const newSubfilters = [];
+  updatedFilters.forEach((subfilter) => {
+    if (subfilter instanceof FieldFilter) {
+      newSubfilters.push(subfilter);
+    } else if (subfilter instanceof CompositeFilter) {
+      if (subfilter.op === filter.op) {
+        newSubfilters.push(...subfilter.filters);
+      } else {
+        newSubfilters.push(subfilter);
+      }
+    }
+  });
+  if (newSubfilters.length === 1) {
+    return newSubfilters[0];
+  }
+  return CompositeFilter.create(newSubfilters, filter.op);
 }
 class MemoryIndexManager {
   constructor() {
@@ -5887,7 +8491,7 @@ class MemoryIndexManager {
       /* IndexType.NONE */
     );
   }
-  getFieldIndexes(transaction, collectionGroup) {
+  getFieldIndexes(transaction, collectionGroup2) {
     return PersistencePromise.resolve([]);
   }
   getNextCollectionGroupToUpdate(transaction) {
@@ -5896,10 +8500,10 @@ class MemoryIndexManager {
   getMinOffset(transaction, target) {
     return PersistencePromise.resolve(IndexOffset.min());
   }
-  getMinOffsetFromCollectionGroup(transaction, collectionGroup) {
+  getMinOffsetFromCollectionGroup(transaction, collectionGroup2) {
     return PersistencePromise.resolve(IndexOffset.min());
   }
-  updateCollectionGroup(transaction, collectionGroup, offset) {
+  updateCollectionGroup(transaction, collectionGroup2, offset) {
     return PersistencePromise.resolve();
   }
   updateIndexEntries(transaction, documents) {
@@ -5930,6 +8534,851 @@ class MemoryCollectionParentIndex {
     return parentPaths.toArray();
   }
 }
+const LOG_TAG$f = "IndexedDbIndexManager";
+const EMPTY_VALUE = new Uint8Array(0);
+class IndexedDbIndexManager {
+  constructor(user, databaseId) {
+    this.databaseId = databaseId;
+    this.collectionParentsCache = new MemoryCollectionParentIndex();
+    this.targetToDnfSubTargets = new ObjectMap((t) => canonifyTarget(t), (l, r) => targetEquals(l, r));
+    this.uid = user.uid || "";
+  }
+  /**
+   * Adds a new entry to the collection parent index.
+   *
+   * Repeated calls for the same collectionPath should be avoided within a
+   * transaction as IndexedDbIndexManager only caches writes once a transaction
+   * has been committed.
+   */
+  addToCollectionParentIndex(transaction, collectionPath) {
+    if (!this.collectionParentsCache.has(collectionPath)) {
+      const collectionId = collectionPath.lastSegment();
+      const parentPath = collectionPath.popLast();
+      transaction.addOnCommittedListener(() => {
+        this.collectionParentsCache.add(collectionPath);
+      });
+      const collectionParent = {
+        collectionId,
+        parent: encodeResourcePath(parentPath)
+      };
+      return collectionParentsStore(transaction).put(collectionParent);
+    }
+    return PersistencePromise.resolve();
+  }
+  getCollectionParents(transaction, collectionId) {
+    const parentPaths = [];
+    const range = IDBKeyRange.bound(
+      [collectionId, ""],
+      [immediateSuccessor(collectionId), ""],
+      /*lowerOpen=*/
+      false,
+      /*upperOpen=*/
+      true
+    );
+    return collectionParentsStore(transaction).loadAll(range).next((entries) => {
+      for (const entry of entries) {
+        if (entry.collectionId !== collectionId) {
+          break;
+        }
+        parentPaths.push(decodeResourcePath(entry.parent));
+      }
+      return parentPaths;
+    });
+  }
+  addFieldIndex(transaction, index) {
+    const indexes = indexConfigurationStore(transaction);
+    const dbIndex = toDbIndexConfiguration(index);
+    delete dbIndex.indexId;
+    const result = indexes.add(dbIndex);
+    if (index.indexState) {
+      const states = indexStateStore(transaction);
+      return result.next((indexId) => {
+        states.put(toDbIndexState(indexId, this.uid, index.indexState.sequenceNumber, index.indexState.offset));
+      });
+    } else {
+      return result.next();
+    }
+  }
+  deleteFieldIndex(transaction, index) {
+    const indexes = indexConfigurationStore(transaction);
+    const states = indexStateStore(transaction);
+    const entries = indexEntriesStore(transaction);
+    return indexes.delete(index.indexId).next(() => states.delete(IDBKeyRange.bound(
+      [index.indexId],
+      [index.indexId + 1],
+      /*lowerOpen=*/
+      false,
+      /*upperOpen=*/
+      true
+    ))).next(() => entries.delete(IDBKeyRange.bound(
+      [index.indexId],
+      [index.indexId + 1],
+      /*lowerOpen=*/
+      false,
+      /*upperOpen=*/
+      true
+    )));
+  }
+  deleteAllFieldIndexes(transaction) {
+    const indexes = indexConfigurationStore(transaction);
+    const entries = indexEntriesStore(transaction);
+    const states = indexStateStore(transaction);
+    return indexes.deleteAll().next(() => entries.deleteAll()).next(() => states.deleteAll());
+  }
+  createTargetIndexes(transaction, target) {
+    return PersistencePromise.forEach(this.getSubTargets(target), (subTarget) => {
+      return this.getIndexType(transaction, subTarget).next((type) => {
+        if (type === 0 || type === 1) {
+          const targetIndexMatcher = new TargetIndexMatcher(subTarget);
+          const fieldIndex = targetIndexMatcher.buildTargetIndex();
+          if (fieldIndex != null) {
+            return this.addFieldIndex(transaction, fieldIndex);
+          }
+        }
+      });
+    });
+  }
+  getDocumentsMatchingTarget(transaction, target) {
+    const indexEntries = indexEntriesStore(transaction);
+    let canServeTarget = true;
+    const indexes = /* @__PURE__ */ new Map();
+    return PersistencePromise.forEach(this.getSubTargets(target), (subTarget) => {
+      return this.getFieldIndex(transaction, subTarget).next((index) => {
+        canServeTarget && (canServeTarget = !!index);
+        indexes.set(subTarget, index);
+      });
+    }).next(() => {
+      if (!canServeTarget) {
+        return PersistencePromise.resolve(null);
+      } else {
+        let existingKeys = documentKeySet();
+        const result = [];
+        return PersistencePromise.forEach(indexes, (index, subTarget) => {
+          logDebug(LOG_TAG$f, `Using index ${fieldIndexToString(index)} to execute ${canonifyTarget(target)}`);
+          const arrayValues = targetGetArrayValues(subTarget, index);
+          const notInValues = targetGetNotInValues(subTarget, index);
+          const lowerBound = targetGetLowerBound(subTarget, index);
+          const upperBound = targetGetUpperBound(subTarget, index);
+          const lowerBoundEncoded = this.encodeBound(index, subTarget, lowerBound);
+          const upperBoundEncoded = this.encodeBound(index, subTarget, upperBound);
+          const notInEncoded = this.encodeValues(index, subTarget, notInValues);
+          const indexRanges = this.generateIndexRanges(index.indexId, arrayValues, lowerBoundEncoded, lowerBound.inclusive, upperBoundEncoded, upperBound.inclusive, notInEncoded);
+          return PersistencePromise.forEach(indexRanges, (indexRange) => {
+            return indexEntries.loadFirst(indexRange, target.limit).next((entries) => {
+              entries.forEach((entry) => {
+                const documentKey = DocumentKey.fromSegments(entry.documentKey);
+                if (!existingKeys.has(documentKey)) {
+                  existingKeys = existingKeys.add(documentKey);
+                  result.push(documentKey);
+                }
+              });
+            });
+          });
+        }).next(() => result);
+      }
+    });
+  }
+  getSubTargets(target) {
+    let subTargets = this.targetToDnfSubTargets.get(target);
+    if (subTargets) {
+      return subTargets;
+    }
+    if (target.filters.length === 0) {
+      subTargets = [target];
+    } else {
+      const dnf = getDnfTerms(CompositeFilter.create(
+        target.filters,
+        "and"
+        /* CompositeOperator.AND */
+      ));
+      subTargets = dnf.map((term) => newTarget(target.path, target.collectionGroup, target.orderBy, term.getFilters(), target.limit, target.startAt, target.endAt));
+    }
+    this.targetToDnfSubTargets.set(target, subTargets);
+    return subTargets;
+  }
+  /**
+   * Constructs a key range query on `DbIndexEntryStore` that unions all
+   * bounds.
+   */
+  generateIndexRanges(indexId, arrayValues, lowerBounds, lowerBoundInclusive, upperBounds, upperBoundInclusive, notInValues) {
+    const totalScans = (arrayValues != null ? arrayValues.length : 1) * Math.max(lowerBounds.length, upperBounds.length);
+    const scansPerArrayElement = totalScans / (arrayValues != null ? arrayValues.length : 1);
+    const indexRanges = [];
+    for (let i = 0; i < totalScans; ++i) {
+      const arrayValue = arrayValues ? this.encodeSingleElement(arrayValues[i / scansPerArrayElement]) : EMPTY_VALUE;
+      const lowerBound = this.generateLowerBound(indexId, arrayValue, lowerBounds[i % scansPerArrayElement], lowerBoundInclusive);
+      const upperBound = this.generateUpperBound(indexId, arrayValue, upperBounds[i % scansPerArrayElement], upperBoundInclusive);
+      const notInBound = notInValues.map((notIn) => this.generateLowerBound(
+        indexId,
+        arrayValue,
+        notIn,
+        /* inclusive= */
+        true
+      ));
+      indexRanges.push(...this.createRange(lowerBound, upperBound, notInBound));
+    }
+    return indexRanges;
+  }
+  /** Generates the lower bound for `arrayValue` and `directionalValue`. */
+  generateLowerBound(indexId, arrayValue, directionalValue, inclusive) {
+    const entry = new IndexEntry(indexId, DocumentKey.empty(), arrayValue, directionalValue);
+    return inclusive ? entry : entry.successor();
+  }
+  /** Generates the upper bound for `arrayValue` and `directionalValue`. */
+  generateUpperBound(indexId, arrayValue, directionalValue, inclusive) {
+    const entry = new IndexEntry(indexId, DocumentKey.empty(), arrayValue, directionalValue);
+    return inclusive ? entry.successor() : entry;
+  }
+  getFieldIndex(transaction, target) {
+    const targetIndexMatcher = new TargetIndexMatcher(target);
+    const collectionGroup2 = target.collectionGroup != null ? target.collectionGroup : target.path.lastSegment();
+    return this.getFieldIndexes(transaction, collectionGroup2).next((indexes) => {
+      let index = null;
+      for (const candidate of indexes) {
+        const matches = targetIndexMatcher.servedByIndex(candidate);
+        if (matches && (!index || candidate.fields.length > index.fields.length)) {
+          index = candidate;
+        }
+      }
+      return index;
+    });
+  }
+  getIndexType(transaction, target) {
+    let indexType = 2;
+    const subTargets = this.getSubTargets(target);
+    return PersistencePromise.forEach(subTargets, (target2) => {
+      return this.getFieldIndex(transaction, target2).next((index) => {
+        if (!index) {
+          indexType = 0;
+        } else if (indexType !== 0 && index.fields.length < targetGetSegmentCount(target2)) {
+          indexType = 1;
+        }
+      });
+    }).next(() => {
+      if (targetHasLimit(target) && subTargets.length > 1 && indexType === 2) {
+        return 1;
+      }
+      return indexType;
+    });
+  }
+  /**
+   * Returns the byte encoded form of the directional values in the field index.
+   * Returns `null` if the document does not have all fields specified in the
+   * index.
+   */
+  encodeDirectionalElements(fieldIndex, document) {
+    const encoder2 = new IndexByteEncoder();
+    for (const segment of fieldIndexGetDirectionalSegments(fieldIndex)) {
+      const field = document.data.field(segment.fieldPath);
+      if (field == null) {
+        return null;
+      }
+      const directionalEncoder = encoder2.forKind(segment.kind);
+      FirestoreIndexValueWriter.INSTANCE.writeIndexValue(field, directionalEncoder);
+    }
+    return encoder2.encodedBytes();
+  }
+  /** Encodes a single value to the ascending index format. */
+  encodeSingleElement(value) {
+    const encoder2 = new IndexByteEncoder();
+    FirestoreIndexValueWriter.INSTANCE.writeIndexValue(value, encoder2.forKind(
+      0
+      /* IndexKind.ASCENDING */
+    ));
+    return encoder2.encodedBytes();
+  }
+  /**
+   * Returns an encoded form of the document key that sorts based on the key
+   * ordering of the field index.
+   */
+  encodeDirectionalKey(fieldIndex, documentKey) {
+    const encoder2 = new IndexByteEncoder();
+    FirestoreIndexValueWriter.INSTANCE.writeIndexValue(refValue(this.databaseId, documentKey), encoder2.forKind(fieldIndexGetKeyOrder(fieldIndex)));
+    return encoder2.encodedBytes();
+  }
+  /**
+   * Encodes the given field values according to the specification in `target`.
+   * For IN queries, a list of possible values is returned.
+   */
+  encodeValues(fieldIndex, target, values) {
+    if (values === null) {
+      return [];
+    }
+    let encoders = [];
+    encoders.push(new IndexByteEncoder());
+    let valueIdx = 0;
+    for (const segment of fieldIndexGetDirectionalSegments(fieldIndex)) {
+      const value = values[valueIdx++];
+      for (const encoder2 of encoders) {
+        if (this.isInFilter(target, segment.fieldPath) && isArray(value)) {
+          encoders = this.expandIndexValues(encoders, segment, value);
+        } else {
+          const directionalEncoder = encoder2.forKind(segment.kind);
+          FirestoreIndexValueWriter.INSTANCE.writeIndexValue(value, directionalEncoder);
+        }
+      }
+    }
+    return this.getEncodedBytes(encoders);
+  }
+  /**
+   * Encodes the given bounds according to the specification in `target`. For IN
+   * queries, a list of possible values is returned.
+   */
+  encodeBound(fieldIndex, target, bound) {
+    return this.encodeValues(fieldIndex, target, bound.position);
+  }
+  /** Returns the byte representation for the provided encoders. */
+  getEncodedBytes(encoders) {
+    const result = [];
+    for (let i = 0; i < encoders.length; ++i) {
+      result[i] = encoders[i].encodedBytes();
+    }
+    return result;
+  }
+  /**
+   * Creates a separate encoder for each element of an array.
+   *
+   * The method appends each value to all existing encoders (e.g. filter("a",
+   * "==", "a1").filter("b", "in", ["b1", "b2"]) becomes ["a1,b1", "a1,b2"]). A
+   * list of new encoders is returned.
+   */
+  expandIndexValues(encoders, segment, value) {
+    const prefixes = [...encoders];
+    const results = [];
+    for (const arrayElement of value.arrayValue.values || []) {
+      for (const prefix of prefixes) {
+        const clonedEncoder = new IndexByteEncoder();
+        clonedEncoder.seed(prefix.encodedBytes());
+        FirestoreIndexValueWriter.INSTANCE.writeIndexValue(arrayElement, clonedEncoder.forKind(segment.kind));
+        results.push(clonedEncoder);
+      }
+    }
+    return results;
+  }
+  isInFilter(target, fieldPath) {
+    return !!target.filters.find((f) => f instanceof FieldFilter && f.field.isEqual(fieldPath) && (f.op === "in" || f.op === "not-in"));
+  }
+  getFieldIndexes(transaction, collectionGroup2) {
+    const indexes = indexConfigurationStore(transaction);
+    const states = indexStateStore(transaction);
+    return (collectionGroup2 ? indexes.loadAll(DbIndexConfigurationCollectionGroupIndex, IDBKeyRange.bound(collectionGroup2, collectionGroup2)) : indexes.loadAll()).next((indexConfigs) => {
+      const result = [];
+      return PersistencePromise.forEach(indexConfigs, (indexConfig) => {
+        return states.get([indexConfig.indexId, this.uid]).next((indexState) => {
+          result.push(fromDbIndexConfiguration(indexConfig, indexState));
+        });
+      }).next(() => result);
+    });
+  }
+  getNextCollectionGroupToUpdate(transaction) {
+    return this.getFieldIndexes(transaction).next((indexes) => {
+      if (indexes.length === 0) {
+        return null;
+      }
+      indexes.sort((l, r) => {
+        const cmp = l.indexState.sequenceNumber - r.indexState.sequenceNumber;
+        return cmp !== 0 ? cmp : primitiveComparator(l.collectionGroup, r.collectionGroup);
+      });
+      return indexes[0].collectionGroup;
+    });
+  }
+  updateCollectionGroup(transaction, collectionGroup2, offset) {
+    const indexes = indexConfigurationStore(transaction);
+    const states = indexStateStore(transaction);
+    return this.getNextSequenceNumber(transaction).next((nextSequenceNumber) => indexes.loadAll(DbIndexConfigurationCollectionGroupIndex, IDBKeyRange.bound(collectionGroup2, collectionGroup2)).next((configs) => PersistencePromise.forEach(configs, (config) => states.put(toDbIndexState(config.indexId, this.uid, nextSequenceNumber, offset)))));
+  }
+  updateIndexEntries(transaction, documents) {
+    const memoizedIndexes = /* @__PURE__ */ new Map();
+    return PersistencePromise.forEach(documents, (key, doc3) => {
+      const memoizedCollectionIndexes = memoizedIndexes.get(key.collectionGroup);
+      const fieldIndexes = memoizedCollectionIndexes ? PersistencePromise.resolve(memoizedCollectionIndexes) : this.getFieldIndexes(transaction, key.collectionGroup);
+      return fieldIndexes.next((fieldIndexes2) => {
+        memoizedIndexes.set(key.collectionGroup, fieldIndexes2);
+        return PersistencePromise.forEach(fieldIndexes2, (fieldIndex) => {
+          return this.getExistingIndexEntries(transaction, key, fieldIndex).next((existingEntries) => {
+            const newEntries = this.computeIndexEntries(doc3, fieldIndex);
+            if (!existingEntries.isEqual(newEntries)) {
+              return this.updateEntries(transaction, doc3, fieldIndex, existingEntries, newEntries);
+            }
+            return PersistencePromise.resolve();
+          });
+        });
+      });
+    });
+  }
+  addIndexEntry(transaction, document, fieldIndex, indexEntry) {
+    const indexEntries = indexEntriesStore(transaction);
+    return indexEntries.put(indexEntry.dbIndexEntry(this.uid, this.encodeDirectionalKey(fieldIndex, document.key), document.key));
+  }
+  deleteIndexEntry(transaction, document, fieldIndex, indexEntry) {
+    const indexEntries = indexEntriesStore(transaction);
+    return indexEntries.delete(indexEntry.dbIndexEntryKey(this.uid, this.encodeDirectionalKey(fieldIndex, document.key), document.key));
+  }
+  getExistingIndexEntries(transaction, documentKey, fieldIndex) {
+    const indexEntries = indexEntriesStore(transaction);
+    let results = new SortedSet(indexEntryComparator);
+    return indexEntries.iterate({
+      index: DbIndexEntryDocumentKeyIndex,
+      range: IDBKeyRange.only([
+        fieldIndex.indexId,
+        this.uid,
+        encodeKeySafeBytes(this.encodeDirectionalKey(fieldIndex, documentKey))
+      ])
+    }, (_, entry) => {
+      results = results.add(new IndexEntry(fieldIndex.indexId, documentKey, decodeKeySafeBytes(entry.arrayValue), decodeKeySafeBytes(entry.directionalValue)));
+    }).next(() => results);
+  }
+  /** Creates the index entries for the given document. */
+  computeIndexEntries(document, fieldIndex) {
+    let results = new SortedSet(indexEntryComparator);
+    const directionalValue = this.encodeDirectionalElements(fieldIndex, document);
+    if (directionalValue == null) {
+      return results;
+    }
+    const arraySegment = fieldIndexGetArraySegment(fieldIndex);
+    if (arraySegment != null) {
+      const value = document.data.field(arraySegment.fieldPath);
+      if (isArray(value)) {
+        for (const arrayValue of value.arrayValue.values || []) {
+          results = results.add(new IndexEntry(fieldIndex.indexId, document.key, this.encodeSingleElement(arrayValue), directionalValue));
+        }
+      }
+    } else {
+      results = results.add(new IndexEntry(fieldIndex.indexId, document.key, EMPTY_VALUE, directionalValue));
+    }
+    return results;
+  }
+  /**
+   * Updates the index entries for the provided document by deleting entries
+   * that are no longer referenced in `newEntries` and adding all newly added
+   * entries.
+   */
+  updateEntries(transaction, document, fieldIndex, existingEntries, newEntries) {
+    logDebug(LOG_TAG$f, "Updating index entries for document '%s'", document.key);
+    const promises = [];
+    diffSortedSets(
+      existingEntries,
+      newEntries,
+      indexEntryComparator,
+      /* onAdd= */
+      (entry) => {
+        promises.push(this.addIndexEntry(transaction, document, fieldIndex, entry));
+      },
+      /* onRemove= */
+      (entry) => {
+        promises.push(this.deleteIndexEntry(transaction, document, fieldIndex, entry));
+      }
+    );
+    return PersistencePromise.waitFor(promises);
+  }
+  getNextSequenceNumber(transaction) {
+    let nextSequenceNumber = 1;
+    const states = indexStateStore(transaction);
+    return states.iterate({
+      index: DbIndexStateSequenceNumberIndex,
+      reverse: true,
+      range: IDBKeyRange.upperBound([this.uid, Number.MAX_SAFE_INTEGER])
+    }, (_, state, controller) => {
+      controller.done();
+      nextSequenceNumber = state.sequenceNumber + 1;
+    }).next(() => nextSequenceNumber);
+  }
+  /**
+   * Returns a new set of IDB ranges that splits the existing range and excludes
+   * any values that match the `notInValue` from these ranges. As an example,
+   * '[foo > 2 && foo != 3]` becomes  `[foo > 2 && < 3, foo > 3]`.
+   */
+  createRange(lower, upper, notInValues) {
+    notInValues = notInValues.sort((l, r) => indexEntryComparator(l, r)).filter((el, i, values) => !i || indexEntryComparator(el, values[i - 1]) !== 0);
+    const bounds = [];
+    bounds.push(lower);
+    for (const notInValue of notInValues) {
+      const cmpToLower = indexEntryComparator(notInValue, lower);
+      const cmpToUpper = indexEntryComparator(notInValue, upper);
+      if (cmpToLower === 0) {
+        bounds[0] = lower.successor();
+      } else if (cmpToLower > 0 && cmpToUpper < 0) {
+        bounds.push(notInValue);
+        bounds.push(notInValue.successor());
+      } else if (cmpToUpper > 0) {
+        break;
+      }
+    }
+    bounds.push(upper);
+    const ranges = [];
+    for (let i = 0; i < bounds.length; i += 2) {
+      if (this.isRangeMatchable(bounds[i], bounds[i + 1])) {
+        return [];
+      }
+      const lowerBound = bounds[i].dbIndexEntryKey(this.uid, EMPTY_VALUE, DocumentKey.empty());
+      const upperBound = bounds[i + 1].dbIndexEntryKey(this.uid, EMPTY_VALUE, DocumentKey.empty());
+      ranges.push(IDBKeyRange.bound(lowerBound, upperBound));
+    }
+    return ranges;
+  }
+  isRangeMatchable(lowerBound, upperBound) {
+    return indexEntryComparator(lowerBound, upperBound) > 0;
+  }
+  getMinOffsetFromCollectionGroup(transaction, collectionGroup2) {
+    return this.getFieldIndexes(transaction, collectionGroup2).next(getMinOffsetFromFieldIndexes);
+  }
+  getMinOffset(transaction, target) {
+    return PersistencePromise.mapArray(this.getSubTargets(target), (subTarget) => this.getFieldIndex(transaction, subTarget).next((index) => index ? index : fail(44426))).next(getMinOffsetFromFieldIndexes);
+  }
+}
+function collectionParentsStore(txn) {
+  return getStore(txn, DbCollectionParentStore);
+}
+function indexEntriesStore(txn) {
+  return getStore(txn, DbIndexEntryStore);
+}
+function indexConfigurationStore(txn) {
+  return getStore(txn, DbIndexConfigurationStore);
+}
+function indexStateStore(txn) {
+  return getStore(txn, DbIndexStateStore);
+}
+function getMinOffsetFromFieldIndexes(fieldIndexes) {
+  hardAssert(fieldIndexes.length !== 0, 28825);
+  let minOffset = fieldIndexes[0].indexState.offset;
+  let maxBatchId = minOffset.largestBatchId;
+  for (let i = 1; i < fieldIndexes.length; i++) {
+    const newOffset = fieldIndexes[i].indexState.offset;
+    if (indexOffsetComparator(newOffset, minOffset) < 0) {
+      minOffset = newOffset;
+    }
+    if (maxBatchId < newOffset.largestBatchId) {
+      maxBatchId = newOffset.largestBatchId;
+    }
+  }
+  return new IndexOffset(minOffset.readTime, minOffset.documentKey, maxBatchId);
+}
+function removeMutationBatch(txn, userId, batch) {
+  const mutationStore = txn.store(DbMutationBatchStore);
+  const indexTxn = txn.store(DbDocumentMutationStore);
+  const promises = [];
+  const range = IDBKeyRange.only(batch.batchId);
+  let numDeleted = 0;
+  const removePromise = mutationStore.iterate({ range }, (key, value, control) => {
+    numDeleted++;
+    return control.delete();
+  });
+  promises.push(removePromise.next(() => {
+    hardAssert(numDeleted === 1, 47070, { batchId: batch.batchId });
+  }));
+  const removedDocuments = [];
+  for (const mutation of batch.mutations) {
+    const indexKey = newDbDocumentMutationKey(userId, mutation.key.path, batch.batchId);
+    promises.push(indexTxn.delete(indexKey));
+    removedDocuments.push(mutation.key);
+  }
+  return PersistencePromise.waitFor(promises).next(() => removedDocuments);
+}
+function dbDocumentSize(doc3) {
+  if (!doc3) {
+    return 0;
+  }
+  let value;
+  if (doc3.document) {
+    value = doc3.document;
+  } else if (doc3.unknownDocument) {
+    value = doc3.unknownDocument;
+  } else if (doc3.noDocument) {
+    value = doc3.noDocument;
+  } else {
+    throw fail(14731);
+  }
+  return JSON.stringify(value).length;
+}
+class IndexedDbMutationQueue {
+  constructor(userId, serializer, indexManager, referenceDelegate) {
+    this.userId = userId;
+    this.serializer = serializer;
+    this.indexManager = indexManager;
+    this.referenceDelegate = referenceDelegate;
+    this.documentKeysByBatchId = {};
+  }
+  /**
+   * Creates a new mutation queue for the given user.
+   * @param user - The user for which to create a mutation queue.
+   * @param serializer - The serializer to use when persisting to IndexedDb.
+   */
+  static forUser(user, serializer, indexManager, referenceDelegate) {
+    hardAssert(user.uid !== "", 64387);
+    const userId = user.isAuthenticated() ? user.uid : "";
+    return new IndexedDbMutationQueue(userId, serializer, indexManager, referenceDelegate);
+  }
+  checkEmpty(transaction) {
+    let empty = true;
+    const range = IDBKeyRange.bound([this.userId, Number.NEGATIVE_INFINITY], [this.userId, Number.POSITIVE_INFINITY]);
+    return mutationsStore(transaction).iterate({ index: DbMutationBatchUserMutationsIndex, range }, (key, value, control) => {
+      empty = false;
+      control.done();
+    }).next(() => empty);
+  }
+  addMutationBatch(transaction, localWriteTime, baseMutations, mutations) {
+    const documentStore = documentMutationsStore(transaction);
+    const mutationStore = mutationsStore(transaction);
+    return mutationStore.add({}).next((batchId) => {
+      hardAssert(typeof batchId === "number", 49019);
+      const batch = new MutationBatch(batchId, localWriteTime, baseMutations, mutations);
+      const dbBatch = toDbMutationBatch(this.serializer, this.userId, batch);
+      const promises = [];
+      let collectionParents = new SortedSet((l, r) => primitiveComparator(l.canonicalString(), r.canonicalString()));
+      for (const mutation of mutations) {
+        const indexKey = newDbDocumentMutationKey(this.userId, mutation.key.path, batchId);
+        collectionParents = collectionParents.add(mutation.key.path.popLast());
+        promises.push(mutationStore.put(dbBatch));
+        promises.push(documentStore.put(indexKey, DbDocumentMutationPlaceholder));
+      }
+      collectionParents.forEach((parent) => {
+        promises.push(this.indexManager.addToCollectionParentIndex(transaction, parent));
+      });
+      transaction.addOnCommittedListener(() => {
+        this.documentKeysByBatchId[batchId] = batch.keys();
+      });
+      return PersistencePromise.waitFor(promises).next(() => batch);
+    });
+  }
+  lookupMutationBatch(transaction, batchId) {
+    return mutationsStore(transaction).get(batchId).next((dbBatch) => {
+      if (dbBatch) {
+        hardAssert(dbBatch.userId === this.userId, 48, `Unexpected user for mutation batch`, {
+          userId: dbBatch.userId,
+          batchId
+        });
+        return fromDbMutationBatch(this.serializer, dbBatch);
+      }
+      return null;
+    });
+  }
+  /**
+   * Returns the document keys for the mutation batch with the given batchId.
+   * For primary clients, this method returns `null` after
+   * `removeMutationBatches()` has been called. Secondary clients return a
+   * cached result until `removeCachedMutationKeys()` is invoked.
+   */
+  // PORTING NOTE: Multi-tab only.
+  lookupMutationKeys(transaction, batchId) {
+    if (this.documentKeysByBatchId[batchId]) {
+      return PersistencePromise.resolve(this.documentKeysByBatchId[batchId]);
+    } else {
+      return this.lookupMutationBatch(transaction, batchId).next((batch) => {
+        if (batch) {
+          const keys = batch.keys();
+          this.documentKeysByBatchId[batchId] = keys;
+          return keys;
+        } else {
+          return null;
+        }
+      });
+    }
+  }
+  getNextMutationBatchAfterBatchId(transaction, batchId) {
+    const nextBatchId = batchId + 1;
+    const range = IDBKeyRange.lowerBound([this.userId, nextBatchId]);
+    let foundBatch = null;
+    return mutationsStore(transaction).iterate({ index: DbMutationBatchUserMutationsIndex, range }, (key, dbBatch, control) => {
+      if (dbBatch.userId === this.userId) {
+        hardAssert(dbBatch.batchId >= nextBatchId, 47524, { nextBatchId });
+        foundBatch = fromDbMutationBatch(this.serializer, dbBatch);
+      }
+      control.done();
+    }).next(() => foundBatch);
+  }
+  getHighestUnacknowledgedBatchId(transaction) {
+    const range = IDBKeyRange.upperBound([
+      this.userId,
+      Number.POSITIVE_INFINITY
+    ]);
+    let batchId = BATCHID_UNKNOWN;
+    return mutationsStore(transaction).iterate({ index: DbMutationBatchUserMutationsIndex, range, reverse: true }, (key, dbBatch, control) => {
+      batchId = dbBatch.batchId;
+      control.done();
+    }).next(() => batchId);
+  }
+  getAllMutationBatches(transaction) {
+    const range = IDBKeyRange.bound([this.userId, BATCHID_UNKNOWN], [this.userId, Number.POSITIVE_INFINITY]);
+    return mutationsStore(transaction).loadAll(DbMutationBatchUserMutationsIndex, range).next((dbBatches) => dbBatches.map((dbBatch) => fromDbMutationBatch(this.serializer, dbBatch)));
+  }
+  getAllMutationBatchesAffectingDocumentKey(transaction, documentKey) {
+    const indexPrefix = newDbDocumentMutationPrefixForPath(this.userId, documentKey.path);
+    const indexStart = IDBKeyRange.lowerBound(indexPrefix);
+    const results = [];
+    return documentMutationsStore(transaction).iterate({ range: indexStart }, (indexKey, _, control) => {
+      const [userID, encodedPath, batchId] = indexKey;
+      const path = decodeResourcePath(encodedPath);
+      if (userID !== this.userId || !documentKey.path.isEqual(path)) {
+        control.done();
+        return;
+      }
+      return mutationsStore(transaction).get(batchId).next((mutation) => {
+        if (!mutation) {
+          throw fail(61480, {
+            indexKey,
+            batchId
+          });
+        }
+        hardAssert(mutation.userId === this.userId, 10503, `Unexpected user for mutation batch`, {
+          userId: mutation.userId,
+          batchId
+        });
+        results.push(fromDbMutationBatch(this.serializer, mutation));
+      });
+    }).next(() => results);
+  }
+  getAllMutationBatchesAffectingDocumentKeys(transaction, documentKeys) {
+    let uniqueBatchIDs = new SortedSet(primitiveComparator);
+    const promises = [];
+    documentKeys.forEach((documentKey) => {
+      const indexStart = newDbDocumentMutationPrefixForPath(this.userId, documentKey.path);
+      const range = IDBKeyRange.lowerBound(indexStart);
+      const promise = documentMutationsStore(transaction).iterate({ range }, (indexKey, _, control) => {
+        const [userID, encodedPath, batchID] = indexKey;
+        const path = decodeResourcePath(encodedPath);
+        if (userID !== this.userId || !documentKey.path.isEqual(path)) {
+          control.done();
+          return;
+        }
+        uniqueBatchIDs = uniqueBatchIDs.add(batchID);
+      });
+      promises.push(promise);
+    });
+    return PersistencePromise.waitFor(promises).next(() => this.lookupMutationBatches(transaction, uniqueBatchIDs));
+  }
+  getAllMutationBatchesAffectingQuery(transaction, query2) {
+    const queryPath = query2.path;
+    const immediateChildrenLength = queryPath.length + 1;
+    const indexPrefix = newDbDocumentMutationPrefixForPath(this.userId, queryPath);
+    const indexStart = IDBKeyRange.lowerBound(indexPrefix);
+    let uniqueBatchIDs = new SortedSet(primitiveComparator);
+    return documentMutationsStore(transaction).iterate({ range: indexStart }, (indexKey, _, control) => {
+      const [userID, encodedPath, batchID] = indexKey;
+      const path = decodeResourcePath(encodedPath);
+      if (userID !== this.userId || !queryPath.isPrefixOf(path)) {
+        control.done();
+        return;
+      }
+      if (path.length !== immediateChildrenLength) {
+        return;
+      }
+      uniqueBatchIDs = uniqueBatchIDs.add(batchID);
+    }).next(() => this.lookupMutationBatches(transaction, uniqueBatchIDs));
+  }
+  lookupMutationBatches(transaction, batchIDs) {
+    const results = [];
+    const promises = [];
+    batchIDs.forEach((batchId) => {
+      promises.push(mutationsStore(transaction).get(batchId).next((mutation) => {
+        if (mutation === null) {
+          throw fail(35274, {
+            batchId
+          });
+        }
+        hardAssert(mutation.userId === this.userId, 9748, `Unexpected user for mutation batch`, { userId: mutation.userId, batchId });
+        results.push(fromDbMutationBatch(this.serializer, mutation));
+      }));
+    });
+    return PersistencePromise.waitFor(promises).next(() => results);
+  }
+  removeMutationBatch(transaction, batch) {
+    return removeMutationBatch(transaction.simpleDbTransaction, this.userId, batch).next((removedDocuments) => {
+      transaction.addOnCommittedListener(() => {
+        this.removeCachedMutationKeys(batch.batchId);
+      });
+      return PersistencePromise.forEach(removedDocuments, (key) => {
+        return this.referenceDelegate.markPotentiallyOrphaned(transaction, key);
+      });
+    });
+  }
+  /**
+   * Clears the cached keys for a mutation batch. This method should be
+   * called by secondary clients after they process mutation updates.
+   *
+   * Note that this method does not have to be called from primary clients as
+   * the corresponding cache entries are cleared when an acknowledged or
+   * rejected batch is removed from the mutation queue.
+   */
+  // PORTING NOTE: Multi-tab only
+  removeCachedMutationKeys(batchId) {
+    delete this.documentKeysByBatchId[batchId];
+  }
+  performConsistencyCheck(txn) {
+    return this.checkEmpty(txn).next((empty) => {
+      if (!empty) {
+        return PersistencePromise.resolve();
+      }
+      const startRange = IDBKeyRange.lowerBound(newDbDocumentMutationPrefixForUser(this.userId));
+      const danglingMutationReferences = [];
+      return documentMutationsStore(txn).iterate({ range: startRange }, (key, _, control) => {
+        const userID = key[0];
+        if (userID !== this.userId) {
+          control.done();
+          return;
+        } else {
+          const path = decodeResourcePath(key[1]);
+          danglingMutationReferences.push(path);
+        }
+      }).next(() => {
+        hardAssert(danglingMutationReferences.length === 0, 56720, {
+          danglingKeys: danglingMutationReferences.map((p) => p.canonicalString())
+        });
+      });
+    });
+  }
+  containsKey(txn, key) {
+    return mutationQueueContainsKey(txn, this.userId, key);
+  }
+  // PORTING NOTE: Multi-tab only (state is held in memory in other clients).
+  /** Returns the mutation queue's metadata from IndexedDb. */
+  getMutationQueueMetadata(transaction) {
+    return mutationQueuesStore(transaction).get(this.userId).next((metadata) => {
+      return metadata || {
+        userId: this.userId,
+        lastAcknowledgedBatchId: BATCHID_UNKNOWN,
+        lastStreamToken: ""
+      };
+    });
+  }
+}
+function mutationQueueContainsKey(txn, userId, key) {
+  const indexKey = newDbDocumentMutationPrefixForPath(userId, key.path);
+  const encodedPath = indexKey[1];
+  const startRange = IDBKeyRange.lowerBound(indexKey);
+  let containsKey = false;
+  return documentMutationsStore(txn).iterate({ range: startRange, keysOnly: true }, (key2, value, control) => {
+    const [
+      userID,
+      keyPath,
+      /*batchID*/
+      _
+    ] = key2;
+    if (userID === userId && keyPath === encodedPath) {
+      containsKey = true;
+    }
+    control.done();
+  }).next(() => containsKey);
+}
+function mutationQueuesContainKey(txn, docKey) {
+  let found = false;
+  return mutationQueuesStore(txn).iterateSerial((userId) => {
+    return mutationQueueContainsKey(txn, userId, docKey).next((containsKey) => {
+      if (containsKey) {
+        found = true;
+      }
+      return PersistencePromise.resolve(!containsKey);
+    });
+  }).next(() => found);
+}
+function mutationsStore(txn) {
+  return getStore(txn, DbMutationBatchStore);
+}
+function documentMutationsStore(txn) {
+  return getStore(txn, DbDocumentMutationStore);
+}
+function mutationQueuesStore(txn) {
+  return getStore(txn, DbMutationQueueStore);
+}
 const OFFSET = 2;
 class TargetIdGenerator {
   constructor(lastId) {
@@ -5945,6 +9394,230 @@ class TargetIdGenerator {
   static forSyncEngine() {
     return new TargetIdGenerator(1 - OFFSET);
   }
+}
+class IndexedDbTargetCache {
+  constructor(referenceDelegate, serializer) {
+    this.referenceDelegate = referenceDelegate;
+    this.serializer = serializer;
+  }
+  // PORTING NOTE: We don't cache global metadata for the target cache, since
+  // some of it (in particular `highestTargetId`) can be modified by secondary
+  // tabs. We could perhaps be more granular (and e.g. still cache
+  // `lastRemoteSnapshotVersion` in memory) but for simplicity we currently go
+  // to IndexedDb whenever we need to read metadata. We can revisit if it turns
+  // out to have a meaningful performance impact.
+  allocateTargetId(transaction) {
+    return this.retrieveMetadata(transaction).next((metadata) => {
+      const targetIdGenerator = new TargetIdGenerator(metadata.highestTargetId);
+      metadata.highestTargetId = targetIdGenerator.next();
+      return this.saveMetadata(transaction, metadata).next(() => metadata.highestTargetId);
+    });
+  }
+  getLastRemoteSnapshotVersion(transaction) {
+    return this.retrieveMetadata(transaction).next((metadata) => {
+      return SnapshotVersion.fromTimestamp(new Timestamp(metadata.lastRemoteSnapshotVersion.seconds, metadata.lastRemoteSnapshotVersion.nanoseconds));
+    });
+  }
+  getHighestSequenceNumber(transaction) {
+    return this.retrieveMetadata(transaction).next((targetGlobal) => targetGlobal.highestListenSequenceNumber);
+  }
+  setTargetsMetadata(transaction, highestListenSequenceNumber, lastRemoteSnapshotVersion) {
+    return this.retrieveMetadata(transaction).next((metadata) => {
+      metadata.highestListenSequenceNumber = highestListenSequenceNumber;
+      if (lastRemoteSnapshotVersion) {
+        metadata.lastRemoteSnapshotVersion = lastRemoteSnapshotVersion.toTimestamp();
+      }
+      if (highestListenSequenceNumber > metadata.highestListenSequenceNumber) {
+        metadata.highestListenSequenceNumber = highestListenSequenceNumber;
+      }
+      return this.saveMetadata(transaction, metadata);
+    });
+  }
+  addTargetData(transaction, targetData) {
+    return this.saveTargetData(transaction, targetData).next(() => {
+      return this.retrieveMetadata(transaction).next((metadata) => {
+        metadata.targetCount += 1;
+        this.updateMetadataFromTargetData(targetData, metadata);
+        return this.saveMetadata(transaction, metadata);
+      });
+    });
+  }
+  updateTargetData(transaction, targetData) {
+    return this.saveTargetData(transaction, targetData);
+  }
+  removeTargetData(transaction, targetData) {
+    return this.removeMatchingKeysForTargetId(transaction, targetData.targetId).next(() => targetsStore(transaction).delete(targetData.targetId)).next(() => this.retrieveMetadata(transaction)).next((metadata) => {
+      hardAssert(metadata.targetCount > 0, 8065);
+      metadata.targetCount -= 1;
+      return this.saveMetadata(transaction, metadata);
+    });
+  }
+  /**
+   * Drops any targets with sequence number less than or equal to the upper bound, excepting those
+   * present in `activeTargetIds`. Document associations for the removed targets are also removed.
+   * Returns the number of targets removed.
+   */
+  removeTargets(txn, upperBound, activeTargetIds) {
+    let count2 = 0;
+    const promises = [];
+    return targetsStore(txn).iterate((key, value) => {
+      const targetData = fromDbTarget(value);
+      if (targetData.sequenceNumber <= upperBound && activeTargetIds.get(targetData.targetId) === null) {
+        count2++;
+        promises.push(this.removeTargetData(txn, targetData));
+      }
+    }).next(() => PersistencePromise.waitFor(promises)).next(() => count2);
+  }
+  /**
+   * Call provided function with each `TargetData` that we have cached.
+   */
+  forEachTarget(txn, f) {
+    return targetsStore(txn).iterate((key, value) => {
+      const targetData = fromDbTarget(value);
+      f(targetData);
+    });
+  }
+  retrieveMetadata(transaction) {
+    return globalTargetStore(transaction).get(DbTargetGlobalKey).next((metadata) => {
+      hardAssert(metadata !== null, 2888);
+      return metadata;
+    });
+  }
+  saveMetadata(transaction, metadata) {
+    return globalTargetStore(transaction).put(DbTargetGlobalKey, metadata);
+  }
+  saveTargetData(transaction, targetData) {
+    return targetsStore(transaction).put(toDbTarget(this.serializer, targetData));
+  }
+  /**
+   * In-place updates the provided metadata to account for values in the given
+   * TargetData. Saving is done separately. Returns true if there were any
+   * changes to the metadata.
+   */
+  updateMetadataFromTargetData(targetData, metadata) {
+    let updated = false;
+    if (targetData.targetId > metadata.highestTargetId) {
+      metadata.highestTargetId = targetData.targetId;
+      updated = true;
+    }
+    if (targetData.sequenceNumber > metadata.highestListenSequenceNumber) {
+      metadata.highestListenSequenceNumber = targetData.sequenceNumber;
+      updated = true;
+    }
+    return updated;
+  }
+  getTargetCount(transaction) {
+    return this.retrieveMetadata(transaction).next((metadata) => metadata.targetCount);
+  }
+  getTargetData(transaction, target) {
+    const canonicalId2 = canonifyTarget(target);
+    const range = IDBKeyRange.bound([canonicalId2, Number.NEGATIVE_INFINITY], [canonicalId2, Number.POSITIVE_INFINITY]);
+    let result = null;
+    return targetsStore(transaction).iterate({ range, index: DbTargetQueryTargetsIndexName }, (key, value, control) => {
+      const found = fromDbTarget(value);
+      if (targetEquals(target, found.target)) {
+        result = found;
+        control.done();
+      }
+    }).next(() => result);
+  }
+  addMatchingKeys(txn, keys, targetId) {
+    const promises = [];
+    const store = documentTargetStore(txn);
+    keys.forEach((key) => {
+      const path = encodeResourcePath(key.path);
+      promises.push(store.put({ targetId, path }));
+      promises.push(this.referenceDelegate.addReference(txn, targetId, key));
+    });
+    return PersistencePromise.waitFor(promises);
+  }
+  removeMatchingKeys(txn, keys, targetId) {
+    const store = documentTargetStore(txn);
+    return PersistencePromise.forEach(keys, (key) => {
+      const path = encodeResourcePath(key.path);
+      return PersistencePromise.waitFor([
+        store.delete([targetId, path]),
+        this.referenceDelegate.removeReference(txn, targetId, key)
+      ]);
+    });
+  }
+  removeMatchingKeysForTargetId(txn, targetId) {
+    const store = documentTargetStore(txn);
+    const range = IDBKeyRange.bound(
+      [targetId],
+      [targetId + 1],
+      /*lowerOpen=*/
+      false,
+      /*upperOpen=*/
+      true
+    );
+    return store.delete(range);
+  }
+  getMatchingKeysForTargetId(txn, targetId) {
+    const range = IDBKeyRange.bound(
+      [targetId],
+      [targetId + 1],
+      /*lowerOpen=*/
+      false,
+      /*upperOpen=*/
+      true
+    );
+    const store = documentTargetStore(txn);
+    let result = documentKeySet();
+    return store.iterate({ range, keysOnly: true }, (key, _, control) => {
+      const path = decodeResourcePath(key[1]);
+      const docKey = new DocumentKey(path);
+      result = result.add(docKey);
+    }).next(() => result);
+  }
+  containsKey(txn, key) {
+    const path = encodeResourcePath(key.path);
+    const range = IDBKeyRange.bound(
+      [path],
+      [immediateSuccessor(path)],
+      /*lowerOpen=*/
+      false,
+      /*upperOpen=*/
+      true
+    );
+    let count2 = 0;
+    return documentTargetStore(txn).iterate({
+      index: DbTargetDocumentDocumentTargetsIndex,
+      keysOnly: true,
+      range
+    }, ([targetId, path2], _, control) => {
+      if (targetId !== 0) {
+        count2++;
+        control.done();
+      }
+    }).next(() => count2 > 0);
+  }
+  /**
+   * Looks up a TargetData entry by target ID.
+   *
+   * @param targetId - The target ID of the TargetData entry to look up.
+   * @returns The cached TargetData entry, or null if the cache has no entry for
+   * the target.
+   */
+  // PORTING NOTE: Multi-tab only.
+  getTargetDataForTarget(transaction, targetId) {
+    return targetsStore(transaction).get(targetId).next((found) => {
+      if (found) {
+        return fromDbTarget(found);
+      } else {
+        return null;
+      }
+    });
+  }
+}
+function targetsStore(txn) {
+  return getStore(txn, DbTargetStore);
+}
+function globalTargetStore(txn) {
+  return getStore(txn, DbTargetGlobalStore);
+}
+function documentTargetStore(txn) {
+  return getStore(txn, DbTargetDocumentStore);
 }
 const GC_DID_NOT_RUN = {
   didRun: false,
@@ -6129,6 +9802,118 @@ Total Duration: ${removedDocumentsTs - startTs}ms`;
 function newLruGarbageCollector(delegate, params) {
   return new LruGarbageCollectorImpl(delegate, params);
 }
+class IndexedDbLruDelegateImpl {
+  constructor(db, params) {
+    this.db = db;
+    this.garbageCollector = newLruGarbageCollector(this, params);
+  }
+  getSequenceNumberCount(txn) {
+    const docCountPromise = this.orphanedDocumentCount(txn);
+    const targetCountPromise = this.db.getTargetCache().getTargetCount(txn);
+    return targetCountPromise.next((targetCount) => docCountPromise.next((docCount) => targetCount + docCount));
+  }
+  orphanedDocumentCount(txn) {
+    let orphanedCount = 0;
+    return this.forEachOrphanedDocumentSequenceNumber(txn, (_) => {
+      orphanedCount++;
+    }).next(() => orphanedCount);
+  }
+  forEachTarget(txn, f) {
+    return this.db.getTargetCache().forEachTarget(txn, f);
+  }
+  forEachOrphanedDocumentSequenceNumber(txn, f) {
+    return this.forEachOrphanedDocument(txn, (docKey, sequenceNumber) => f(sequenceNumber));
+  }
+  addReference(txn, targetId, key) {
+    return writeSentinelKey(txn, key);
+  }
+  removeReference(txn, targetId, key) {
+    return writeSentinelKey(txn, key);
+  }
+  removeTargets(txn, upperBound, activeTargetIds) {
+    return this.db.getTargetCache().removeTargets(txn, upperBound, activeTargetIds);
+  }
+  markPotentiallyOrphaned(txn, key) {
+    return writeSentinelKey(txn, key);
+  }
+  /**
+   * Returns true if anything would prevent this document from being garbage
+   * collected, given that the document in question is not present in any
+   * targets and has a sequence number less than or equal to the upper bound for
+   * the collection run.
+   */
+  isPinned(txn, docKey) {
+    return mutationQueuesContainKey(txn, docKey);
+  }
+  removeOrphanedDocuments(txn, upperBound) {
+    const documentCache = this.db.getRemoteDocumentCache();
+    const changeBuffer = documentCache.newChangeBuffer();
+    const promises = [];
+    let documentCount = 0;
+    const iteration = this.forEachOrphanedDocument(txn, (docKey, sequenceNumber) => {
+      if (sequenceNumber <= upperBound) {
+        const p = this.isPinned(txn, docKey).next((isPinned) => {
+          if (!isPinned) {
+            documentCount++;
+            return changeBuffer.getEntry(txn, docKey).next(() => {
+              changeBuffer.removeEntry(docKey, SnapshotVersion.min());
+              return documentTargetStore(txn).delete(sentinelKey$1(docKey));
+            });
+          }
+        });
+        promises.push(p);
+      }
+    });
+    return iteration.next(() => PersistencePromise.waitFor(promises)).next(() => changeBuffer.apply(txn)).next(() => documentCount);
+  }
+  removeTarget(txn, targetData) {
+    const updated = targetData.withSequenceNumber(txn.currentSequenceNumber);
+    return this.db.getTargetCache().updateTargetData(txn, updated);
+  }
+  updateLimboDocument(txn, key) {
+    return writeSentinelKey(txn, key);
+  }
+  /**
+   * Call provided function for each document in the cache that is 'orphaned'. Orphaned
+   * means not a part of any target, so the only entry in the target-document index for
+   * that document will be the sentinel row (targetId 0), which will also have the sequence
+   * number for the last time the document was accessed.
+   */
+  forEachOrphanedDocument(txn, f) {
+    const store = documentTargetStore(txn);
+    let nextToReport = ListenSequence.INVALID;
+    let nextPath;
+    return store.iterate({
+      index: DbTargetDocumentDocumentTargetsIndex
+    }, ([targetId, docKey], { path, sequenceNumber }) => {
+      if (targetId === 0) {
+        if (nextToReport !== ListenSequence.INVALID) {
+          f(new DocumentKey(decodeResourcePath(nextPath)), nextToReport);
+        }
+        nextToReport = sequenceNumber;
+        nextPath = path;
+      } else {
+        nextToReport = ListenSequence.INVALID;
+      }
+    }).next(() => {
+      if (nextToReport !== ListenSequence.INVALID) {
+        f(new DocumentKey(decodeResourcePath(nextPath)), nextToReport);
+      }
+    });
+  }
+  getCacheSize(txn) {
+    return this.db.getRemoteDocumentCache().getSize(txn);
+  }
+}
+function sentinelKey$1(key) {
+  return [0, encodeResourcePath(key.path)];
+}
+function sentinelRow(key, sequenceNumber) {
+  return { targetId: 0, path: encodeResourcePath(key.path), sequenceNumber };
+}
+function writeSentinelKey(txn, key) {
+  return documentTargetStore(txn).put(sentinelRow(key, txn.currentSequenceNumber));
+}
 class RemoteDocumentChangeBuffer {
   constructor() {
     this.changes = new ObjectMap((key) => key.toString(), (l, r) => l.isEqual(r));
@@ -6200,6 +9985,331 @@ class RemoteDocumentChangeBuffer {
   assertNotApplied() {
   }
 }
+class IndexedDbRemoteDocumentCacheImpl {
+  constructor(serializer) {
+    this.serializer = serializer;
+  }
+  setIndexManager(indexManager) {
+    this.indexManager = indexManager;
+  }
+  /**
+   * Adds the supplied entries to the cache.
+   *
+   * All calls of `addEntry` are required to go through the RemoteDocumentChangeBuffer
+   * returned by `newChangeBuffer()` to ensure proper accounting of metadata.
+   */
+  addEntry(transaction, key, doc3) {
+    const documentStore = remoteDocumentsStore(transaction);
+    return documentStore.put(doc3);
+  }
+  /**
+   * Removes a document from the cache.
+   *
+   * All calls of `removeEntry`  are required to go through the RemoteDocumentChangeBuffer
+   * returned by `newChangeBuffer()` to ensure proper accounting of metadata.
+   */
+  removeEntry(transaction, documentKey, readTime) {
+    const store = remoteDocumentsStore(transaction);
+    return store.delete(dbReadTimeKey(documentKey, readTime));
+  }
+  /**
+   * Updates the current cache size.
+   *
+   * Callers to `addEntry()` and `removeEntry()` *must* call this afterwards to update the
+   * cache's metadata.
+   */
+  updateMetadata(transaction, sizeDelta) {
+    return this.getMetadata(transaction).next((metadata) => {
+      metadata.byteSize += sizeDelta;
+      return this.setMetadata(transaction, metadata);
+    });
+  }
+  getEntry(transaction, documentKey) {
+    let doc3 = MutableDocument.newInvalidDocument(documentKey);
+    return remoteDocumentsStore(transaction).iterate({
+      index: DbRemoteDocumentDocumentKeyIndex,
+      range: IDBKeyRange.only(dbKey(documentKey))
+    }, (_, dbRemoteDoc) => {
+      doc3 = this.maybeDecodeDocument(documentKey, dbRemoteDoc);
+    }).next(() => doc3);
+  }
+  /**
+   * Looks up an entry in the cache.
+   *
+   * @param documentKey - The key of the entry to look up.
+   * @returns The cached document entry and its size.
+   */
+  getSizedEntry(transaction, documentKey) {
+    let result = {
+      size: 0,
+      document: MutableDocument.newInvalidDocument(documentKey)
+    };
+    return remoteDocumentsStore(transaction).iterate({
+      index: DbRemoteDocumentDocumentKeyIndex,
+      range: IDBKeyRange.only(dbKey(documentKey))
+    }, (_, dbRemoteDoc) => {
+      result = {
+        document: this.maybeDecodeDocument(documentKey, dbRemoteDoc),
+        size: dbDocumentSize(dbRemoteDoc)
+      };
+    }).next(() => result);
+  }
+  getEntries(transaction, documentKeys) {
+    let results = mutableDocumentMap();
+    return this.forEachDbEntry(transaction, documentKeys, (key, dbRemoteDoc) => {
+      const doc3 = this.maybeDecodeDocument(key, dbRemoteDoc);
+      results = results.insert(key, doc3);
+    }).next(() => results);
+  }
+  /**
+   * Looks up several entries in the cache.
+   *
+   * @param documentKeys - The set of keys entries to look up.
+   * @returns A map of documents indexed by key and a map of sizes indexed by
+   *     key (zero if the document does not exist).
+   */
+  getSizedEntries(transaction, documentKeys) {
+    let results = mutableDocumentMap();
+    let sizeMap = new SortedMap(DocumentKey.comparator);
+    return this.forEachDbEntry(transaction, documentKeys, (key, dbRemoteDoc) => {
+      const doc3 = this.maybeDecodeDocument(key, dbRemoteDoc);
+      results = results.insert(key, doc3);
+      sizeMap = sizeMap.insert(key, dbDocumentSize(dbRemoteDoc));
+    }).next(() => {
+      return { documents: results, sizeMap };
+    });
+  }
+  forEachDbEntry(transaction, documentKeys, callback) {
+    if (documentKeys.isEmpty()) {
+      return PersistencePromise.resolve();
+    }
+    let sortedKeys = new SortedSet(dbKeyComparator);
+    documentKeys.forEach((e) => sortedKeys = sortedKeys.add(e));
+    const range = IDBKeyRange.bound(dbKey(sortedKeys.first()), dbKey(sortedKeys.last()));
+    const keyIter = sortedKeys.getIterator();
+    let nextKey = keyIter.getNext();
+    return remoteDocumentsStore(transaction).iterate({ index: DbRemoteDocumentDocumentKeyIndex, range }, (_, dbRemoteDoc, control) => {
+      const potentialKey = DocumentKey.fromSegments([
+        ...dbRemoteDoc.prefixPath,
+        dbRemoteDoc.collectionGroup,
+        dbRemoteDoc.documentId
+      ]);
+      while (nextKey && dbKeyComparator(nextKey, potentialKey) < 0) {
+        callback(nextKey, null);
+        nextKey = keyIter.getNext();
+      }
+      if (nextKey && nextKey.isEqual(potentialKey)) {
+        callback(nextKey, dbRemoteDoc);
+        nextKey = keyIter.hasNext() ? keyIter.getNext() : null;
+      }
+      if (nextKey) {
+        control.skip(dbKey(nextKey));
+      } else {
+        control.done();
+      }
+    }).next(() => {
+      while (nextKey) {
+        callback(nextKey, null);
+        nextKey = keyIter.hasNext() ? keyIter.getNext() : null;
+      }
+    });
+  }
+  getDocumentsMatchingQuery(transaction, query2, offset, mutatedDocs, context) {
+    const collection2 = query2.path;
+    const startKey = [
+      collection2.popLast().toArray(),
+      collection2.lastSegment(),
+      toDbTimestampKey(offset.readTime),
+      offset.documentKey.path.isEmpty() ? "" : offset.documentKey.path.lastSegment()
+    ];
+    const endKey = [
+      collection2.popLast().toArray(),
+      collection2.lastSegment(),
+      [Number.MAX_SAFE_INTEGER, Number.MAX_SAFE_INTEGER],
+      ""
+    ];
+    return remoteDocumentsStore(transaction).loadAll(IDBKeyRange.bound(startKey, endKey, true)).next((dbRemoteDocs) => {
+      context?.incrementDocumentReadCount(dbRemoteDocs.length);
+      let results = mutableDocumentMap();
+      for (const dbRemoteDoc of dbRemoteDocs) {
+        const document = this.maybeDecodeDocument(DocumentKey.fromSegments(dbRemoteDoc.prefixPath.concat(dbRemoteDoc.collectionGroup, dbRemoteDoc.documentId)), dbRemoteDoc);
+        if (document.isFoundDocument() && (queryMatches(query2, document) || mutatedDocs.has(document.key))) {
+          results = results.insert(document.key, document);
+        }
+      }
+      return results;
+    });
+  }
+  getAllFromCollectionGroup(transaction, collectionGroup2, offset, limit2) {
+    let results = mutableDocumentMap();
+    const startKey = dbCollectionGroupKey(collectionGroup2, offset);
+    const endKey = dbCollectionGroupKey(collectionGroup2, IndexOffset.max());
+    return remoteDocumentsStore(transaction).iterate({
+      index: DbRemoteDocumentCollectionGroupIndex,
+      range: IDBKeyRange.bound(startKey, endKey, true)
+    }, (_, dbRemoteDoc, control) => {
+      const document = this.maybeDecodeDocument(DocumentKey.fromSegments(dbRemoteDoc.prefixPath.concat(dbRemoteDoc.collectionGroup, dbRemoteDoc.documentId)), dbRemoteDoc);
+      results = results.insert(document.key, document);
+      if (results.size === limit2) {
+        control.done();
+      }
+    }).next(() => results);
+  }
+  newChangeBuffer(options2) {
+    return new IndexedDbRemoteDocumentChangeBuffer(this, !!options2 && options2.trackRemovals);
+  }
+  getSize(txn) {
+    return this.getMetadata(txn).next((metadata) => metadata.byteSize);
+  }
+  getMetadata(txn) {
+    return documentGlobalStore(txn).get(DbRemoteDocumentGlobalKey).next((metadata) => {
+      hardAssert(!!metadata, 20021);
+      return metadata;
+    });
+  }
+  setMetadata(txn, metadata) {
+    return documentGlobalStore(txn).put(DbRemoteDocumentGlobalKey, metadata);
+  }
+  /**
+   * Decodes `dbRemoteDoc` and returns the document (or an invalid document if
+   * the document corresponds to the format used for sentinel deletes).
+   */
+  maybeDecodeDocument(documentKey, dbRemoteDoc) {
+    if (dbRemoteDoc) {
+      const doc3 = fromDbRemoteDocument(this.serializer, dbRemoteDoc);
+      const isSentinelRemoval = doc3.isNoDocument() && doc3.version.isEqual(SnapshotVersion.min());
+      if (!isSentinelRemoval) {
+        return doc3;
+      }
+    }
+    return MutableDocument.newInvalidDocument(documentKey);
+  }
+}
+function newIndexedDbRemoteDocumentCache(serializer) {
+  return new IndexedDbRemoteDocumentCacheImpl(serializer);
+}
+class IndexedDbRemoteDocumentChangeBuffer extends RemoteDocumentChangeBuffer {
+  /**
+   * @param documentCache - The IndexedDbRemoteDocumentCache to apply the changes to.
+   * @param trackRemovals - Whether to create sentinel deletes that can be tracked by
+   * `getNewDocumentChanges()`.
+   */
+  constructor(documentCache, trackRemovals) {
+    super();
+    this.documentCache = documentCache;
+    this.trackRemovals = trackRemovals;
+    this.documentStates = new ObjectMap((key) => key.toString(), (l, r) => l.isEqual(r));
+  }
+  applyChanges(transaction) {
+    const promises = [];
+    let sizeDelta = 0;
+    let collectionParents = new SortedSet((l, r) => primitiveComparator(l.canonicalString(), r.canonicalString()));
+    this.changes.forEach((key, documentChange) => {
+      const previousDoc = this.documentStates.get(key);
+      promises.push(this.documentCache.removeEntry(transaction, key, previousDoc.readTime));
+      if (documentChange.isValidDocument()) {
+        const doc3 = toDbRemoteDocument(this.documentCache.serializer, documentChange);
+        collectionParents = collectionParents.add(key.path.popLast());
+        const size = dbDocumentSize(doc3);
+        sizeDelta += size - previousDoc.size;
+        promises.push(this.documentCache.addEntry(transaction, key, doc3));
+      } else {
+        sizeDelta -= previousDoc.size;
+        if (this.trackRemovals) {
+          const deletedDoc = toDbRemoteDocument(this.documentCache.serializer, documentChange.convertToNoDocument(SnapshotVersion.min()));
+          promises.push(this.documentCache.addEntry(transaction, key, deletedDoc));
+        }
+      }
+    });
+    collectionParents.forEach((parent) => {
+      promises.push(this.documentCache.indexManager.addToCollectionParentIndex(transaction, parent));
+    });
+    promises.push(this.documentCache.updateMetadata(transaction, sizeDelta));
+    return PersistencePromise.waitFor(promises);
+  }
+  getFromCache(transaction, documentKey) {
+    return this.documentCache.getSizedEntry(transaction, documentKey).next((getResult) => {
+      this.documentStates.set(documentKey, {
+        size: getResult.size,
+        readTime: getResult.document.readTime
+      });
+      return getResult.document;
+    });
+  }
+  getAllFromCache(transaction, documentKeys) {
+    return this.documentCache.getSizedEntries(transaction, documentKeys).next(({ documents, sizeMap }) => {
+      sizeMap.forEach((documentKey, size) => {
+        this.documentStates.set(documentKey, {
+          size,
+          readTime: documents.get(documentKey).readTime
+        });
+      });
+      return documents;
+    });
+  }
+}
+function documentGlobalStore(txn) {
+  return getStore(txn, DbRemoteDocumentGlobalStore);
+}
+function remoteDocumentsStore(txn) {
+  return getStore(txn, DbRemoteDocumentStore);
+}
+function dbKey(documentKey) {
+  const path = documentKey.path.toArray();
+  return [
+    /* prefix path */
+    path.slice(0, path.length - 2),
+    /* collection id */
+    path[path.length - 2],
+    /* document id */
+    path[path.length - 1]
+  ];
+}
+function dbReadTimeKey(documentKey, readTime) {
+  const path = documentKey.path.toArray();
+  return [
+    /* prefix path */
+    path.slice(0, path.length - 2),
+    /* collection id */
+    path[path.length - 2],
+    toDbTimestampKey(readTime),
+    /* document id */
+    path[path.length - 1]
+  ];
+}
+function dbCollectionGroupKey(collectionGroup2, offset) {
+  const path = offset.documentKey.path.toArray();
+  return [
+    /* collection id */
+    collectionGroup2,
+    toDbTimestampKey(offset.readTime),
+    /* prefix path */
+    path.slice(0, path.length - 2),
+    /* document id */
+    path.length > 0 ? path[path.length - 1] : ""
+  ];
+}
+function dbKeyComparator(l, r) {
+  const left = l.path.toArray();
+  const right = r.path.toArray();
+  let cmp = 0;
+  for (let i = 0; i < left.length - 2 && i < right.length - 2; ++i) {
+    cmp = primitiveComparator(left[i], right[i]);
+    if (cmp) {
+      return cmp;
+    }
+  }
+  cmp = primitiveComparator(left.length, right.length);
+  if (cmp) {
+    return cmp;
+  }
+  cmp = primitiveComparator(left[left.length - 2], right[right.length - 2]);
+  if (cmp) {
+    return cmp;
+  }
+  return primitiveComparator(left[left.length - 1], right[right.length - 1]);
+}
+const SCHEMA_VERSION = 18;
 class OverlayedDocument {
   constructor(overlayedDocument, mutatedFields) {
     this.overlayedDocument = overlayedDocument;
@@ -6401,9 +10511,9 @@ class LocalDocumentsView {
    * @param count - The number of documents to return
    * @returns A LocalWriteResult with the documents that follow the provided offset and the last processed batch id.
    */
-  getNextDocuments(transaction, collectionGroup, offset, count) {
-    return this.remoteDocumentCache.getAllFromCollectionGroup(transaction, collectionGroup, offset, count).next((originalDocs) => {
-      const overlaysPromise = count - originalDocs.size > 0 ? this.documentOverlayCache.getOverlaysForCollectionGroup(transaction, collectionGroup, offset.largestBatchId, count - originalDocs.size) : PersistencePromise.resolve(newOverlayMap());
+  getNextDocuments(transaction, collectionGroup2, offset, count2) {
+    return this.remoteDocumentCache.getAllFromCollectionGroup(transaction, collectionGroup2, offset, count2).next((originalDocs) => {
+      const overlaysPromise = count2 - originalDocs.size > 0 ? this.documentOverlayCache.getOverlaysForCollectionGroup(transaction, collectionGroup2, offset.largestBatchId, count2 - originalDocs.size) : PersistencePromise.resolve(newOverlayMap());
       let largestBatchId = INITIAL_LARGEST_BATCH_ID;
       let modifiedDocs = originalDocs;
       return overlaysPromise.next((overlays) => {
@@ -6547,14 +10657,14 @@ class MemoryDocumentOverlayCache {
     }
     return PersistencePromise.resolve(result);
   }
-  getOverlaysForCollectionGroup(transaction, collectionGroup, sinceBatchId, count) {
+  getOverlaysForCollectionGroup(transaction, collectionGroup2, sinceBatchId, count2) {
     let batchIdToOverlays = new SortedMap((key1, key2) => key1 - key2);
     const iter = this.overlays.getIterator();
     while (iter.hasNext()) {
       const entry = iter.getNext();
       const overlay = entry.value;
       const key = overlay.getKey();
-      if (key.getCollectionGroup() !== collectionGroup) {
+      if (key.getCollectionGroup() !== collectionGroup2) {
         continue;
       }
       if (overlay.largestBatchId > sinceBatchId) {
@@ -6572,7 +10682,7 @@ class MemoryDocumentOverlayCache {
       const entry = batchIter.getNext();
       const overlays = entry.value;
       overlays.forEach((key, overlay) => result.set(key, overlay));
-      if (result.size() >= count) {
+      if (result.size() >= count2) {
         break;
       }
     }
@@ -6928,7 +11038,7 @@ class MemoryRemoteDocumentCacheImpl {
     }
     return PersistencePromise.resolve(results);
   }
-  getAllFromCollectionGroup(transaction, collectionGroup, offset, limit) {
+  getAllFromCollectionGroup(transaction, collectionGroup2, offset, limit2) {
     fail(9500);
   }
   forEachDocumentKey(transaction, f) {
@@ -7028,16 +11138,16 @@ class MemoryTargetCache {
     return PersistencePromise.resolve();
   }
   removeTargets(transaction, upperBound, activeTargetIds) {
-    let count = 0;
+    let count2 = 0;
     const removals = [];
     this.targets.forEach((key, targetData) => {
       if (targetData.sequenceNumber <= upperBound && activeTargetIds.get(targetData.targetId) === null) {
         this.targets.delete(key);
         removals.push(this.removeMatchingKeysForTargetId(transaction, targetData.targetId));
-        count++;
+        count2++;
       }
     });
-    return PersistencePromise.waitFor(removals).next(() => count);
+    return PersistencePromise.waitFor(removals).next(() => count2);
   }
   getTargetCount(transaction) {
     return PersistencePromise.resolve(this.targetCount);
@@ -7283,18 +11393,18 @@ class MemoryLruDelegate {
     return this.persistence.getTargetCache().removeTargets(txn, upperBound, activeTargetIds);
   }
   removeOrphanedDocuments(txn, upperBound) {
-    let count = 0;
+    let count2 = 0;
     const cache = this.persistence.getRemoteDocumentCache();
     const changeBuffer = cache.newChangeBuffer();
     const p = cache.forEachDocumentKey(txn, (key) => {
       return this.isPinned(txn, key, upperBound).next((isPinned) => {
         if (!isPinned) {
-          count++;
+          count2++;
           changeBuffer.removeEntry(key, SnapshotVersion.min());
         }
       });
     });
-    return p.next(() => changeBuffer.apply(txn)).next(() => count);
+    return p.next(() => changeBuffer.apply(txn)).next(() => count2);
   }
   markPotentiallyOrphaned(txn, key) {
     this.orphanedSequenceNumbers.set(key, txn.currentSequenceNumber);
@@ -7335,6 +11445,932 @@ class MemoryLruDelegate {
   }
   getCacheSize(txn) {
     return this.persistence.getRemoteDocumentCache().getSize(txn);
+  }
+}
+class SchemaConverter {
+  constructor(serializer) {
+    this.serializer = serializer;
+  }
+  /**
+   * Performs database creation and schema upgrades.
+   *
+   * Note that in production, this method is only ever used to upgrade the schema
+   * to SCHEMA_VERSION. Different values of toVersion are only used for testing
+   * and local feature development.
+   */
+  createOrUpgrade(db, txn, fromVersion2, toVersion2) {
+    const simpleDbTransaction = new SimpleDbTransaction("createOrUpgrade", txn);
+    if (fromVersion2 < 1 && toVersion2 >= 1) {
+      createPrimaryClientStore(db);
+      createMutationQueue(db);
+      createQueryCache(db);
+      createLegacyRemoteDocumentCache(db);
+    }
+    let p = PersistencePromise.resolve();
+    if (fromVersion2 < 3 && toVersion2 >= 3) {
+      if (fromVersion2 !== 0) {
+        dropQueryCache(db);
+        createQueryCache(db);
+      }
+      p = p.next(() => writeEmptyTargetGlobalEntry(simpleDbTransaction));
+    }
+    if (fromVersion2 < 4 && toVersion2 >= 4) {
+      if (fromVersion2 !== 0) {
+        p = p.next(() => upgradeMutationBatchSchemaAndMigrateData(db, simpleDbTransaction));
+      }
+      p = p.next(() => {
+        createClientMetadataStore(db);
+      });
+    }
+    if (fromVersion2 < 5 && toVersion2 >= 5) {
+      p = p.next(() => this.removeAcknowledgedMutations(simpleDbTransaction));
+    }
+    if (fromVersion2 < 6 && toVersion2 >= 6) {
+      p = p.next(() => {
+        createDocumentGlobalStore(db);
+        return this.addDocumentGlobal(simpleDbTransaction);
+      });
+    }
+    if (fromVersion2 < 7 && toVersion2 >= 7) {
+      p = p.next(() => this.ensureSequenceNumbers(simpleDbTransaction));
+    }
+    if (fromVersion2 < 8 && toVersion2 >= 8) {
+      p = p.next(() => this.createCollectionParentIndex(db, simpleDbTransaction));
+    }
+    if (fromVersion2 < 9 && toVersion2 >= 9) {
+      p = p.next(() => {
+        dropRemoteDocumentChangesStore(db);
+      });
+    }
+    if (fromVersion2 < 10 && toVersion2 >= 10) {
+      p = p.next(() => this.rewriteCanonicalIds(simpleDbTransaction));
+    }
+    if (fromVersion2 < 11 && toVersion2 >= 11) {
+      p = p.next(() => {
+        createBundlesStore(db);
+        createNamedQueriesStore(db);
+      });
+    }
+    if (fromVersion2 < 12 && toVersion2 >= 12) {
+      p = p.next(() => {
+        createDocumentOverlayStore(db);
+      });
+    }
+    if (fromVersion2 < 13 && toVersion2 >= 13) {
+      p = p.next(() => createRemoteDocumentCache(db)).next(() => this.rewriteRemoteDocumentCache(db, simpleDbTransaction)).next(() => db.deleteObjectStore(DbRemoteDocumentStore$1));
+    }
+    if (fromVersion2 < 14 && toVersion2 >= 14) {
+      p = p.next(() => this.runOverlayMigration(db, simpleDbTransaction));
+    }
+    if (fromVersion2 < 15 && toVersion2 >= 15) {
+      p = p.next(() => createFieldIndex(db));
+    }
+    if (fromVersion2 < 16 && toVersion2 >= 16) {
+      p = p.next(() => {
+        const indexStateStore2 = txn.objectStore(DbIndexStateStore);
+        indexStateStore2.clear();
+      }).next(() => {
+        const indexEntryStore = txn.objectStore(DbIndexEntryStore);
+        indexEntryStore.clear();
+      });
+    }
+    if (fromVersion2 < 17 && toVersion2 >= 17) {
+      p = p.next(() => {
+        createGlobalsStore(db);
+      });
+    }
+    if (fromVersion2 < 18 && toVersion2 >= 18) {
+      if (isSafariOrWebkit()) {
+        p = p.next(() => {
+          const indexStateStore2 = txn.objectStore(DbIndexStateStore);
+          indexStateStore2.clear();
+        }).next(() => {
+          const indexEntryStore = txn.objectStore(DbIndexEntryStore);
+          indexEntryStore.clear();
+        });
+      }
+    }
+    return p;
+  }
+  addDocumentGlobal(txn) {
+    let byteSize = 0;
+    return txn.store(DbRemoteDocumentStore$1).iterate((_, doc3) => {
+      byteSize += dbDocumentSize(doc3);
+    }).next(() => {
+      const metadata = { byteSize };
+      return txn.store(DbRemoteDocumentGlobalStore).put(DbRemoteDocumentGlobalKey, metadata);
+    });
+  }
+  removeAcknowledgedMutations(txn) {
+    const queuesStore = txn.store(DbMutationQueueStore);
+    const mutationsStore2 = txn.store(DbMutationBatchStore);
+    return queuesStore.loadAll().next((queues) => {
+      return PersistencePromise.forEach(queues, (queue) => {
+        const range = IDBKeyRange.bound([queue.userId, BATCHID_UNKNOWN], [queue.userId, queue.lastAcknowledgedBatchId]);
+        return mutationsStore2.loadAll(DbMutationBatchUserMutationsIndex, range).next((dbBatches) => {
+          return PersistencePromise.forEach(dbBatches, (dbBatch) => {
+            hardAssert(dbBatch.userId === queue.userId, 18650, `Cannot process batch from unexpected user`, { batchId: dbBatch.batchId });
+            const batch = fromDbMutationBatch(this.serializer, dbBatch);
+            return removeMutationBatch(txn, queue.userId, batch).next(() => {
+            });
+          });
+        });
+      });
+    });
+  }
+  /**
+   * Ensures that every document in the remote document cache has a corresponding sentinel row
+   * with a sequence number. Missing rows are given the most recently used sequence number.
+   */
+  ensureSequenceNumbers(txn) {
+    const documentTargetStore2 = txn.store(DbTargetDocumentStore);
+    const documentsStore = txn.store(DbRemoteDocumentStore$1);
+    const globalTargetStore2 = txn.store(DbTargetGlobalStore);
+    return globalTargetStore2.get(DbTargetGlobalKey).next((metadata) => {
+      const writeSentinelKey2 = (path) => {
+        return documentTargetStore2.put({
+          targetId: 0,
+          path: encodeResourcePath(path),
+          sequenceNumber: metadata.highestListenSequenceNumber
+        });
+      };
+      const promises = [];
+      return documentsStore.iterate((key, doc3) => {
+        const path = new ResourcePath(key);
+        const docSentinelKey = sentinelKey(path);
+        promises.push(documentTargetStore2.get(docSentinelKey).next((maybeSentinel) => {
+          if (!maybeSentinel) {
+            return writeSentinelKey2(path);
+          } else {
+            return PersistencePromise.resolve();
+          }
+        }));
+      }).next(() => PersistencePromise.waitFor(promises));
+    });
+  }
+  createCollectionParentIndex(db, txn) {
+    db.createObjectStore(DbCollectionParentStore, {
+      keyPath: DbCollectionParentKeyPath
+    });
+    const collectionParentsStore2 = txn.store(DbCollectionParentStore);
+    const cache = new MemoryCollectionParentIndex();
+    const addEntry = (collectionPath) => {
+      if (cache.add(collectionPath)) {
+        const collectionId = collectionPath.lastSegment();
+        const parentPath = collectionPath.popLast();
+        return collectionParentsStore2.put({
+          collectionId,
+          parent: encodeResourcePath(parentPath)
+        });
+      }
+    };
+    return txn.store(DbRemoteDocumentStore$1).iterate({ keysOnly: true }, (pathSegments, _) => {
+      const path = new ResourcePath(pathSegments);
+      return addEntry(path.popLast());
+    }).next(() => {
+      return txn.store(DbDocumentMutationStore).iterate({ keysOnly: true }, ([userID, encodedPath, batchId], _) => {
+        const path = decodeResourcePath(encodedPath);
+        return addEntry(path.popLast());
+      });
+    });
+  }
+  rewriteCanonicalIds(txn) {
+    const targetStore = txn.store(DbTargetStore);
+    return targetStore.iterate((key, originalDbTarget) => {
+      const originalTargetData = fromDbTarget(originalDbTarget);
+      const updatedDbTarget = toDbTarget(this.serializer, originalTargetData);
+      return targetStore.put(updatedDbTarget);
+    });
+  }
+  rewriteRemoteDocumentCache(db, transaction) {
+    const legacyRemoteDocumentStore = transaction.store(DbRemoteDocumentStore$1);
+    const writes = [];
+    return legacyRemoteDocumentStore.iterate((_, legacyDocument) => {
+      const remoteDocumentStore = transaction.store(DbRemoteDocumentStore);
+      const path = extractKey(legacyDocument).path.toArray();
+      const dbRemoteDocument = {
+        prefixPath: path.slice(0, path.length - 2),
+        collectionGroup: path[path.length - 2],
+        documentId: path[path.length - 1],
+        readTime: legacyDocument.readTime || [0, 0],
+        unknownDocument: legacyDocument.unknownDocument,
+        noDocument: legacyDocument.noDocument,
+        document: legacyDocument.document,
+        hasCommittedMutations: !!legacyDocument.hasCommittedMutations
+      };
+      writes.push(remoteDocumentStore.put(dbRemoteDocument));
+    }).next(() => PersistencePromise.waitFor(writes));
+  }
+  runOverlayMigration(db, transaction) {
+    const mutationsStore2 = transaction.store(DbMutationBatchStore);
+    const remoteDocumentCache = newIndexedDbRemoteDocumentCache(this.serializer);
+    const memoryPersistence = new MemoryPersistence(MemoryEagerDelegate.factory, this.serializer.remoteSerializer);
+    return mutationsStore2.loadAll().next((dbBatches) => {
+      const userToDocumentSet = /* @__PURE__ */ new Map();
+      dbBatches.forEach((dbBatch) => {
+        let documentSet = userToDocumentSet.get(dbBatch.userId) ?? documentKeySet();
+        const batch = fromDbMutationBatch(this.serializer, dbBatch);
+        batch.keys().forEach((key) => documentSet = documentSet.add(key));
+        userToDocumentSet.set(dbBatch.userId, documentSet);
+      });
+      return PersistencePromise.forEach(userToDocumentSet, (allDocumentKeysForUser, userId) => {
+        const user = new User(userId);
+        const documentOverlayCache = IndexedDbDocumentOverlayCache.forUser(this.serializer, user);
+        const indexManager = memoryPersistence.getIndexManager(user);
+        const mutationQueue = IndexedDbMutationQueue.forUser(user, this.serializer, indexManager, memoryPersistence.referenceDelegate);
+        const localDocumentsView = new LocalDocumentsView(remoteDocumentCache, mutationQueue, documentOverlayCache, indexManager);
+        return localDocumentsView.recalculateAndSaveOverlaysForDocumentKeys(new IndexedDbTransaction(transaction, ListenSequence.INVALID), allDocumentKeysForUser).next();
+      });
+    });
+  }
+}
+function sentinelKey(path) {
+  return [0, encodeResourcePath(path)];
+}
+function createPrimaryClientStore(db) {
+  db.createObjectStore(DbPrimaryClientStore);
+}
+function createMutationQueue(db) {
+  db.createObjectStore(DbMutationQueueStore, {
+    keyPath: DbMutationQueueKeyPath
+  });
+  const mutationBatchesStore = db.createObjectStore(DbMutationBatchStore, {
+    keyPath: DbMutationBatchKeyPath,
+    autoIncrement: true
+  });
+  mutationBatchesStore.createIndex(DbMutationBatchUserMutationsIndex, DbMutationBatchUserMutationsKeyPath, { unique: true });
+  db.createObjectStore(DbDocumentMutationStore);
+}
+function upgradeMutationBatchSchemaAndMigrateData(db, txn) {
+  const v1MutationsStore = txn.store(DbMutationBatchStore);
+  return v1MutationsStore.loadAll().next((existingMutations) => {
+    db.deleteObjectStore(DbMutationBatchStore);
+    const mutationsStore2 = db.createObjectStore(DbMutationBatchStore, {
+      keyPath: DbMutationBatchKeyPath,
+      autoIncrement: true
+    });
+    mutationsStore2.createIndex(DbMutationBatchUserMutationsIndex, DbMutationBatchUserMutationsKeyPath, { unique: true });
+    const v3MutationsStore = txn.store(DbMutationBatchStore);
+    const writeAll = existingMutations.map((mutation) => v3MutationsStore.put(mutation));
+    return PersistencePromise.waitFor(writeAll);
+  });
+}
+function createLegacyRemoteDocumentCache(db) {
+  db.createObjectStore(DbRemoteDocumentStore$1);
+}
+function createRemoteDocumentCache(db) {
+  const remoteDocumentStore = db.createObjectStore(DbRemoteDocumentStore, {
+    keyPath: DbRemoteDocumentKeyPath
+  });
+  remoteDocumentStore.createIndex(DbRemoteDocumentDocumentKeyIndex, DbRemoteDocumentDocumentKeyIndexPath);
+  remoteDocumentStore.createIndex(DbRemoteDocumentCollectionGroupIndex, DbRemoteDocumentCollectionGroupIndexPath);
+}
+function createDocumentGlobalStore(db) {
+  db.createObjectStore(DbRemoteDocumentGlobalStore);
+}
+function createQueryCache(db) {
+  const targetDocumentsStore = db.createObjectStore(DbTargetDocumentStore, {
+    keyPath: DbTargetDocumentKeyPath
+  });
+  targetDocumentsStore.createIndex(DbTargetDocumentDocumentTargetsIndex, DbTargetDocumentDocumentTargetsKeyPath, { unique: true });
+  const targetStore = db.createObjectStore(DbTargetStore, {
+    keyPath: DbTargetKeyPath
+  });
+  targetStore.createIndex(DbTargetQueryTargetsIndexName, DbTargetQueryTargetsKeyPath, { unique: true });
+  db.createObjectStore(DbTargetGlobalStore);
+}
+function dropQueryCache(db) {
+  db.deleteObjectStore(DbTargetDocumentStore);
+  db.deleteObjectStore(DbTargetStore);
+  db.deleteObjectStore(DbTargetGlobalStore);
+}
+function dropRemoteDocumentChangesStore(db) {
+  if (db.objectStoreNames.contains("remoteDocumentChanges")) {
+    db.deleteObjectStore("remoteDocumentChanges");
+  }
+}
+function writeEmptyTargetGlobalEntry(txn) {
+  const globalStore = txn.store(DbTargetGlobalStore);
+  const metadata = {
+    highestTargetId: 0,
+    highestListenSequenceNumber: 0,
+    lastRemoteSnapshotVersion: SnapshotVersion.min().toTimestamp(),
+    targetCount: 0
+  };
+  return globalStore.put(DbTargetGlobalKey, metadata);
+}
+function createClientMetadataStore(db) {
+  db.createObjectStore(DbClientMetadataStore, {
+    keyPath: DbClientMetadataKeyPath
+  });
+}
+function createBundlesStore(db) {
+  db.createObjectStore(DbBundleStore, {
+    keyPath: DbBundleKeyPath
+  });
+}
+function createNamedQueriesStore(db) {
+  db.createObjectStore(DbNamedQueryStore, {
+    keyPath: DbNamedQueryKeyPath
+  });
+}
+function createFieldIndex(db) {
+  const indexConfigurationStore2 = db.createObjectStore(DbIndexConfigurationStore, {
+    keyPath: DbIndexConfigurationKeyPath,
+    autoIncrement: true
+  });
+  indexConfigurationStore2.createIndex(DbIndexConfigurationCollectionGroupIndex, DbIndexConfigurationCollectionGroupIndexPath, { unique: false });
+  const indexStateStore2 = db.createObjectStore(DbIndexStateStore, {
+    keyPath: DbIndexStateKeyPath
+  });
+  indexStateStore2.createIndex(DbIndexStateSequenceNumberIndex, DbIndexStateSequenceNumberIndexPath, { unique: false });
+  const indexEntryStore = db.createObjectStore(DbIndexEntryStore, {
+    keyPath: DbIndexEntryKeyPath
+  });
+  indexEntryStore.createIndex(DbIndexEntryDocumentKeyIndex, DbIndexEntryDocumentKeyIndexPath, { unique: false });
+}
+function createDocumentOverlayStore(db) {
+  const documentOverlayStore2 = db.createObjectStore(DbDocumentOverlayStore, {
+    keyPath: DbDocumentOverlayKeyPath
+  });
+  documentOverlayStore2.createIndex(DbDocumentOverlayCollectionPathOverlayIndex, DbDocumentOverlayCollectionPathOverlayIndexPath, { unique: false });
+  documentOverlayStore2.createIndex(DbDocumentOverlayCollectionGroupOverlayIndex, DbDocumentOverlayCollectionGroupOverlayIndexPath, { unique: false });
+}
+function createGlobalsStore(db) {
+  db.createObjectStore(DbGlobalsStore, {
+    keyPath: DbGlobalsKeyPath
+  });
+}
+function extractKey(remoteDoc) {
+  if (remoteDoc.document) {
+    return new DocumentKey(ResourcePath.fromString(remoteDoc.document.name).popFirst(5));
+  } else if (remoteDoc.noDocument) {
+    return DocumentKey.fromSegments(remoteDoc.noDocument.path);
+  } else if (remoteDoc.unknownDocument) {
+    return DocumentKey.fromSegments(remoteDoc.unknownDocument.path);
+  } else {
+    return fail(36783);
+  }
+}
+const LOG_TAG$c = "IndexedDbPersistence";
+const MAX_CLIENT_AGE_MS = 30 * 60 * 1e3;
+const MAX_PRIMARY_ELIGIBLE_AGE_MS = 5e3;
+const CLIENT_METADATA_REFRESH_INTERVAL_MS = 4e3;
+const PRIMARY_LEASE_EXCLUSIVE_ERROR_MSG = "Failed to obtain exclusive access to the persistence layer. To allow shared access, multi-tab synchronization has to be enabled in all tabs. If you are using `experimentalForceOwningTab:true`, make sure that only one tab has persistence enabled at any given time.";
+const UNSUPPORTED_PLATFORM_ERROR_MSG = "This platform is either missing IndexedDB or is known to have an incomplete implementation. Offline persistence has been disabled.";
+const ZOMBIED_CLIENTS_KEY_PREFIX = "firestore_zombie";
+const MAIN_DATABASE = "main";
+class IndexedDbPersistence {
+  constructor(allowTabSynchronization, persistenceKey, clientId, lruParams, queue, window2, document, serializer, sequenceNumberSyncer, forceOwningTab, schemaVersion = SCHEMA_VERSION) {
+    this.allowTabSynchronization = allowTabSynchronization;
+    this.persistenceKey = persistenceKey;
+    this.clientId = clientId;
+    this.queue = queue;
+    this.window = window2;
+    this.document = document;
+    this.sequenceNumberSyncer = sequenceNumberSyncer;
+    this.forceOwningTab = forceOwningTab;
+    this.schemaVersion = schemaVersion;
+    this.listenSequence = null;
+    this._started = false;
+    this.isPrimary = false;
+    this.networkEnabled = true;
+    this.windowUnloadHandler = null;
+    this.inForeground = false;
+    this.documentVisibilityHandler = null;
+    this.clientMetadataRefresher = null;
+    this.lastGarbageCollectionTime = Number.NEGATIVE_INFINITY;
+    this.primaryStateListener = (_) => Promise.resolve();
+    if (!IndexedDbPersistence.isAvailable()) {
+      throw new FirestoreError(Code.UNIMPLEMENTED, UNSUPPORTED_PLATFORM_ERROR_MSG);
+    }
+    this.referenceDelegate = new IndexedDbLruDelegateImpl(this, lruParams);
+    this.dbName = persistenceKey + MAIN_DATABASE;
+    this.serializer = new LocalSerializer(serializer);
+    this.simpleDb = new SimpleDb(this.dbName, this.schemaVersion, new SchemaConverter(this.serializer));
+    this.globalsCache = new IndexedDbGlobalsCache();
+    this.targetCache = new IndexedDbTargetCache(this.referenceDelegate, this.serializer);
+    this.remoteDocumentCache = newIndexedDbRemoteDocumentCache(this.serializer);
+    this.bundleCache = new IndexedDbBundleCache();
+    if (this.window && this.window.localStorage) {
+      this.webStorage = this.window.localStorage;
+    } else {
+      this.webStorage = null;
+      if (forceOwningTab === false) {
+        logError(LOG_TAG$c, "LocalStorage is unavailable. As a result, persistence may not work reliably. In particular enablePersistence() could fail immediately after refreshing the page.");
+      }
+    }
+  }
+  /**
+   * Attempt to start IndexedDb persistence.
+   *
+   * @returns Whether persistence was enabled.
+   */
+  start() {
+    return this.updateClientMetadataAndTryBecomePrimary().then(() => {
+      if (!this.isPrimary && !this.allowTabSynchronization) {
+        throw new FirestoreError(Code.FAILED_PRECONDITION, PRIMARY_LEASE_EXCLUSIVE_ERROR_MSG);
+      }
+      this.attachVisibilityHandler();
+      this.attachWindowUnloadHook();
+      this.scheduleClientMetadataAndPrimaryLeaseRefreshes();
+      return this.runTransaction("getHighestListenSequenceNumber", "readonly", (txn) => this.targetCache.getHighestSequenceNumber(txn));
+    }).then((highestListenSequenceNumber) => {
+      this.listenSequence = new ListenSequence(highestListenSequenceNumber, this.sequenceNumberSyncer);
+    }).then(() => {
+      this._started = true;
+    }).catch((reason) => {
+      this.simpleDb && this.simpleDb.close();
+      return Promise.reject(reason);
+    });
+  }
+  /**
+   * Registers a listener that gets called when the primary state of the
+   * instance changes. Upon registering, this listener is invoked immediately
+   * with the current primary state.
+   *
+   * PORTING NOTE: This is only used for Web multi-tab.
+   */
+  setPrimaryStateListener(primaryStateListener) {
+    this.primaryStateListener = async (primaryState) => {
+      if (this.started) {
+        return primaryStateListener(primaryState);
+      }
+    };
+    return primaryStateListener(this.isPrimary);
+  }
+  /**
+   * Registers a listener that gets called when the database receives a
+   * version change event indicating that it has deleted.
+   *
+   * PORTING NOTE: This is only used for Web multi-tab.
+   */
+  setDatabaseDeletedListener(databaseDeletedListener) {
+    this.simpleDb.setVersionChangeListener(async (event) => {
+      if (event.newVersion === null) {
+        await databaseDeletedListener();
+      }
+    });
+  }
+  /**
+   * Adjusts the current network state in the client's metadata, potentially
+   * affecting the primary lease.
+   *
+   * PORTING NOTE: This is only used for Web multi-tab.
+   */
+  setNetworkEnabled(networkEnabled) {
+    if (this.networkEnabled !== networkEnabled) {
+      this.networkEnabled = networkEnabled;
+      this.queue.enqueueAndForget(async () => {
+        if (this.started) {
+          await this.updateClientMetadataAndTryBecomePrimary();
+        }
+      });
+    }
+  }
+  /**
+   * Updates the client metadata in IndexedDb and attempts to either obtain or
+   * extend the primary lease for the local client. Asynchronously notifies the
+   * primary state listener if the client either newly obtained or released its
+   * primary lease.
+   */
+  updateClientMetadataAndTryBecomePrimary() {
+    return this.runTransaction("updateClientMetadataAndTryBecomePrimary", "readwrite", (txn) => {
+      const metadataStore = clientMetadataStore(txn);
+      return metadataStore.put({
+        clientId: this.clientId,
+        updateTimeMs: Date.now(),
+        networkEnabled: this.networkEnabled,
+        inForeground: this.inForeground
+      }).next(() => {
+        if (this.isPrimary) {
+          return this.verifyPrimaryLease(txn).next((success) => {
+            if (!success) {
+              this.isPrimary = false;
+              this.queue.enqueueRetryable(() => this.primaryStateListener(false));
+            }
+          });
+        }
+      }).next(() => this.canActAsPrimary(txn)).next((canActAsPrimary) => {
+        if (this.isPrimary && !canActAsPrimary) {
+          return this.releasePrimaryLeaseIfHeld(txn).next(() => false);
+        } else if (canActAsPrimary) {
+          return this.acquireOrExtendPrimaryLease(txn).next(() => true);
+        } else {
+          return (
+            /* canActAsPrimary= */
+            false
+          );
+        }
+      });
+    }).catch((e) => {
+      if (isIndexedDbTransactionError(e)) {
+        logDebug(LOG_TAG$c, "Failed to extend owner lease: ", e);
+        return this.isPrimary;
+      }
+      if (!this.allowTabSynchronization) {
+        throw e;
+      }
+      logDebug(LOG_TAG$c, "Releasing owner lease after error during lease refresh", e);
+      return (
+        /* isPrimary= */
+        false
+      );
+    }).then((isPrimary) => {
+      if (this.isPrimary !== isPrimary) {
+        this.queue.enqueueRetryable(() => this.primaryStateListener(isPrimary));
+      }
+      this.isPrimary = isPrimary;
+    });
+  }
+  verifyPrimaryLease(txn) {
+    const store = primaryClientStore(txn);
+    return store.get(DbPrimaryClientKey).next((primaryClient) => {
+      return PersistencePromise.resolve(this.isLocalClient(primaryClient));
+    });
+  }
+  removeClientMetadata(txn) {
+    const metadataStore = clientMetadataStore(txn);
+    return metadataStore.delete(this.clientId);
+  }
+  /**
+   * If the garbage collection threshold has passed, prunes the
+   * RemoteDocumentChanges and the ClientMetadata store based on the last update
+   * time of all clients.
+   */
+  async maybeGarbageCollectMultiClientState() {
+    if (this.isPrimary && !this.isWithinAge(this.lastGarbageCollectionTime, MAX_CLIENT_AGE_MS)) {
+      this.lastGarbageCollectionTime = Date.now();
+      const inactiveClients = await this.runTransaction("maybeGarbageCollectMultiClientState", "readwrite-primary", (txn) => {
+        const metadataStore = getStore(txn, DbClientMetadataStore);
+        return metadataStore.loadAll().next((existingClients) => {
+          const active = this.filterActiveClients(existingClients, MAX_CLIENT_AGE_MS);
+          const inactive = existingClients.filter((client) => active.indexOf(client) === -1);
+          return PersistencePromise.forEach(inactive, (inactiveClient) => metadataStore.delete(inactiveClient.clientId)).next(() => inactive);
+        });
+      }).catch(() => {
+        return [];
+      });
+      if (this.webStorage) {
+        for (const inactiveClient of inactiveClients) {
+          this.webStorage.removeItem(this.zombiedClientLocalStorageKey(inactiveClient.clientId));
+        }
+      }
+    }
+  }
+  /**
+   * Schedules a recurring timer to update the client metadata and to either
+   * extend or acquire the primary lease if the client is eligible.
+   */
+  scheduleClientMetadataAndPrimaryLeaseRefreshes() {
+    this.clientMetadataRefresher = this.queue.enqueueAfterDelay("client_metadata_refresh", CLIENT_METADATA_REFRESH_INTERVAL_MS, () => {
+      return this.updateClientMetadataAndTryBecomePrimary().then(() => this.maybeGarbageCollectMultiClientState()).then(() => this.scheduleClientMetadataAndPrimaryLeaseRefreshes());
+    });
+  }
+  /** Checks whether `client` is the local client. */
+  isLocalClient(client) {
+    return client ? client.ownerId === this.clientId : false;
+  }
+  /**
+   * Evaluate the state of all active clients and determine whether the local
+   * client is or can act as the holder of the primary lease. Returns whether
+   * the client is eligible for the lease, but does not actually acquire it.
+   * May return 'false' even if there is no active leaseholder and another
+   * (foreground) client should become leaseholder instead.
+   */
+  canActAsPrimary(txn) {
+    if (this.forceOwningTab) {
+      return PersistencePromise.resolve(true);
+    }
+    const store = primaryClientStore(txn);
+    return store.get(DbPrimaryClientKey).next((currentPrimary) => {
+      const currentLeaseIsValid = currentPrimary !== null && this.isWithinAge(currentPrimary.leaseTimestampMs, MAX_PRIMARY_ELIGIBLE_AGE_MS) && !this.isClientZombied(currentPrimary.ownerId);
+      if (currentLeaseIsValid) {
+        if (this.isLocalClient(currentPrimary) && this.networkEnabled) {
+          return true;
+        }
+        if (!this.isLocalClient(currentPrimary)) {
+          if (!currentPrimary.allowTabSynchronization) {
+            throw new FirestoreError(Code.FAILED_PRECONDITION, PRIMARY_LEASE_EXCLUSIVE_ERROR_MSG);
+          }
+          return false;
+        }
+      }
+      if (this.networkEnabled && this.inForeground) {
+        return true;
+      }
+      return clientMetadataStore(txn).loadAll().next((existingClients) => {
+        const preferredCandidate = this.filterActiveClients(existingClients, MAX_PRIMARY_ELIGIBLE_AGE_MS).find((otherClient) => {
+          if (this.clientId !== otherClient.clientId) {
+            const otherClientHasBetterNetworkState = !this.networkEnabled && otherClient.networkEnabled;
+            const otherClientHasBetterVisibility = !this.inForeground && otherClient.inForeground;
+            const otherClientHasSameNetworkState = this.networkEnabled === otherClient.networkEnabled;
+            if (otherClientHasBetterNetworkState || otherClientHasBetterVisibility && otherClientHasSameNetworkState) {
+              return true;
+            }
+          }
+          return false;
+        });
+        return preferredCandidate === void 0;
+      });
+    }).next((canActAsPrimary) => {
+      if (this.isPrimary !== canActAsPrimary) {
+        logDebug(LOG_TAG$c, `Client ${canActAsPrimary ? "is" : "is not"} eligible for a primary lease.`);
+      }
+      return canActAsPrimary;
+    });
+  }
+  async shutdown() {
+    this._started = false;
+    this.markClientZombied();
+    if (this.clientMetadataRefresher) {
+      this.clientMetadataRefresher.cancel();
+      this.clientMetadataRefresher = null;
+    }
+    this.detachVisibilityHandler();
+    this.detachWindowUnloadHook();
+    await this.simpleDb.runTransaction("shutdown", "readwrite", [DbPrimaryClientStore, DbClientMetadataStore], (simpleDbTxn) => {
+      const persistenceTransaction = new IndexedDbTransaction(simpleDbTxn, ListenSequence.INVALID);
+      return this.releasePrimaryLeaseIfHeld(persistenceTransaction).next(() => this.removeClientMetadata(persistenceTransaction));
+    });
+    this.simpleDb.close();
+    this.removeClientZombiedEntry();
+  }
+  /**
+   * Returns clients that are not zombied and have an updateTime within the
+   * provided threshold.
+   */
+  filterActiveClients(clients, activityThresholdMs) {
+    return clients.filter((client) => this.isWithinAge(client.updateTimeMs, activityThresholdMs) && !this.isClientZombied(client.clientId));
+  }
+  /**
+   * Returns the IDs of the clients that are currently active. If multi-tab
+   * is not supported, returns an array that only contains the local client's
+   * ID.
+   *
+   * PORTING NOTE: This is only used for Web multi-tab.
+   */
+  getActiveClients() {
+    return this.runTransaction("getActiveClients", "readonly", (txn) => {
+      return clientMetadataStore(txn).loadAll().next((clients) => this.filterActiveClients(clients, MAX_CLIENT_AGE_MS).map((clientMetadata) => clientMetadata.clientId));
+    });
+  }
+  get started() {
+    return this._started;
+  }
+  getGlobalsCache() {
+    return this.globalsCache;
+  }
+  getMutationQueue(user, indexManager) {
+    return IndexedDbMutationQueue.forUser(user, this.serializer, indexManager, this.referenceDelegate);
+  }
+  getTargetCache() {
+    return this.targetCache;
+  }
+  getRemoteDocumentCache() {
+    return this.remoteDocumentCache;
+  }
+  getIndexManager(user) {
+    return new IndexedDbIndexManager(user, this.serializer.remoteSerializer.databaseId);
+  }
+  getDocumentOverlayCache(user) {
+    return IndexedDbDocumentOverlayCache.forUser(this.serializer, user);
+  }
+  getBundleCache() {
+    return this.bundleCache;
+  }
+  runTransaction(action, mode, transactionOperation) {
+    logDebug(LOG_TAG$c, "Starting transaction:", action);
+    const simpleDbMode = mode === "readonly" ? "readonly" : "readwrite";
+    const objectStores = getObjectStores(this.schemaVersion);
+    let persistenceTransaction;
+    return this.simpleDb.runTransaction(action, simpleDbMode, objectStores, (simpleDbTxn) => {
+      persistenceTransaction = new IndexedDbTransaction(simpleDbTxn, this.listenSequence ? this.listenSequence.next() : ListenSequence.INVALID);
+      if (mode === "readwrite-primary") {
+        return this.verifyPrimaryLease(persistenceTransaction).next((holdsPrimaryLease) => {
+          if (holdsPrimaryLease) {
+            return (
+              /* holdsPrimaryLease= */
+              true
+            );
+          }
+          return this.canActAsPrimary(persistenceTransaction);
+        }).next((holdsPrimaryLease) => {
+          if (!holdsPrimaryLease) {
+            logError(`Failed to obtain primary lease for action '${action}'.`);
+            this.isPrimary = false;
+            this.queue.enqueueRetryable(() => this.primaryStateListener(false));
+            throw new FirestoreError(Code.FAILED_PRECONDITION, PRIMARY_LEASE_LOST_ERROR_MSG);
+          }
+          return transactionOperation(persistenceTransaction);
+        }).next((result) => {
+          return this.acquireOrExtendPrimaryLease(persistenceTransaction).next(() => result);
+        });
+      } else {
+        return this.verifyAllowTabSynchronization(persistenceTransaction).next(() => transactionOperation(persistenceTransaction));
+      }
+    }).then((result) => {
+      persistenceTransaction.raiseOnCommittedEvent();
+      return result;
+    });
+  }
+  /**
+   * Verifies that the current tab is the primary leaseholder or alternatively
+   * that the leaseholder has opted into multi-tab synchronization.
+   */
+  // TODO(b/114226234): Remove this check when `synchronizeTabs` can no longer
+  // be turned off.
+  verifyAllowTabSynchronization(txn) {
+    const store = primaryClientStore(txn);
+    return store.get(DbPrimaryClientKey).next((currentPrimary) => {
+      const currentLeaseIsValid = currentPrimary !== null && this.isWithinAge(currentPrimary.leaseTimestampMs, MAX_PRIMARY_ELIGIBLE_AGE_MS) && !this.isClientZombied(currentPrimary.ownerId);
+      if (currentLeaseIsValid && !this.isLocalClient(currentPrimary)) {
+        if (!this.forceOwningTab && (!this.allowTabSynchronization || !currentPrimary.allowTabSynchronization)) {
+          throw new FirestoreError(Code.FAILED_PRECONDITION, PRIMARY_LEASE_EXCLUSIVE_ERROR_MSG);
+        }
+      }
+    });
+  }
+  /**
+   * Obtains or extends the new primary lease for the local client. This
+   * method does not verify that the client is eligible for this lease.
+   */
+  acquireOrExtendPrimaryLease(txn) {
+    const newPrimary = {
+      ownerId: this.clientId,
+      allowTabSynchronization: this.allowTabSynchronization,
+      leaseTimestampMs: Date.now()
+    };
+    return primaryClientStore(txn).put(DbPrimaryClientKey, newPrimary);
+  }
+  static isAvailable() {
+    return SimpleDb.isAvailable();
+  }
+  /** Checks the primary lease and removes it if we are the current primary. */
+  releasePrimaryLeaseIfHeld(txn) {
+    const store = primaryClientStore(txn);
+    return store.get(DbPrimaryClientKey).next((primaryClient) => {
+      if (this.isLocalClient(primaryClient)) {
+        logDebug(LOG_TAG$c, "Releasing primary lease.");
+        return store.delete(DbPrimaryClientKey);
+      } else {
+        return PersistencePromise.resolve();
+      }
+    });
+  }
+  /** Verifies that `updateTimeMs` is within `maxAgeMs`. */
+  isWithinAge(updateTimeMs, maxAgeMs) {
+    const now = Date.now();
+    const minAcceptable = now - maxAgeMs;
+    const maxAcceptable = now;
+    if (updateTimeMs < minAcceptable) {
+      return false;
+    } else if (updateTimeMs > maxAcceptable) {
+      logError(`Detected an update time that is in the future: ${updateTimeMs} > ${maxAcceptable}`);
+      return false;
+    }
+    return true;
+  }
+  attachVisibilityHandler() {
+    if (this.document !== null && typeof this.document.addEventListener === "function") {
+      this.documentVisibilityHandler = () => {
+        this.queue.enqueueAndForget(() => {
+          this.inForeground = this.document.visibilityState === "visible";
+          return this.updateClientMetadataAndTryBecomePrimary();
+        });
+      };
+      this.document.addEventListener("visibilitychange", this.documentVisibilityHandler);
+      this.inForeground = this.document.visibilityState === "visible";
+    }
+  }
+  detachVisibilityHandler() {
+    if (this.documentVisibilityHandler) {
+      this.document.removeEventListener("visibilitychange", this.documentVisibilityHandler);
+      this.documentVisibilityHandler = null;
+    }
+  }
+  /**
+   * Attaches a window.unload handler that will synchronously write our
+   * clientId to a "zombie client id" location in LocalStorage. This can be used
+   * by tabs trying to acquire the primary lease to determine that the lease
+   * is no longer valid even if the timestamp is recent. This is particularly
+   * important for the refresh case (so the tab correctly re-acquires the
+   * primary lease). LocalStorage is used for this rather than IndexedDb because
+   * it is a synchronous API and so can be used reliably from  an unload
+   * handler.
+   */
+  attachWindowUnloadHook() {
+    if (typeof this.window?.addEventListener === "function") {
+      this.windowUnloadHandler = () => {
+        this.markClientZombied();
+        const safariIndexdbBugVersionRegex = /(?:Version|Mobile)\/1[456]/;
+        if (isSafari() && (navigator.appVersion.match(safariIndexdbBugVersionRegex) || navigator.userAgent.match(safariIndexdbBugVersionRegex))) {
+          this.queue.enterRestrictedMode(
+            /* purgeExistingTasks= */
+            true
+          );
+        }
+        this.queue.enqueueAndForget(() => {
+          return this.shutdown();
+        });
+      };
+      this.window.addEventListener("pagehide", this.windowUnloadHandler);
+    }
+  }
+  detachWindowUnloadHook() {
+    if (this.windowUnloadHandler) {
+      this.window.removeEventListener("pagehide", this.windowUnloadHandler);
+      this.windowUnloadHandler = null;
+    }
+  }
+  /**
+   * Returns whether a client is "zombied" based on its LocalStorage entry.
+   * Clients become zombied when their tab closes without running all of the
+   * cleanup logic in `shutdown()`.
+   */
+  isClientZombied(clientId) {
+    try {
+      const isZombied = this.webStorage?.getItem(this.zombiedClientLocalStorageKey(clientId)) !== null;
+      logDebug(LOG_TAG$c, `Client '${clientId}' ${isZombied ? "is" : "is not"} zombied in LocalStorage`);
+      return isZombied;
+    } catch (e) {
+      logError(LOG_TAG$c, "Failed to get zombied client id.", e);
+      return false;
+    }
+  }
+  /**
+   * Record client as zombied (a client that had its tab closed). Zombied
+   * clients are ignored during primary tab selection.
+   */
+  markClientZombied() {
+    if (!this.webStorage) {
+      return;
+    }
+    try {
+      this.webStorage.setItem(this.zombiedClientLocalStorageKey(this.clientId), String(Date.now()));
+    } catch (e) {
+      logError("Failed to set zombie client id.", e);
+    }
+  }
+  /** Removes the zombied client entry if it exists. */
+  removeClientZombiedEntry() {
+    if (!this.webStorage) {
+      return;
+    }
+    try {
+      this.webStorage.removeItem(this.zombiedClientLocalStorageKey(this.clientId));
+    } catch (e) {
+    }
+  }
+  zombiedClientLocalStorageKey(clientId) {
+    return `${ZOMBIED_CLIENTS_KEY_PREFIX}_${this.persistenceKey}_${clientId}`;
+  }
+}
+function primaryClientStore(txn) {
+  return getStore(txn, DbPrimaryClientStore);
+}
+function clientMetadataStore(txn) {
+  return getStore(txn, DbClientMetadataStore);
+}
+function indexedDbStoragePrefix(databaseId, persistenceKey) {
+  let database = databaseId.projectId;
+  if (!databaseId.isDefaultDatabase) {
+    database += "." + databaseId.database;
+  }
+  return "firestore/" + persistenceKey + "/" + database + "/";
+}
+async function indexedDbClearPersistence(persistenceKey) {
+  if (!SimpleDb.isAvailable()) {
+    return Promise.resolve();
+  }
+  const dbName = persistenceKey + MAIN_DATABASE;
+  await SimpleDb.delete(dbName);
+}
+function diffArrays(before, after, comparator, onAdd, onRemove) {
+  before = [...before];
+  after = [...after];
+  before.sort(comparator);
+  after.sort(comparator);
+  const bLen = before.length;
+  const aLen = after.length;
+  let a = 0;
+  let b = 0;
+  while (a < aLen && b < bLen) {
+    const cmp = comparator(before[b], after[a]);
+    if (cmp < 0) {
+      onRemove(before[b++]);
+    } else if (cmp > 0) {
+      onAdd(after[a++]);
+    } else {
+      a++;
+      b++;
+    }
+  }
+  while (a < aLen) {
+    onAdd(after[a++]);
+  }
+  while (b < bLen) {
+    onRemove(before[b++]);
   }
 }
 function isPrimitiveArrayEqual(left, right) {
@@ -7483,6 +12519,10 @@ function localStoreRejectBatch(localStore, batchId) {
     }).next(() => localStoreImpl.mutationQueue.performConsistencyCheck(txn)).next(() => localStoreImpl.documentOverlayCache.removeOverlaysForBatchId(txn, affectedKeys, batchId)).next(() => localStoreImpl.localDocuments.recalculateAndSaveOverlaysForDocumentKeys(txn, affectedKeys)).next(() => localStoreImpl.localDocuments.getDocuments(txn, affectedKeys));
   });
 }
+function localStoreGetHighestUnacknowledgedBatchId(localStore) {
+  const localStoreImpl = debugCast(localStore);
+  return localStoreImpl.persistence.runTransaction("Get highest unacknowledged batch id", "readonly", (txn) => localStoreImpl.mutationQueue.getHighestUnacknowledgedBatchId(txn));
+}
 function localStoreGetLastRemoteSnapshotVersion(localStore) {
   const localStoreImpl = debugCast(localStore);
   return localStoreImpl.persistence.runTransaction("Get last remote snapshot version", "readonly", (txn) => localStoreImpl.targetCache.getLastRemoteSnapshotVersion(txn));
@@ -7609,6 +12649,10 @@ function localStoreGetNextMutationBatch(localStore, afterBatchId) {
     return localStoreImpl.mutationQueue.getNextMutationBatchAfterBatchId(txn, afterBatchId);
   });
 }
+function localStoreReadDocument(localStore, key) {
+  const localStoreImpl = debugCast(localStore);
+  return localStoreImpl.persistence.runTransaction("read document", "readonly", (txn) => localStoreImpl.localDocuments.getDocument(txn, key));
+}
 function localStoreAllocateTarget(localStore, target) {
   const localStoreImpl = debugCast(localStore);
   return localStoreImpl.persistence.runTransaction("Allocate target", "readwrite", (txn) => {
@@ -7705,14 +12749,142 @@ function applyWriteToRemoteDocuments(localStoreImpl, txn, batchResult, documentB
   });
   return promiseChain.next(() => localStoreImpl.mutationQueue.removeMutationBatch(txn, batch));
 }
-function setMaxReadTime(localStoreImpl, collectionGroup, changedDocs) {
-  let readTime = localStoreImpl.collectionGroupReadTime.get(collectionGroup) || SnapshotVersion.min();
+function localStoreLookupMutationDocuments(localStore, batchId) {
+  const localStoreImpl = debugCast(localStore);
+  const mutationQueueImpl = debugCast(localStoreImpl.mutationQueue);
+  return localStoreImpl.persistence.runTransaction("Lookup mutation documents", "readonly", (txn) => {
+    return mutationQueueImpl.lookupMutationKeys(txn, batchId).next((keys) => {
+      if (keys) {
+        return localStoreImpl.localDocuments.getDocuments(txn, keys);
+      } else {
+        return PersistencePromise.resolve(null);
+      }
+    });
+  });
+}
+function localStoreRemoveCachedMutationBatchMetadata(localStore, batchId) {
+  const mutationQueueImpl = debugCast(debugCast(localStore, LocalStoreImpl).mutationQueue);
+  mutationQueueImpl.removeCachedMutationKeys(batchId);
+}
+function localStoreGetActiveClients(localStore) {
+  const persistenceImpl = debugCast(debugCast(localStore, LocalStoreImpl).persistence);
+  return persistenceImpl.getActiveClients();
+}
+function localStoreGetCachedTarget(localStore, targetId) {
+  const localStoreImpl = debugCast(localStore);
+  const targetCacheImpl = debugCast(localStoreImpl.targetCache);
+  const cachedTargetData = localStoreImpl.targetDataByTarget.get(targetId);
+  if (cachedTargetData) {
+    return Promise.resolve(cachedTargetData.target);
+  } else {
+    return localStoreImpl.persistence.runTransaction("Get target data", "readonly", (txn) => {
+      return targetCacheImpl.getTargetDataForTarget(txn, targetId).next((targetData) => targetData ? targetData.target : null);
+    });
+  }
+}
+function localStoreGetNewDocumentChanges(localStore, collectionGroup2) {
+  const localStoreImpl = debugCast(localStore);
+  const readTime = localStoreImpl.collectionGroupReadTime.get(collectionGroup2) || SnapshotVersion.min();
+  return localStoreImpl.persistence.runTransaction("Get new document changes", "readonly", (txn) => localStoreImpl.remoteDocuments.getAllFromCollectionGroup(
+    txn,
+    collectionGroup2,
+    newIndexOffsetSuccessorFromReadTime(readTime, INITIAL_LARGEST_BATCH_ID),
+    /* limit= */
+    Number.MAX_SAFE_INTEGER
+  )).then((changedDocs) => {
+    setMaxReadTime(localStoreImpl, collectionGroup2, changedDocs);
+    return changedDocs;
+  });
+}
+function setMaxReadTime(localStoreImpl, collectionGroup2, changedDocs) {
+  let readTime = localStoreImpl.collectionGroupReadTime.get(collectionGroup2) || SnapshotVersion.min();
   changedDocs.forEach((_, doc3) => {
     if (doc3.readTime.compareTo(readTime) > 0) {
       readTime = doc3.readTime;
     }
   });
-  localStoreImpl.collectionGroupReadTime.set(collectionGroup, readTime);
+  localStoreImpl.collectionGroupReadTime.set(collectionGroup2, readTime);
+}
+function umbrellaTarget(bundleName) {
+  return queryToTarget(newQueryForPath(ResourcePath.fromString(`__bundle__/docs/${bundleName}`)));
+}
+async function localStoreApplyBundledDocuments(localStore, bundleConverter, documents, bundleName) {
+  const localStoreImpl = debugCast(localStore);
+  let documentKeys = documentKeySet();
+  let documentMap2 = mutableDocumentMap();
+  for (const bundleDoc of documents) {
+    const documentKey = bundleConverter.toDocumentKey(bundleDoc.metadata.name);
+    if (bundleDoc.document) {
+      documentKeys = documentKeys.add(documentKey);
+    }
+    const doc3 = bundleConverter.toMutableDocument(bundleDoc);
+    doc3.setReadTime(bundleConverter.toSnapshotVersion(bundleDoc.metadata.readTime));
+    documentMap2 = documentMap2.insert(documentKey, doc3);
+  }
+  const documentBuffer = localStoreImpl.remoteDocuments.newChangeBuffer({
+    trackRemovals: true
+    // Make sure document removals show up in `getNewDocumentChanges()`
+  });
+  const umbrellaTargetData = await localStoreAllocateTarget(localStoreImpl, umbrellaTarget(bundleName));
+  return localStoreImpl.persistence.runTransaction("Apply bundle documents", "readwrite", (txn) => {
+    return populateDocumentChangeBuffer(txn, documentBuffer, documentMap2).next((documentChangeResult) => {
+      documentBuffer.apply(txn);
+      return documentChangeResult;
+    }).next((documentChangeResult) => {
+      return localStoreImpl.targetCache.removeMatchingKeysForTargetId(txn, umbrellaTargetData.targetId).next(() => localStoreImpl.targetCache.addMatchingKeys(txn, documentKeys, umbrellaTargetData.targetId)).next(() => localStoreImpl.localDocuments.getLocalViewOfDocuments(txn, documentChangeResult.changedDocuments, documentChangeResult.existenceChangedKeys)).next(() => documentChangeResult.changedDocuments);
+    });
+  });
+}
+function localStoreHasNewerBundle(localStore, bundleMetadata) {
+  const localStoreImpl = debugCast(localStore);
+  const currentReadTime = fromVersion(bundleMetadata.createTime);
+  return localStoreImpl.persistence.runTransaction("hasNewerBundle", "readonly", (transaction) => {
+    return localStoreImpl.bundleCache.getBundleMetadata(transaction, bundleMetadata.id);
+  }).then((cached) => {
+    return !!cached && cached.createTime.compareTo(currentReadTime) >= 0;
+  });
+}
+function localStoreSaveBundle(localStore, bundleMetadata) {
+  const localStoreImpl = debugCast(localStore);
+  return localStoreImpl.persistence.runTransaction("Save bundle", "readwrite", (transaction) => {
+    return localStoreImpl.bundleCache.saveBundleMetadata(transaction, bundleMetadata);
+  });
+}
+function localStoreGetNamedQuery(localStore, queryName) {
+  const localStoreImpl = debugCast(localStore);
+  return localStoreImpl.persistence.runTransaction("Get named query", "readonly", (transaction) => localStoreImpl.bundleCache.getNamedQuery(transaction, queryName));
+}
+async function localStoreSaveNamedQuery(localStore, query2, documents = documentKeySet()) {
+  const allocated = await localStoreAllocateTarget(localStore, queryToTarget(fromBundledQuery(query2.bundledQuery)));
+  const localStoreImpl = debugCast(localStore);
+  return localStoreImpl.persistence.runTransaction("Save named query", "readwrite", (transaction) => {
+    const readTime = fromVersion(query2.readTime);
+    if (allocated.snapshotVersion.compareTo(readTime) >= 0) {
+      return localStoreImpl.bundleCache.saveNamedQuery(transaction, query2);
+    }
+    const newTargetData = allocated.withResumeToken(ByteString.EMPTY_BYTE_STRING, readTime);
+    localStoreImpl.targetDataByTarget = localStoreImpl.targetDataByTarget.insert(newTargetData.targetId, newTargetData);
+    return localStoreImpl.targetCache.updateTargetData(transaction, newTargetData).next(() => localStoreImpl.targetCache.removeMatchingKeysForTargetId(transaction, allocated.targetId)).next(() => localStoreImpl.targetCache.addMatchingKeys(transaction, documents, allocated.targetId)).next(() => localStoreImpl.bundleCache.saveNamedQuery(transaction, query2));
+  });
+}
+async function localStoreConfigureFieldIndexes(localStore, newFieldIndexes) {
+  const localStoreImpl = debugCast(localStore);
+  const indexManager = localStoreImpl.indexManager;
+  const promises = [];
+  return localStoreImpl.persistence.runTransaction("Configure indexes", "readwrite", (transaction) => indexManager.getFieldIndexes(transaction).next((oldFieldIndexes) => diffArrays(oldFieldIndexes, newFieldIndexes, fieldIndexSemanticComparator, (fieldIndex) => {
+    promises.push(indexManager.addFieldIndex(transaction, fieldIndex));
+  }, (fieldIndex) => {
+    promises.push(indexManager.deleteFieldIndex(transaction, fieldIndex));
+  })).next(() => PersistencePromise.waitFor(promises)));
+}
+function localStoreSetIndexAutoCreationEnabled(localStore, isEnabled) {
+  const localStoreImpl = debugCast(localStore);
+  localStoreImpl.queryEngine.indexAutoCreationEnabled = isEnabled;
+}
+function localStoreDeleteAllFieldIndexes(localStore) {
+  const localStoreImpl = debugCast(localStore);
+  const indexManager = localStoreImpl.indexManager;
+  return localStoreImpl.persistence.runTransaction("Delete All Indexes", "readwrite", (transaction) => indexManager.deleteAllFieldIndexes(transaction));
 }
 class QueryContext {
   constructor() {
@@ -7908,6 +13080,165 @@ class QueryEngine {
     });
   }
 }
+const CLIENT_STATE_KEY_PREFIX = "firestore_clients";
+function createWebStorageClientStateKey(persistenceKey, clientId) {
+  return `${CLIENT_STATE_KEY_PREFIX}_${persistenceKey}_${clientId}`;
+}
+const MUTATION_BATCH_KEY_PREFIX = "firestore_mutations";
+function createWebStorageMutationBatchKey(persistenceKey, user, batchId) {
+  let mutationKey = `${MUTATION_BATCH_KEY_PREFIX}_${persistenceKey}_${batchId}`;
+  if (user.isAuthenticated()) {
+    mutationKey += `_${user.uid}`;
+  }
+  return mutationKey;
+}
+const QUERY_TARGET_KEY_PREFIX = "firestore_targets";
+function createWebStorageQueryTargetMetadataKey(persistenceKey, targetId) {
+  return `${QUERY_TARGET_KEY_PREFIX}_${persistenceKey}_${targetId}`;
+}
+const ONLINE_STATE_KEY_PREFIX = "firestore_online_state";
+function createWebStorageOnlineStateKey(persistenceKey) {
+  return `${ONLINE_STATE_KEY_PREFIX}_${persistenceKey}`;
+}
+const BUNDLE_LOADED_KEY_PREFIX = "firestore_bundle_loaded_v2";
+function createBundleLoadedKey(persistenceKey) {
+  return `${BUNDLE_LOADED_KEY_PREFIX}_${persistenceKey}`;
+}
+const SEQUENCE_NUMBER_KEY_PREFIX = "firestore_sequence_number";
+function createWebStorageSequenceNumberKey(persistenceKey) {
+  return `${SEQUENCE_NUMBER_KEY_PREFIX}_${persistenceKey}`;
+}
+const LOG_TAG$a = "SharedClientState";
+class MutationMetadata {
+  constructor(user, batchId, state, error) {
+    this.user = user;
+    this.batchId = batchId;
+    this.state = state;
+    this.error = error;
+  }
+  /**
+   * Parses a MutationMetadata from its JSON representation in WebStorage.
+   * Logs a warning and returns null if the format of the data is not valid.
+   */
+  static fromWebStorageEntry(user, batchId, value) {
+    const mutationBatch = JSON.parse(value);
+    let validData = typeof mutationBatch === "object" && ["pending", "acknowledged", "rejected"].indexOf(mutationBatch.state) !== -1 && (mutationBatch.error === void 0 || typeof mutationBatch.error === "object");
+    let firestoreError = void 0;
+    if (validData && mutationBatch.error) {
+      validData = typeof mutationBatch.error.message === "string" && typeof mutationBatch.error.code === "string";
+      if (validData) {
+        firestoreError = new FirestoreError(mutationBatch.error.code, mutationBatch.error.message);
+      }
+    }
+    if (validData) {
+      return new MutationMetadata(user, batchId, mutationBatch.state, firestoreError);
+    } else {
+      logError(LOG_TAG$a, `Failed to parse mutation state for ID '${batchId}': ${value}`);
+      return null;
+    }
+  }
+  toWebStorageJSON() {
+    const batchMetadata = {
+      state: this.state,
+      updateTimeMs: Date.now()
+      // Modify the existing value to trigger update.
+    };
+    if (this.error) {
+      batchMetadata.error = {
+        code: this.error.code,
+        message: this.error.message
+      };
+    }
+    return JSON.stringify(batchMetadata);
+  }
+}
+class QueryTargetMetadata {
+  constructor(targetId, state, error) {
+    this.targetId = targetId;
+    this.state = state;
+    this.error = error;
+  }
+  /**
+   * Parses a QueryTargetMetadata from its JSON representation in WebStorage.
+   * Logs a warning and returns null if the format of the data is not valid.
+   */
+  static fromWebStorageEntry(targetId, value) {
+    const targetState = JSON.parse(value);
+    let validData = typeof targetState === "object" && ["not-current", "current", "rejected"].indexOf(targetState.state) !== -1 && (targetState.error === void 0 || typeof targetState.error === "object");
+    let firestoreError = void 0;
+    if (validData && targetState.error) {
+      validData = typeof targetState.error.message === "string" && typeof targetState.error.code === "string";
+      if (validData) {
+        firestoreError = new FirestoreError(targetState.error.code, targetState.error.message);
+      }
+    }
+    if (validData) {
+      return new QueryTargetMetadata(targetId, targetState.state, firestoreError);
+    } else {
+      logError(LOG_TAG$a, `Failed to parse target state for ID '${targetId}': ${value}`);
+      return null;
+    }
+  }
+  toWebStorageJSON() {
+    const targetState = {
+      state: this.state,
+      updateTimeMs: Date.now()
+      // Modify the existing value to trigger update.
+    };
+    if (this.error) {
+      targetState.error = {
+        code: this.error.code,
+        message: this.error.message
+      };
+    }
+    return JSON.stringify(targetState);
+  }
+}
+class RemoteClientState {
+  constructor(clientId, activeTargetIds) {
+    this.clientId = clientId;
+    this.activeTargetIds = activeTargetIds;
+  }
+  /**
+   * Parses a RemoteClientState from the JSON representation in WebStorage.
+   * Logs a warning and returns null if the format of the data is not valid.
+   */
+  static fromWebStorageEntry(clientId, value) {
+    const clientState = JSON.parse(value);
+    let validData = typeof clientState === "object" && clientState.activeTargetIds instanceof Array;
+    let activeTargetIdsSet = targetIdSet();
+    for (let i = 0; validData && i < clientState.activeTargetIds.length; ++i) {
+      validData = isSafeInteger(clientState.activeTargetIds[i]);
+      activeTargetIdsSet = activeTargetIdsSet.add(clientState.activeTargetIds[i]);
+    }
+    if (validData) {
+      return new RemoteClientState(clientId, activeTargetIdsSet);
+    } else {
+      logError(LOG_TAG$a, `Failed to parse client data for instance '${clientId}': ${value}`);
+      return null;
+    }
+  }
+}
+class SharedOnlineState {
+  constructor(clientId, onlineState) {
+    this.clientId = clientId;
+    this.onlineState = onlineState;
+  }
+  /**
+   * Parses a SharedOnlineState from its JSON representation in WebStorage.
+   * Logs a warning and returns null if the format of the data is not valid.
+   */
+  static fromWebStorageEntry(value) {
+    const onlineState = JSON.parse(value);
+    const validData = typeof onlineState === "object" && ["Unknown", "Online", "Offline"].indexOf(onlineState.onlineState) !== -1 && typeof onlineState.clientId === "string";
+    if (validData) {
+      return new SharedOnlineState(onlineState.clientId, onlineState.onlineState);
+    } else {
+      logError(LOG_TAG$a, `Failed to parse online state: ${value}`);
+      return null;
+    }
+  }
+}
 class LocalClientState {
   constructor() {
     this.activeTargetIds = targetIdSet();
@@ -7930,6 +13261,343 @@ class LocalClientState {
     };
     return JSON.stringify(data);
   }
+}
+class WebStorageSharedClientState {
+  constructor(window2, queue, persistenceKey, localClientId, initialUser) {
+    this.window = window2;
+    this.queue = queue;
+    this.persistenceKey = persistenceKey;
+    this.localClientId = localClientId;
+    this.syncEngine = null;
+    this.onlineStateHandler = null;
+    this.sequenceNumberHandler = null;
+    this.storageListener = this.handleWebStorageEvent.bind(this);
+    this.activeClients = new SortedMap(primitiveComparator);
+    this.started = false;
+    this.earlyEvents = [];
+    const escapedPersistenceKey = persistenceKey.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    this.storage = this.window.localStorage;
+    this.currentUser = initialUser;
+    this.localClientStorageKey = createWebStorageClientStateKey(this.persistenceKey, this.localClientId);
+    this.sequenceNumberKey = createWebStorageSequenceNumberKey(this.persistenceKey);
+    this.activeClients = this.activeClients.insert(this.localClientId, new LocalClientState());
+    this.clientStateKeyRe = new RegExp(`^${CLIENT_STATE_KEY_PREFIX}_${escapedPersistenceKey}_([^_]*)$`);
+    this.mutationBatchKeyRe = new RegExp(`^${MUTATION_BATCH_KEY_PREFIX}_${escapedPersistenceKey}_(\\d+)(?:_(.*))?$`);
+    this.queryTargetKeyRe = new RegExp(`^${QUERY_TARGET_KEY_PREFIX}_${escapedPersistenceKey}_(\\d+)$`);
+    this.onlineStateKey = createWebStorageOnlineStateKey(this.persistenceKey);
+    this.bundleLoadedKey = createBundleLoadedKey(this.persistenceKey);
+    this.window.addEventListener("storage", this.storageListener);
+  }
+  /** Returns 'true' if WebStorage is available in the current environment. */
+  static isAvailable(window2) {
+    return !!(window2 && window2.localStorage);
+  }
+  async start() {
+    const existingClients = await this.syncEngine.getActiveClients();
+    for (const clientId of existingClients) {
+      if (clientId === this.localClientId) {
+        continue;
+      }
+      const storageItem = this.getItem(createWebStorageClientStateKey(this.persistenceKey, clientId));
+      if (storageItem) {
+        const clientState = RemoteClientState.fromWebStorageEntry(clientId, storageItem);
+        if (clientState) {
+          this.activeClients = this.activeClients.insert(clientState.clientId, clientState);
+        }
+      }
+    }
+    this.persistClientState();
+    const onlineStateJSON = this.storage.getItem(this.onlineStateKey);
+    if (onlineStateJSON) {
+      const onlineState = this.fromWebStorageOnlineState(onlineStateJSON);
+      if (onlineState) {
+        this.handleOnlineStateEvent(onlineState);
+      }
+    }
+    for (const event of this.earlyEvents) {
+      this.handleWebStorageEvent(event);
+    }
+    this.earlyEvents = [];
+    this.window.addEventListener("pagehide", () => this.shutdown());
+    this.started = true;
+  }
+  writeSequenceNumber(sequenceNumber) {
+    this.setItem(this.sequenceNumberKey, JSON.stringify(sequenceNumber));
+  }
+  getAllActiveQueryTargets() {
+    return this.extractActiveQueryTargets(this.activeClients);
+  }
+  isActiveQueryTarget(targetId) {
+    let found = false;
+    this.activeClients.forEach((key, value) => {
+      if (value.activeTargetIds.has(targetId)) {
+        found = true;
+      }
+    });
+    return found;
+  }
+  addPendingMutation(batchId) {
+    this.persistMutationState(batchId, "pending");
+  }
+  updateMutationState(batchId, state, error) {
+    this.persistMutationState(batchId, state, error);
+    this.removeMutationState(batchId);
+  }
+  addLocalQueryTarget(targetId, addToActiveTargetIds = true) {
+    let queryState = "not-current";
+    if (this.isActiveQueryTarget(targetId)) {
+      const storageItem = this.storage.getItem(createWebStorageQueryTargetMetadataKey(this.persistenceKey, targetId));
+      if (storageItem) {
+        const metadata = QueryTargetMetadata.fromWebStorageEntry(targetId, storageItem);
+        if (metadata) {
+          queryState = metadata.state;
+        }
+      }
+    }
+    if (addToActiveTargetIds) {
+      this.localClientState.addQueryTarget(targetId);
+    }
+    this.persistClientState();
+    return queryState;
+  }
+  removeLocalQueryTarget(targetId) {
+    this.localClientState.removeQueryTarget(targetId);
+    this.persistClientState();
+  }
+  isLocalQueryTarget(targetId) {
+    return this.localClientState.activeTargetIds.has(targetId);
+  }
+  clearQueryState(targetId) {
+    this.removeItem(createWebStorageQueryTargetMetadataKey(this.persistenceKey, targetId));
+  }
+  updateQueryState(targetId, state, error) {
+    this.persistQueryTargetState(targetId, state, error);
+  }
+  handleUserChange(user, removedBatchIds, addedBatchIds) {
+    removedBatchIds.forEach((batchId) => {
+      this.removeMutationState(batchId);
+    });
+    this.currentUser = user;
+    addedBatchIds.forEach((batchId) => {
+      this.addPendingMutation(batchId);
+    });
+  }
+  setOnlineState(onlineState) {
+    this.persistOnlineState(onlineState);
+  }
+  notifyBundleLoaded(collectionGroups) {
+    this.persistBundleLoadedState(collectionGroups);
+  }
+  shutdown() {
+    if (this.started) {
+      this.window.removeEventListener("storage", this.storageListener);
+      this.removeItem(this.localClientStorageKey);
+      this.started = false;
+    }
+  }
+  getItem(key) {
+    const value = this.storage.getItem(key);
+    logDebug(LOG_TAG$a, "READ", key, value);
+    return value;
+  }
+  setItem(key, value) {
+    logDebug(LOG_TAG$a, "SET", key, value);
+    this.storage.setItem(key, value);
+  }
+  removeItem(key) {
+    logDebug(LOG_TAG$a, "REMOVE", key);
+    this.storage.removeItem(key);
+  }
+  handleWebStorageEvent(event) {
+    const storageEvent = event;
+    if (storageEvent.storageArea === this.storage) {
+      logDebug(LOG_TAG$a, "EVENT", storageEvent.key, storageEvent.newValue);
+      if (storageEvent.key === this.localClientStorageKey) {
+        logError("Received WebStorage notification for local change. Another client might have garbage-collected our state");
+        return;
+      }
+      this.queue.enqueueRetryable(async () => {
+        if (!this.started) {
+          this.earlyEvents.push(storageEvent);
+          return;
+        }
+        if (storageEvent.key === null) {
+          return;
+        }
+        if (this.clientStateKeyRe.test(storageEvent.key)) {
+          if (storageEvent.newValue != null) {
+            const clientState = this.fromWebStorageClientState(storageEvent.key, storageEvent.newValue);
+            if (clientState) {
+              return this.handleClientStateEvent(clientState.clientId, clientState);
+            }
+          } else {
+            const clientId = this.fromWebStorageClientStateKey(storageEvent.key);
+            return this.handleClientStateEvent(clientId, null);
+          }
+        } else if (this.mutationBatchKeyRe.test(storageEvent.key)) {
+          if (storageEvent.newValue !== null) {
+            const mutationMetadata = this.fromWebStorageMutationMetadata(storageEvent.key, storageEvent.newValue);
+            if (mutationMetadata) {
+              return this.handleMutationBatchEvent(mutationMetadata);
+            }
+          }
+        } else if (this.queryTargetKeyRe.test(storageEvent.key)) {
+          if (storageEvent.newValue !== null) {
+            const queryTargetMetadata = this.fromWebStorageQueryTargetMetadata(storageEvent.key, storageEvent.newValue);
+            if (queryTargetMetadata) {
+              return this.handleQueryTargetEvent(queryTargetMetadata);
+            }
+          }
+        } else if (storageEvent.key === this.onlineStateKey) {
+          if (storageEvent.newValue !== null) {
+            const onlineState = this.fromWebStorageOnlineState(storageEvent.newValue);
+            if (onlineState) {
+              return this.handleOnlineStateEvent(onlineState);
+            }
+          }
+        } else if (storageEvent.key === this.sequenceNumberKey) {
+          const sequenceNumber = fromWebStorageSequenceNumber(storageEvent.newValue);
+          if (sequenceNumber !== ListenSequence.INVALID) {
+            this.sequenceNumberHandler(sequenceNumber);
+          }
+        } else if (storageEvent.key === this.bundleLoadedKey) {
+          const collectionGroups = this.fromWebStoreBundleLoadedState(storageEvent.newValue);
+          await Promise.all(collectionGroups.map((cg) => this.syncEngine.synchronizeWithChangedDocuments(cg)));
+        }
+      });
+    }
+  }
+  get localClientState() {
+    return this.activeClients.get(this.localClientId);
+  }
+  persistClientState() {
+    this.setItem(this.localClientStorageKey, this.localClientState.toWebStorageJSON());
+  }
+  persistMutationState(batchId, state, error) {
+    const mutationState = new MutationMetadata(this.currentUser, batchId, state, error);
+    const mutationKey = createWebStorageMutationBatchKey(this.persistenceKey, this.currentUser, batchId);
+    this.setItem(mutationKey, mutationState.toWebStorageJSON());
+  }
+  removeMutationState(batchId) {
+    const mutationKey = createWebStorageMutationBatchKey(this.persistenceKey, this.currentUser, batchId);
+    this.removeItem(mutationKey);
+  }
+  persistOnlineState(onlineState) {
+    const entry = {
+      clientId: this.localClientId,
+      onlineState
+    };
+    this.storage.setItem(this.onlineStateKey, JSON.stringify(entry));
+  }
+  persistQueryTargetState(targetId, state, error) {
+    const targetKey = createWebStorageQueryTargetMetadataKey(this.persistenceKey, targetId);
+    const targetMetadata = new QueryTargetMetadata(targetId, state, error);
+    this.setItem(targetKey, targetMetadata.toWebStorageJSON());
+  }
+  persistBundleLoadedState(collectionGroups) {
+    const json = JSON.stringify(Array.from(collectionGroups));
+    this.setItem(this.bundleLoadedKey, json);
+  }
+  /**
+   * Parses a client state key in WebStorage. Returns null if the key does not
+   * match the expected key format.
+   */
+  fromWebStorageClientStateKey(key) {
+    const match = this.clientStateKeyRe.exec(key);
+    return match ? match[1] : null;
+  }
+  /**
+   * Parses a client state in WebStorage. Returns 'null' if the value could not
+   * be parsed.
+   */
+  fromWebStorageClientState(key, value) {
+    const clientId = this.fromWebStorageClientStateKey(key);
+    return RemoteClientState.fromWebStorageEntry(clientId, value);
+  }
+  /**
+   * Parses a mutation batch state in WebStorage. Returns 'null' if the value
+   * could not be parsed.
+   */
+  fromWebStorageMutationMetadata(key, value) {
+    const match = this.mutationBatchKeyRe.exec(key);
+    const batchId = Number(match[1]);
+    const userId = match[2] !== void 0 ? match[2] : null;
+    return MutationMetadata.fromWebStorageEntry(new User(userId), batchId, value);
+  }
+  /**
+   * Parses a query target state from WebStorage. Returns 'null' if the value
+   * could not be parsed.
+   */
+  fromWebStorageQueryTargetMetadata(key, value) {
+    const match = this.queryTargetKeyRe.exec(key);
+    const targetId = Number(match[1]);
+    return QueryTargetMetadata.fromWebStorageEntry(targetId, value);
+  }
+  /**
+   * Parses an online state from WebStorage. Returns 'null' if the value
+   * could not be parsed.
+   */
+  fromWebStorageOnlineState(value) {
+    return SharedOnlineState.fromWebStorageEntry(value);
+  }
+  fromWebStoreBundleLoadedState(value) {
+    return JSON.parse(value);
+  }
+  async handleMutationBatchEvent(mutationBatch) {
+    if (mutationBatch.user.uid !== this.currentUser.uid) {
+      logDebug(LOG_TAG$a, `Ignoring mutation for non-active user ${mutationBatch.user.uid}`);
+      return;
+    }
+    return this.syncEngine.applyBatchState(mutationBatch.batchId, mutationBatch.state, mutationBatch.error);
+  }
+  handleQueryTargetEvent(targetMetadata) {
+    return this.syncEngine.applyTargetState(targetMetadata.targetId, targetMetadata.state, targetMetadata.error);
+  }
+  handleClientStateEvent(clientId, clientState) {
+    const updatedClients = clientState ? this.activeClients.insert(clientId, clientState) : this.activeClients.remove(clientId);
+    const existingTargets = this.extractActiveQueryTargets(this.activeClients);
+    const newTargets = this.extractActiveQueryTargets(updatedClients);
+    const addedTargets = [];
+    const removedTargets = [];
+    newTargets.forEach((targetId) => {
+      if (!existingTargets.has(targetId)) {
+        addedTargets.push(targetId);
+      }
+    });
+    existingTargets.forEach((targetId) => {
+      if (!newTargets.has(targetId)) {
+        removedTargets.push(targetId);
+      }
+    });
+    return this.syncEngine.applyActiveTargetsChange(addedTargets, removedTargets).then(() => {
+      this.activeClients = updatedClients;
+    });
+  }
+  handleOnlineStateEvent(onlineState) {
+    if (this.activeClients.get(onlineState.clientId)) {
+      this.onlineStateHandler(onlineState.onlineState);
+    }
+  }
+  extractActiveQueryTargets(clients) {
+    let activeTargets = targetIdSet();
+    clients.forEach((kev, value) => {
+      activeTargets = activeTargets.unionWith(value.activeTargetIds);
+    });
+    return activeTargets;
+  }
+}
+function fromWebStorageSequenceNumber(seqString) {
+  let sequenceNumber = ListenSequence.INVALID;
+  if (seqString != null) {
+    try {
+      const parsed = JSON.parse(seqString);
+      hardAssert(typeof parsed === "number", 30636, { seqString });
+      sequenceNumber = parsed;
+    } catch (e) {
+      logError(LOG_TAG$a, "Failed to read sequence number from WebStorage", e);
+    }
+  }
+  return sequenceNumber;
 }
 class MemorySharedClientState {
   constructor() {
@@ -12796,6 +18464,15 @@ function newConnection(databaseInfo) {
 function newConnectivityMonitor() {
   return new NoopConnectivityMonitor();
 }
+function getWindow() {
+  if (process.env.USE_MOCK_PERSISTENCE === "YES") {
+    return window;
+  }
+  return null;
+}
+function getDocument() {
+  return null;
+}
 function newSerializer(databaseId) {
   return new JsonProtoSerializer(
     databaseId,
@@ -13290,6 +18967,57 @@ class DatastoreImpl extends Datastore {
 function newDatastore(authCredentials, appCheckCredentials, connection, serializer) {
   return new DatastoreImpl(authCredentials, appCheckCredentials, connection, serializer);
 }
+async function invokeCommitRpc(datastore, mutations) {
+  const datastoreImpl = debugCast(datastore);
+  const request = {
+    writes: mutations.map((m) => toMutation(datastoreImpl.serializer, m))
+  };
+  await datastoreImpl.invokeRPC("Commit", datastoreImpl.serializer.databaseId, ResourcePath.emptyPath(), request);
+}
+async function invokeBatchGetDocumentsRpc(datastore, keys) {
+  const datastoreImpl = debugCast(datastore);
+  const request = {
+    documents: keys.map((k) => toName(datastoreImpl.serializer, k))
+  };
+  const response = await datastoreImpl.invokeStreamingRPC("BatchGetDocuments", datastoreImpl.serializer.databaseId, ResourcePath.emptyPath(), request, keys.length);
+  const docs = /* @__PURE__ */ new Map();
+  response.forEach((proto) => {
+    const doc3 = fromBatchGetDocumentsResponse(datastoreImpl.serializer, proto);
+    docs.set(doc3.key.toString(), doc3);
+  });
+  const result = [];
+  keys.forEach((key) => {
+    const doc3 = docs.get(key.toString());
+    hardAssert(!!doc3, 55234, {
+      key
+    });
+    result.push(doc3);
+  });
+  return result;
+}
+async function invokeRunAggregationQueryRpc(datastore, query2, aggregates) {
+  const datastoreImpl = debugCast(datastore);
+  const { request, aliasMap, parent } = toRunAggregationQueryRequest(datastoreImpl.serializer, queryToAggregateTarget(query2), aggregates);
+  if (!datastoreImpl.connection.shouldResourcePathBeIncludedInRequest) {
+    delete request.parent;
+  }
+  const response = await datastoreImpl.invokeStreamingRPC(
+    "RunAggregationQuery",
+    datastoreImpl.serializer.databaseId,
+    parent,
+    request,
+    /*expectedResponseCount=*/
+    1
+  );
+  const filteredResult = response.filter((proto) => !!proto.result);
+  hardAssert(filteredResult.length === 1, 64727);
+  const unmappedAggregateFields = filteredResult[0].result?.aggregateFields;
+  const remappedFields = Object.keys(unmappedAggregateFields).reduce((accumulator, key) => {
+    accumulator[aliasMap[key]] = unmappedAggregateFields[key];
+    return accumulator;
+  }, {});
+  return remappedFields;
+}
 function newPersistentWriteStream(datastore, queue, listener) {
   const datastoreImpl = debugCast(datastore);
   datastoreImpl.verifyInitialized();
@@ -13429,6 +19157,14 @@ class RemoteStoreImpl {
 function newRemoteStore(localStore, datastore, asyncQueue, onlineStateHandler, connectivityMonitor) {
   return new RemoteStoreImpl(localStore, datastore, asyncQueue, onlineStateHandler, connectivityMonitor);
 }
+function remoteStoreEnableNetwork(remoteStore) {
+  const remoteStoreImpl = debugCast(remoteStore);
+  remoteStoreImpl.offlineCauses.delete(
+    0
+    /* OfflineCause.UserDisabled */
+  );
+  return enableNetworkInternal(remoteStoreImpl);
+}
 async function enableNetworkInternal(remoteStoreImpl) {
   if (canUseNetwork(remoteStoreImpl)) {
     for (const networkStatusHandler of remoteStoreImpl.onNetworkStatusChange) {
@@ -13438,6 +19174,18 @@ async function enableNetworkInternal(remoteStoreImpl) {
       );
     }
   }
+}
+async function remoteStoreDisableNetwork(remoteStore) {
+  const remoteStoreImpl = debugCast(remoteStore);
+  remoteStoreImpl.offlineCauses.add(
+    0
+    /* OfflineCause.UserDisabled */
+  );
+  await disableNetworkInternal(remoteStoreImpl);
+  remoteStoreImpl.onlineStateTracker.set(
+    "Offline"
+    /* OnlineState.Offline */
+  );
 }
 async function disableNetworkInternal(remoteStoreImpl) {
   for (const networkStatusHandler of remoteStoreImpl.onNetworkStatusChange) {
@@ -14335,6 +20083,15 @@ function eventManagerOnOnlineStateChange(eventManager, onlineState) {
     raiseSnapshotsInSyncEvent(eventManagerImpl);
   }
 }
+function addSnapshotsInSyncListener(eventManager, observer) {
+  const eventManagerImpl = debugCast(eventManager);
+  eventManagerImpl.snapshotsInSyncListeners.add(observer);
+  observer.next();
+}
+function removeSnapshotsInSyncListener(eventManager, observer) {
+  const eventManagerImpl = debugCast(eventManager);
+  eventManagerImpl.snapshotsInSyncListeners.delete(observer);
+}
 function errorAllTargets(eventManager, error) {
   const eventManagerImpl = debugCast(eventManager);
   const queries = eventManagerImpl.queries;
@@ -14471,6 +20228,127 @@ class LocalViewChanges {
     }
     return new LocalViewChanges(targetId, viewSnapshot.fromCache, addedKeys, removedKeys);
   }
+}
+class BundleConverterImpl {
+  constructor(serializer) {
+    this.serializer = serializer;
+  }
+  toDocumentKey(name2) {
+    return fromName(this.serializer, name2);
+  }
+  /**
+   * Converts a BundleDocument to a MutableDocument.
+   */
+  toMutableDocument(bundledDoc) {
+    if (bundledDoc.metadata.exists) {
+      return fromDocument(this.serializer, bundledDoc.document, false);
+    } else {
+      return MutableDocument.newNoDocument(this.toDocumentKey(bundledDoc.metadata.name), this.toSnapshotVersion(bundledDoc.metadata.readTime));
+    }
+  }
+  toSnapshotVersion(time) {
+    return fromVersion(time);
+  }
+}
+class BundleLoader {
+  constructor(bundleMetadata, serializer) {
+    this.bundleMetadata = bundleMetadata;
+    this.serializer = serializer;
+    this._queries = [];
+    this._documents = [];
+    this.collectionGroups = /* @__PURE__ */ new Set();
+    this.progress = bundleInitialProgress(bundleMetadata);
+  }
+  /**
+   * Returns the named queries that have been parsed from the SizeBundleElements added by
+   * calling {@link adSizedElement}.
+   */
+  get queries() {
+    return this._queries;
+  }
+  /**
+   * Returns the BundledDocuments that have been parsed from the SizeBundleElements added by
+   * calling {@link addSizedElement}.
+   */
+  get documents() {
+    return this._documents;
+  }
+  /**
+   * Adds an element from the bundle to the loader.
+   *
+   * Returns a new progress if adding the element leads to a new progress,
+   * otherwise returns null.
+   */
+  addSizedElement(element) {
+    this.progress.bytesLoaded += element.byteLength;
+    let documentsLoaded = this.progress.documentsLoaded;
+    if (element.payload.namedQuery) {
+      this._queries.push(element.payload.namedQuery);
+    } else if (element.payload.documentMetadata) {
+      this._documents.push({ metadata: element.payload.documentMetadata });
+      if (!element.payload.documentMetadata.exists) {
+        ++documentsLoaded;
+      }
+      const path = ResourcePath.fromString(element.payload.documentMetadata.name);
+      this.collectionGroups.add(path.get(path.length - 2));
+    } else if (element.payload.document) {
+      this._documents[this._documents.length - 1].document = element.payload.document;
+      ++documentsLoaded;
+    }
+    if (documentsLoaded !== this.progress.documentsLoaded) {
+      this.progress.documentsLoaded = documentsLoaded;
+      return { ...this.progress };
+    }
+    return null;
+  }
+  getQueryDocumentMapping(documents) {
+    const queryDocumentMap = /* @__PURE__ */ new Map();
+    const bundleConverter = new BundleConverterImpl(this.serializer);
+    for (const bundleDoc of documents) {
+      if (bundleDoc.metadata.queries) {
+        const documentKey = bundleConverter.toDocumentKey(bundleDoc.metadata.name);
+        for (const queryName of bundleDoc.metadata.queries) {
+          const documentKeys = (queryDocumentMap.get(queryName) || documentKeySet()).add(documentKey);
+          queryDocumentMap.set(queryName, documentKeys);
+        }
+      }
+    }
+    return queryDocumentMap;
+  }
+  /**
+   * Update the progress to 'Success' and return the updated progress.
+   */
+  async completeAndStoreAsync(localStore) {
+    const changedDocs = await localStoreApplyBundledDocuments(localStore, new BundleConverterImpl(this.serializer), this._documents, this.bundleMetadata.id);
+    const queryDocumentMap = this.getQueryDocumentMapping(this.documents);
+    for (const q of this._queries) {
+      await localStoreSaveNamedQuery(localStore, q, queryDocumentMap.get(q.name));
+    }
+    this.progress.taskState = "Success";
+    return {
+      progress: this.progress,
+      changedCollectionGroups: this.collectionGroups,
+      changedDocs
+    };
+  }
+}
+function bundleInitialProgress(metadata) {
+  return {
+    taskState: "Running",
+    documentsLoaded: 0,
+    bytesLoaded: 0,
+    totalDocuments: metadata.totalDocuments,
+    totalBytes: metadata.totalBytes
+  };
+}
+function bundleSuccessProgress(metadata) {
+  return {
+    taskState: "Success",
+    documentsLoaded: metadata.totalDocuments,
+    bytesLoaded: metadata.totalBytes,
+    totalDocuments: metadata.totalDocuments,
+    totalBytes: metadata.totalBytes
+  };
 }
 class AddedLimboDocument {
   constructor(key) {
@@ -15048,6 +20926,25 @@ async function syncEngineRejectFailedWrite(syncEngine, batchId, error) {
     await ignoreIfPrimaryLeaseLoss(error2);
   }
 }
+async function syncEngineRegisterPendingWritesCallback(syncEngine, callback) {
+  const syncEngineImpl = debugCast(syncEngine);
+  if (!canUseNetwork(syncEngineImpl.remoteStore)) {
+    logDebug(LOG_TAG$3, "The network is disabled. The task returned by 'awaitPendingWrites()' will not complete until the network is enabled.");
+  }
+  try {
+    const highestBatchId = await localStoreGetHighestUnacknowledgedBatchId(syncEngineImpl.localStore);
+    if (highestBatchId === BATCHID_UNKNOWN) {
+      callback.resolve();
+      return;
+    }
+    const callbacks = syncEngineImpl.pendingWritesCallbacks.get(highestBatchId) || [];
+    callbacks.push(callback);
+    syncEngineImpl.pendingWritesCallbacks.set(highestBatchId, callbacks);
+  } catch (e) {
+    const firestoreError = wrapInUserErrorIfRecoverable(e, "Initialization of waitForPendingWrites() operation failed");
+    callback.reject(firestoreError);
+  }
+}
 function triggerPendingWritesCallbacks(syncEngineImpl, batchId) {
   (syncEngineImpl.pendingWritesCallbacks.get(batchId) || []).forEach((callback) => {
     callback.resolve();
@@ -15234,6 +21131,198 @@ function syncEngineGetRemoteKeysForTarget(syncEngine, targetId) {
     return keySet;
   }
 }
+async function synchronizeViewAndComputeSnapshot(syncEngine, queryView) {
+  const syncEngineImpl = debugCast(syncEngine);
+  const queryResult = await localStoreExecuteQuery(
+    syncEngineImpl.localStore,
+    queryView.query,
+    /* usePreviousResults= */
+    true
+  );
+  const viewSnapshot = queryView.view.synchronizeWithPersistedState(queryResult);
+  if (syncEngineImpl.isPrimaryClient) {
+    updateTrackedLimbos(syncEngineImpl, queryView.targetId, viewSnapshot.limboChanges);
+  }
+  return viewSnapshot;
+}
+async function syncEngineSynchronizeWithChangedDocuments(syncEngine, collectionGroup2) {
+  const syncEngineImpl = debugCast(syncEngine);
+  return localStoreGetNewDocumentChanges(syncEngineImpl.localStore, collectionGroup2).then((changes) => syncEngineEmitNewSnapsAndNotifyLocalStore(syncEngineImpl, changes));
+}
+async function syncEngineApplyBatchState(syncEngine, batchId, batchState, error) {
+  const syncEngineImpl = debugCast(syncEngine);
+  const documents = await localStoreLookupMutationDocuments(syncEngineImpl.localStore, batchId);
+  if (documents === null) {
+    logDebug(LOG_TAG$3, "Cannot apply mutation batch with id: " + batchId);
+    return;
+  }
+  if (batchState === "pending") {
+    await fillWritePipeline(syncEngineImpl.remoteStore);
+  } else if (batchState === "acknowledged" || batchState === "rejected") {
+    processUserCallback(syncEngineImpl, batchId, error ? error : null);
+    triggerPendingWritesCallbacks(syncEngineImpl, batchId);
+    localStoreRemoveCachedMutationBatchMetadata(syncEngineImpl.localStore, batchId);
+  } else {
+    fail(6720, `Unknown batchState`, { batchState });
+  }
+  await syncEngineEmitNewSnapsAndNotifyLocalStore(syncEngineImpl, documents);
+}
+async function syncEngineApplyPrimaryState(syncEngine, isPrimary) {
+  const syncEngineImpl = debugCast(syncEngine);
+  ensureWatchCallbacks(syncEngineImpl);
+  syncEngineEnsureWriteCallbacks(syncEngineImpl);
+  if (isPrimary === true && syncEngineImpl._isPrimaryClient !== true) {
+    const activeTargets = syncEngineImpl.sharedClientState.getAllActiveQueryTargets();
+    const activeQueries = await synchronizeQueryViewsAndRaiseSnapshots(syncEngineImpl, activeTargets.toArray());
+    syncEngineImpl._isPrimaryClient = true;
+    await remoteStoreApplyPrimaryState(syncEngineImpl.remoteStore, true);
+    for (const targetData of activeQueries) {
+      remoteStoreListen(syncEngineImpl.remoteStore, targetData);
+    }
+  } else if (isPrimary === false && syncEngineImpl._isPrimaryClient !== false) {
+    const activeTargets = [];
+    let p = Promise.resolve();
+    syncEngineImpl.queriesByTarget.forEach((_, targetId) => {
+      if (syncEngineImpl.sharedClientState.isLocalQueryTarget(targetId)) {
+        activeTargets.push(targetId);
+      } else {
+        p = p.then(() => {
+          removeAndCleanupTarget(syncEngineImpl, targetId);
+          return localStoreReleaseTarget(
+            syncEngineImpl.localStore,
+            targetId,
+            /*keepPersistedTargetData=*/
+            true
+          );
+        });
+      }
+      remoteStoreUnlisten(syncEngineImpl.remoteStore, targetId);
+    });
+    await p;
+    await synchronizeQueryViewsAndRaiseSnapshots(syncEngineImpl, activeTargets);
+    resetLimboDocuments(syncEngineImpl);
+    syncEngineImpl._isPrimaryClient = false;
+    await remoteStoreApplyPrimaryState(syncEngineImpl.remoteStore, false);
+  }
+}
+function resetLimboDocuments(syncEngine) {
+  const syncEngineImpl = debugCast(syncEngine);
+  syncEngineImpl.activeLimboResolutionsByTarget.forEach((_, targetId) => {
+    remoteStoreUnlisten(syncEngineImpl.remoteStore, targetId);
+  });
+  syncEngineImpl.limboDocumentRefs.removeAllReferences();
+  syncEngineImpl.activeLimboResolutionsByTarget = /* @__PURE__ */ new Map();
+  syncEngineImpl.activeLimboTargetsByKey = new SortedMap(DocumentKey.comparator);
+}
+async function synchronizeQueryViewsAndRaiseSnapshots(syncEngine, targets, transitionToPrimary) {
+  const syncEngineImpl = debugCast(syncEngine);
+  const activeQueries = [];
+  const newViewSnapshots = [];
+  for (const targetId of targets) {
+    let targetData;
+    const queries = syncEngineImpl.queriesByTarget.get(targetId);
+    if (queries && queries.length !== 0) {
+      targetData = await localStoreAllocateTarget(syncEngineImpl.localStore, queryToTarget(queries[0]));
+      for (const query2 of queries) {
+        const queryView = syncEngineImpl.queryViewsByQuery.get(query2);
+        const viewChange = await synchronizeViewAndComputeSnapshot(syncEngineImpl, queryView);
+        if (viewChange.snapshot) {
+          newViewSnapshots.push(viewChange.snapshot);
+        }
+      }
+    } else {
+      const target = await localStoreGetCachedTarget(syncEngineImpl.localStore, targetId);
+      targetData = await localStoreAllocateTarget(syncEngineImpl.localStore, target);
+      await initializeViewAndComputeSnapshot(
+        syncEngineImpl,
+        synthesizeTargetToQuery(target),
+        targetId,
+        /*current=*/
+        false,
+        targetData.resumeToken
+      );
+    }
+    activeQueries.push(targetData);
+  }
+  syncEngineImpl.syncEngineListener.onWatchChange(newViewSnapshots);
+  return activeQueries;
+}
+function synthesizeTargetToQuery(target) {
+  return newQuery(target.path, target.collectionGroup, target.orderBy, target.filters, target.limit, "F", target.startAt, target.endAt);
+}
+function syncEngineGetActiveClients(syncEngine) {
+  const syncEngineImpl = debugCast(syncEngine);
+  return localStoreGetActiveClients(syncEngineImpl.localStore);
+}
+async function syncEngineApplyTargetState(syncEngine, targetId, state, error) {
+  const syncEngineImpl = debugCast(syncEngine);
+  if (syncEngineImpl._isPrimaryClient) {
+    logDebug(LOG_TAG$3, "Ignoring unexpected query state notification.");
+    return;
+  }
+  const query2 = syncEngineImpl.queriesByTarget.get(targetId);
+  if (query2 && query2.length > 0) {
+    switch (state) {
+      case "current":
+      case "not-current": {
+        const changes = await localStoreGetNewDocumentChanges(syncEngineImpl.localStore, queryCollectionGroup(query2[0]));
+        const synthesizedRemoteEvent = RemoteEvent.createSynthesizedRemoteEventForCurrentChange(targetId, state === "current", ByteString.EMPTY_BYTE_STRING);
+        await syncEngineEmitNewSnapsAndNotifyLocalStore(syncEngineImpl, changes, synthesizedRemoteEvent);
+        break;
+      }
+      case "rejected": {
+        await localStoreReleaseTarget(
+          syncEngineImpl.localStore,
+          targetId,
+          /* keepPersistedTargetData */
+          true
+        );
+        removeAndCleanupTarget(syncEngineImpl, targetId, error);
+        break;
+      }
+      default:
+        fail(64155, state);
+    }
+  }
+}
+async function syncEngineApplyActiveTargetsChange(syncEngine, added, removed) {
+  const syncEngineImpl = ensureWatchCallbacks(syncEngine);
+  if (!syncEngineImpl._isPrimaryClient) {
+    return;
+  }
+  for (const targetId of added) {
+    const targetAlreadyListeningToRemoteStore = syncEngineImpl.queriesByTarget.has(targetId) && syncEngineImpl.sharedClientState.isActiveQueryTarget(targetId);
+    if (targetAlreadyListeningToRemoteStore) {
+      logDebug(LOG_TAG$3, "Adding an already active target " + targetId);
+      continue;
+    }
+    const target = await localStoreGetCachedTarget(syncEngineImpl.localStore, targetId);
+    const targetData = await localStoreAllocateTarget(syncEngineImpl.localStore, target);
+    await initializeViewAndComputeSnapshot(
+      syncEngineImpl,
+      synthesizeTargetToQuery(target),
+      targetData.targetId,
+      /*current=*/
+      false,
+      targetData.resumeToken
+    );
+    remoteStoreListen(syncEngineImpl.remoteStore, targetData);
+  }
+  for (const targetId of removed) {
+    if (!syncEngineImpl.queriesByTarget.has(targetId)) {
+      continue;
+    }
+    await localStoreReleaseTarget(
+      syncEngineImpl.localStore,
+      targetId,
+      /* keepPersistedTargetData */
+      false
+    ).then(() => {
+      remoteStoreUnlisten(syncEngineImpl.remoteStore, targetId);
+      removeAndCleanupTarget(syncEngineImpl, targetId);
+    }).catch(ignoreIfPrimaryLeaseLoss);
+  }
+}
 function ensureWatchCallbacks(syncEngine) {
   const syncEngineImpl = debugCast(syncEngine);
   syncEngineImpl.remoteStore.remoteSyncer.applyRemoteEvent = syncEngineApplyRemoteEvent.bind(null, syncEngineImpl);
@@ -15248,6 +21337,48 @@ function syncEngineEnsureWriteCallbacks(syncEngine) {
   syncEngineImpl.remoteStore.remoteSyncer.applySuccessfulWrite = syncEngineApplySuccessfulWrite.bind(null, syncEngineImpl);
   syncEngineImpl.remoteStore.remoteSyncer.rejectFailedWrite = syncEngineRejectFailedWrite.bind(null, syncEngineImpl);
   return syncEngineImpl;
+}
+function syncEngineLoadBundle(syncEngine, bundleReader, task) {
+  const syncEngineImpl = debugCast(syncEngine);
+  loadBundleImpl(syncEngineImpl, bundleReader, task).then((collectionGroups) => {
+    syncEngineImpl.sharedClientState.notifyBundleLoaded(collectionGroups);
+  });
+}
+async function loadBundleImpl(syncEngine, reader, task) {
+  try {
+    const metadata = await reader.getMetadata();
+    const skip = await localStoreHasNewerBundle(syncEngine.localStore, metadata);
+    if (skip) {
+      await reader.close();
+      task._completeWith(bundleSuccessProgress(metadata));
+      return Promise.resolve(/* @__PURE__ */ new Set());
+    }
+    task._updateProgress(bundleInitialProgress(metadata));
+    const loader = new BundleLoader(metadata, reader.serializer);
+    let element = await reader.nextElement();
+    while (element) {
+      ;
+      const progress = await loader.addSizedElement(element);
+      if (progress) {
+        task._updateProgress(progress);
+      }
+      element = await reader.nextElement();
+    }
+    const result = await loader.completeAndStoreAsync(syncEngine.localStore);
+    await syncEngineEmitNewSnapsAndNotifyLocalStore(
+      syncEngine,
+      result.changedDocs,
+      /* remoteEvent */
+      void 0
+    );
+    await localStoreSaveBundle(syncEngine.localStore, metadata);
+    task._completeWith(result.progress);
+    return Promise.resolve(result.changedCollectionGroups);
+  } catch (e) {
+    logWarn(LOG_TAG$3, `Loading bundle failed with ${e}`);
+    task._failWith(e);
+    return Promise.resolve(/* @__PURE__ */ new Set());
+  }
 }
 class MemoryOfflineComponentProvider {
   constructor() {
@@ -15303,6 +21434,102 @@ class LruGcMemoryOfflineComponentProvider extends MemoryOfflineComponentProvider
     return new MemoryPersistence((p) => MemoryLruDelegate.factory(p, lruParams), this.serializer);
   }
 }
+class IndexedDbOfflineComponentProvider extends MemoryOfflineComponentProvider {
+  constructor(onlineComponentProvider, cacheSizeBytes, forceOwnership) {
+    super();
+    this.onlineComponentProvider = onlineComponentProvider;
+    this.cacheSizeBytes = cacheSizeBytes;
+    this.forceOwnership = forceOwnership;
+    this.kind = "persistent";
+    this.synchronizeTabs = false;
+  }
+  async initialize(cfg) {
+    await super.initialize(cfg);
+    await this.onlineComponentProvider.initialize(this, cfg);
+    await syncEngineEnsureWriteCallbacks(this.onlineComponentProvider.syncEngine);
+    await fillWritePipeline(this.onlineComponentProvider.remoteStore);
+    await this.persistence.setPrimaryStateListener(() => {
+      if (this.gcScheduler && !this.gcScheduler.started) {
+        this.gcScheduler.start();
+      }
+      if (this.indexBackfillerScheduler && !this.indexBackfillerScheduler.started) {
+        this.indexBackfillerScheduler.start();
+      }
+      return Promise.resolve();
+    });
+  }
+  createLocalStore(cfg) {
+    return newLocalStore(this.persistence, new QueryEngine(), cfg.initialUser, this.serializer);
+  }
+  createGarbageCollectionScheduler(cfg, localStore) {
+    const garbageCollector = this.persistence.referenceDelegate.garbageCollector;
+    return new LruScheduler(garbageCollector, cfg.asyncQueue, localStore);
+  }
+  createIndexBackfillerScheduler(cfg, localStore) {
+    const indexBackfiller = new IndexBackfiller(localStore, this.persistence);
+    return new IndexBackfillerScheduler(cfg.asyncQueue, indexBackfiller);
+  }
+  createPersistence(cfg) {
+    const persistenceKey = indexedDbStoragePrefix(cfg.databaseInfo.databaseId, cfg.databaseInfo.persistenceKey);
+    const lruParams = this.cacheSizeBytes !== void 0 ? LruParams.withCacheSize(this.cacheSizeBytes) : LruParams.DEFAULT;
+    return new IndexedDbPersistence(this.synchronizeTabs, persistenceKey, cfg.clientId, lruParams, cfg.asyncQueue, getWindow(), getDocument(), this.serializer, this.sharedClientState, !!this.forceOwnership);
+  }
+  createSharedClientState(cfg) {
+    return new MemorySharedClientState();
+  }
+}
+class MultiTabOfflineComponentProvider extends IndexedDbOfflineComponentProvider {
+  constructor(onlineComponentProvider, cacheSizeBytes) {
+    super(
+      onlineComponentProvider,
+      cacheSizeBytes,
+      /* forceOwnership= */
+      false
+    );
+    this.onlineComponentProvider = onlineComponentProvider;
+    this.cacheSizeBytes = cacheSizeBytes;
+    this.synchronizeTabs = true;
+  }
+  async initialize(cfg) {
+    await super.initialize(cfg);
+    const syncEngine = this.onlineComponentProvider.syncEngine;
+    if (this.sharedClientState instanceof WebStorageSharedClientState) {
+      this.sharedClientState.syncEngine = {
+        applyBatchState: syncEngineApplyBatchState.bind(null, syncEngine),
+        applyTargetState: syncEngineApplyTargetState.bind(null, syncEngine),
+        applyActiveTargetsChange: syncEngineApplyActiveTargetsChange.bind(null, syncEngine),
+        getActiveClients: syncEngineGetActiveClients.bind(null, syncEngine),
+        synchronizeWithChangedDocuments: syncEngineSynchronizeWithChangedDocuments.bind(null, syncEngine)
+      };
+      await this.sharedClientState.start();
+    }
+    await this.persistence.setPrimaryStateListener(async (isPrimary) => {
+      await syncEngineApplyPrimaryState(this.onlineComponentProvider.syncEngine, isPrimary);
+      if (this.gcScheduler) {
+        if (isPrimary && !this.gcScheduler.started) {
+          this.gcScheduler.start();
+        } else if (!isPrimary) {
+          this.gcScheduler.stop();
+        }
+      }
+      if (this.indexBackfillerScheduler) {
+        if (isPrimary && !this.indexBackfillerScheduler.started) {
+          this.indexBackfillerScheduler.start();
+        } else if (!isPrimary) {
+          this.indexBackfillerScheduler.stop();
+        }
+      }
+    });
+  }
+  createSharedClientState(cfg) {
+    const window2 = getWindow();
+    if (!WebStorageSharedClientState.isAvailable(window2)) {
+      throw new FirestoreError(Code.UNIMPLEMENTED, "IndexedDB persistence is only available on platforms that support LocalStorage.");
+    }
+    const persistenceKey = indexedDbStoragePrefix(cfg.databaseInfo.databaseId, cfg.databaseInfo.persistenceKey);
+    return new WebStorageSharedClientState(window2, cfg.asyncQueue, persistenceKey, cfg.clientId, cfg.initialUser);
+  }
+}
 class OnlineComponentProvider {
   async initialize(offlineComponentProvider, cfg) {
     if (this.localStore) {
@@ -15355,6 +21582,36 @@ class OnlineComponentProvider {
 OnlineComponentProvider.provider = {
   build: () => new OnlineComponentProvider()
 };
+const DEFAULT_BYTES_PER_READ = 10240;
+function toByteStreamReaderHelper(source, bytesPerRead = DEFAULT_BYTES_PER_READ) {
+  let readFrom = 0;
+  const reader = {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    async read() {
+      if (readFrom < source.byteLength) {
+        const result = {
+          value: source.slice(readFrom, readFrom + bytesPerRead),
+          done: false
+        };
+        readFrom += bytesPerRead;
+        return result;
+      }
+      return { done: true };
+    },
+    async cancel() {
+    },
+    releaseLock() {
+    },
+    closed: Promise.resolve()
+  };
+  return reader;
+}
+function toByteStreamReader(source, bytesPerRead) {
+  if (!(source instanceof Uint8Array)) {
+    throw new FirestoreError(Code.INVALID_ARGUMENT, `NodePlatform.toByteStreamReader expects source to be Uint8Array, got ${valueDescription(source)}`);
+  }
+  return toByteStreamReaderHelper(source, bytesPerRead);
+}
 class AsyncObserver {
   constructor(observer) {
     this.observer = observer;
@@ -15387,6 +21644,391 @@ class AsyncObserver {
         eventHandler(event);
       }
     }, 0);
+  }
+}
+class SizedBundleElement {
+  constructor(payload, byteLength) {
+    this.payload = payload;
+    this.byteLength = byteLength;
+  }
+  isBundleMetadata() {
+    return "metadata" in this.payload;
+  }
+}
+class BundleReaderImpl {
+  constructor(reader, serializer) {
+    this.reader = reader;
+    this.serializer = serializer;
+    this.metadata = new Deferred();
+    this.buffer = new Uint8Array();
+    this.textDecoder = newTextDecoder();
+    this.nextElementImpl().then((element) => {
+      if (element && element.isBundleMetadata()) {
+        this.metadata.resolve(element.payload.metadata);
+      } else {
+        this.metadata.reject(new Error(`The first element of the bundle is not a metadata, it is
+             ${JSON.stringify(element?.payload)}`));
+      }
+    }, (error) => this.metadata.reject(error));
+  }
+  close() {
+    return this.reader.cancel();
+  }
+  async getMetadata() {
+    return this.metadata.promise;
+  }
+  async nextElement() {
+    await this.getMetadata();
+    return this.nextElementImpl();
+  }
+  /**
+   * Reads from the head of internal buffer, and pulling more data from
+   * underlying stream if a complete element cannot be found, until an
+   * element(including the prefixed length and the JSON string) is found.
+   *
+   * Once a complete element is read, it is dropped from internal buffer.
+   *
+   * Returns either the bundled element, or null if we have reached the end of
+   * the stream.
+   */
+  async nextElementImpl() {
+    const lengthBuffer = await this.readLength();
+    if (lengthBuffer === null) {
+      return null;
+    }
+    const lengthString = this.textDecoder.decode(lengthBuffer);
+    const length = Number(lengthString);
+    if (isNaN(length)) {
+      this.raiseError(`length string (${lengthString}) is not valid number`);
+    }
+    const jsonString = await this.readJsonString(length);
+    return new SizedBundleElement(JSON.parse(jsonString), lengthBuffer.length + length);
+  }
+  /** First index of '{' from the underlying buffer. */
+  indexOfOpenBracket() {
+    return this.buffer.findIndex((v) => v === "{".charCodeAt(0));
+  }
+  /**
+   * Reads from the beginning of the internal buffer, until the first '{', and
+   * return the content.
+   *
+   * If reached end of the stream, returns a null.
+   */
+  async readLength() {
+    while (this.indexOfOpenBracket() < 0) {
+      const done = await this.pullMoreDataToBuffer();
+      if (done) {
+        break;
+      }
+    }
+    if (this.buffer.length === 0) {
+      return null;
+    }
+    const position = this.indexOfOpenBracket();
+    if (position < 0) {
+      this.raiseError("Reached the end of bundle when a length string is expected.");
+    }
+    const result = this.buffer.slice(0, position);
+    this.buffer = this.buffer.slice(position);
+    return result;
+  }
+  /**
+   * Reads from a specified position from the internal buffer, for a specified
+   * number of bytes, pulling more data from the underlying stream if needed.
+   *
+   * Returns a string decoded from the read bytes.
+   */
+  async readJsonString(length) {
+    while (this.buffer.length < length) {
+      const done = await this.pullMoreDataToBuffer();
+      if (done) {
+        this.raiseError("Reached the end of bundle when more is expected.");
+      }
+    }
+    const result = this.textDecoder.decode(this.buffer.slice(0, length));
+    this.buffer = this.buffer.slice(length);
+    return result;
+  }
+  raiseError(message) {
+    this.reader.cancel();
+    throw new Error(`Invalid bundle format: ${message}`);
+  }
+  /**
+   * Pulls more data from underlying stream to internal buffer.
+   * Returns a boolean indicating whether the stream is finished.
+   */
+  async pullMoreDataToBuffer() {
+    const result = await this.reader.read();
+    if (!result.done) {
+      const newBuffer = new Uint8Array(this.buffer.length + result.value.length);
+      newBuffer.set(this.buffer);
+      newBuffer.set(result.value, this.buffer.length);
+      this.buffer = newBuffer;
+    }
+    return result.done;
+  }
+}
+function newBundleReader(reader, serializer) {
+  return new BundleReaderImpl(reader, serializer);
+}
+class BundleReaderSyncImpl {
+  constructor(bundleData, serializer) {
+    this.bundleData = bundleData;
+    this.serializer = serializer;
+    this.cursor = 0;
+    this.elements = [];
+    let element = this.nextElement();
+    if (element && element.isBundleMetadata()) {
+      this.metadata = element;
+    } else {
+      throw new Error(`The first element of the bundle is not a metadata object, it is
+         ${JSON.stringify(element?.payload)}`);
+    }
+    do {
+      element = this.nextElement();
+      if (element !== null) {
+        this.elements.push(element);
+      }
+    } while (element !== null);
+  }
+  /* Returns the parsed metadata of the bundle. */
+  getMetadata() {
+    return this.metadata;
+  }
+  /* Returns the DocumentSnapshot or NamedQuery elements of the bundle. */
+  getElements() {
+    return this.elements;
+  }
+  /**
+   * Parses the next element of the bundle.
+   *
+   * @returns a SizedBundleElement representation of the next element in the bundle, or null if
+   * no more elements exist.
+   */
+  nextElement() {
+    if (this.cursor === this.bundleData.length) {
+      return null;
+    }
+    const length = this.readLength();
+    const jsonString = this.readJsonString(length);
+    return new SizedBundleElement(JSON.parse(jsonString), length);
+  }
+  /**
+   * Reads from a specified position from the bundleData string, for a specified
+   * number of bytes.
+   *
+   * @param length - how many characters to read.
+   * @returns a string parsed from the bundle.
+   */
+  readJsonString(length) {
+    if (this.cursor + length > this.bundleData.length) {
+      throw new FirestoreError(Code.INTERNAL, "Reached the end of bundle when more is expected.");
+    }
+    const result = this.bundleData.slice(this.cursor, this.cursor += length);
+    return result;
+  }
+  /**
+   * Reads from the current cursor until the first '{'.
+   *
+   * @returns  A string to integer represention of the parsed value.
+   * @throws An {@link Error} if the cursor has reached the end of the stream, since lengths
+   * prefix bundle objects.
+   */
+  readLength() {
+    const startIndex = this.cursor;
+    let curIndex = this.cursor;
+    while (curIndex < this.bundleData.length) {
+      if (this.bundleData[curIndex] === "{") {
+        if (curIndex === startIndex) {
+          throw new Error("First character is a bracket and not a number");
+        }
+        this.cursor = curIndex;
+        return Number(this.bundleData.slice(startIndex, curIndex));
+      }
+      curIndex++;
+    }
+    throw new Error("Reached the end of bundle when more is expected.");
+  }
+}
+function newBundleReaderSync(bundleData, serializer) {
+  return new BundleReaderSyncImpl(bundleData, serializer);
+}
+let Transaction$2 = class Transaction {
+  constructor(datastore) {
+    this.datastore = datastore;
+    this.readVersions = /* @__PURE__ */ new Map();
+    this.mutations = [];
+    this.committed = false;
+    this.lastTransactionError = null;
+    this.writtenDocs = /* @__PURE__ */ new Set();
+  }
+  async lookup(keys) {
+    this.ensureCommitNotCalled();
+    if (this.mutations.length > 0) {
+      this.lastTransactionError = new FirestoreError(Code.INVALID_ARGUMENT, "Firestore transactions require all reads to be executed before all writes.");
+      throw this.lastTransactionError;
+    }
+    const docs = await invokeBatchGetDocumentsRpc(this.datastore, keys);
+    docs.forEach((doc3) => this.recordVersion(doc3));
+    return docs;
+  }
+  set(key, data) {
+    this.write(data.toMutation(key, this.precondition(key)));
+    this.writtenDocs.add(key.toString());
+  }
+  update(key, data) {
+    try {
+      this.write(data.toMutation(key, this.preconditionForUpdate(key)));
+    } catch (e) {
+      this.lastTransactionError = e;
+    }
+    this.writtenDocs.add(key.toString());
+  }
+  delete(key) {
+    this.write(new DeleteMutation(key, this.precondition(key)));
+    this.writtenDocs.add(key.toString());
+  }
+  async commit() {
+    this.ensureCommitNotCalled();
+    if (this.lastTransactionError) {
+      throw this.lastTransactionError;
+    }
+    const unwritten = this.readVersions;
+    this.mutations.forEach((mutation) => {
+      unwritten.delete(mutation.key.toString());
+    });
+    unwritten.forEach((_, path) => {
+      const key = DocumentKey.fromPath(path);
+      this.mutations.push(new VerifyMutation(key, this.precondition(key)));
+    });
+    await invokeCommitRpc(this.datastore, this.mutations);
+    this.committed = true;
+  }
+  recordVersion(doc3) {
+    let docVersion;
+    if (doc3.isFoundDocument()) {
+      docVersion = doc3.version;
+    } else if (doc3.isNoDocument()) {
+      docVersion = SnapshotVersion.min();
+    } else {
+      throw fail(50498, {
+        documentName: doc3.constructor.name
+      });
+    }
+    const existingVersion = this.readVersions.get(doc3.key.toString());
+    if (existingVersion) {
+      if (!docVersion.isEqual(existingVersion)) {
+        throw new FirestoreError(Code.ABORTED, "Document version changed between two reads.");
+      }
+    } else {
+      this.readVersions.set(doc3.key.toString(), docVersion);
+    }
+  }
+  /**
+   * Returns the version of this document when it was read in this transaction,
+   * as a precondition, or no precondition if it was not read.
+   */
+  precondition(key) {
+    const version2 = this.readVersions.get(key.toString());
+    if (!this.writtenDocs.has(key.toString()) && version2) {
+      if (version2.isEqual(SnapshotVersion.min())) {
+        return Precondition.exists(false);
+      } else {
+        return Precondition.updateTime(version2);
+      }
+    } else {
+      return Precondition.none();
+    }
+  }
+  /**
+   * Returns the precondition for a document if the operation is an update.
+   */
+  preconditionForUpdate(key) {
+    const version2 = this.readVersions.get(key.toString());
+    if (!this.writtenDocs.has(key.toString()) && version2) {
+      if (version2.isEqual(SnapshotVersion.min())) {
+        throw new FirestoreError(Code.INVALID_ARGUMENT, "Can't update a document that doesn't exist.");
+      }
+      return Precondition.updateTime(version2);
+    } else {
+      return Precondition.exists(true);
+    }
+  }
+  write(mutation) {
+    this.ensureCommitNotCalled();
+    this.mutations.push(mutation);
+  }
+  ensureCommitNotCalled() {
+  }
+};
+class TransactionRunner {
+  constructor(asyncQueue, datastore, options2, updateFunction, deferred) {
+    this.asyncQueue = asyncQueue;
+    this.datastore = datastore;
+    this.options = options2;
+    this.updateFunction = updateFunction;
+    this.deferred = deferred;
+    this.attemptsRemaining = options2.maxAttempts;
+    this.backoff = new ExponentialBackoff(
+      this.asyncQueue,
+      "transaction_retry"
+      /* TimerId.TransactionRetry */
+    );
+  }
+  /** Runs the transaction and sets the result on deferred. */
+  run() {
+    this.attemptsRemaining -= 1;
+    this.runWithBackOff();
+  }
+  runWithBackOff() {
+    this.backoff.backoffAndRun(async () => {
+      const transaction = new Transaction$2(this.datastore);
+      const userPromise = this.tryRunUpdateFunction(transaction);
+      if (userPromise) {
+        userPromise.then((result) => {
+          this.asyncQueue.enqueueAndForget(() => {
+            return transaction.commit().then(() => {
+              this.deferred.resolve(result);
+            }).catch((commitError) => {
+              this.handleTransactionError(commitError);
+            });
+          });
+        }).catch((userPromiseError) => {
+          this.handleTransactionError(userPromiseError);
+        });
+      }
+    });
+  }
+  tryRunUpdateFunction(transaction) {
+    try {
+      const userPromise = this.updateFunction(transaction);
+      if (isNullOrUndefined(userPromise) || !userPromise.catch || !userPromise.then) {
+        this.deferred.reject(Error("Transaction callback must return a Promise"));
+        return null;
+      }
+      return userPromise;
+    } catch (error) {
+      this.deferred.reject(error);
+      return null;
+    }
+  }
+  handleTransactionError(error) {
+    if (this.attemptsRemaining > 0 && this.isRetryableTransactionError(error)) {
+      this.attemptsRemaining -= 1;
+      this.asyncQueue.enqueueAndForget(() => {
+        this.runWithBackOff();
+        return Promise.resolve();
+      });
+    } else {
+      this.deferred.reject(error);
+    }
+  }
+  isRetryableTransactionError(error) {
+    if (error?.name === "FirebaseError") {
+      const code = error.code;
+      return code === "aborted" || code === "failed-precondition" || code === "already-exists" || !isPermanentError(code);
+    }
+    return false;
   }
 }
 const LOG_TAG$2 = "FirestoreClient";
@@ -15526,8 +22168,20 @@ async function ensureOnlineComponents(client) {
   }
   return client._onlineComponents;
 }
+function getPersistence(client) {
+  return ensureOfflineComponents(client).then((c) => c.persistence);
+}
+function getLocalStore(client) {
+  return ensureOfflineComponents(client).then((c) => c.localStore);
+}
+function getRemoteStore(client) {
+  return ensureOnlineComponents(client).then((c) => c.remoteStore);
+}
 function getSyncEngine(client) {
   return ensureOnlineComponents(client).then((c) => c.syncEngine);
+}
+function getDatastore$1(client) {
+  return ensureOnlineComponents(client).then((c) => c.datastore);
 }
 async function getEventManager(client) {
   const onlineComponentProvider = await ensureOnlineComponents(client);
@@ -15537,6 +22191,30 @@ async function getEventManager(client) {
   eventManager.onFirstRemoteStoreListen = triggerRemoteStoreListen.bind(null, onlineComponentProvider.syncEngine);
   eventManager.onLastRemoteStoreUnlisten = triggerRemoteStoreUnlisten.bind(null, onlineComponentProvider.syncEngine);
   return eventManager;
+}
+function firestoreClientEnableNetwork(client) {
+  return client.asyncQueue.enqueue(async () => {
+    const persistence = await getPersistence(client);
+    const remoteStore = await getRemoteStore(client);
+    persistence.setNetworkEnabled(true);
+    return remoteStoreEnableNetwork(remoteStore);
+  });
+}
+function firestoreClientDisableNetwork(client) {
+  return client.asyncQueue.enqueue(async () => {
+    const persistence = await getPersistence(client);
+    const remoteStore = await getRemoteStore(client);
+    persistence.setNetworkEnabled(false);
+    return remoteStoreDisableNetwork(remoteStore);
+  });
+}
+function firestoreClientWaitForPendingWrites(client) {
+  const deferred = new Deferred();
+  client.asyncQueue.enqueueAndForget(async () => {
+    const syncEngine = await getSyncEngine(client);
+    return syncEngineRegisterPendingWritesCallback(syncEngine, deferred);
+  });
+  return deferred.promise;
 }
 function firestoreClientListen(client, query2, options2, observer) {
   const wrappedObserver = new AsyncObserver(observer);
@@ -15553,11 +22231,47 @@ function firestoreClientListen(client, query2, options2, observer) {
     });
   };
 }
+function firestoreClientGetDocumentFromLocalCache(client, docKey) {
+  const deferred = new Deferred();
+  client.asyncQueue.enqueueAndForget(async () => {
+    const localStore = await getLocalStore(client);
+    return readDocumentFromCache(localStore, docKey, deferred);
+  });
+  return deferred.promise;
+}
 function firestoreClientGetDocumentViaSnapshotListener(client, key, options2 = {}) {
   const deferred = new Deferred();
   client.asyncQueue.enqueueAndForget(async () => {
     const eventManager = await getEventManager(client);
     return readDocumentViaSnapshotListener(eventManager, client.asyncQueue, key, options2, deferred);
+  });
+  return deferred.promise;
+}
+function firestoreClientGetDocumentsFromLocalCache(client, query2) {
+  const deferred = new Deferred();
+  client.asyncQueue.enqueueAndForget(async () => {
+    const localStore = await getLocalStore(client);
+    return executeQueryFromCache(localStore, query2, deferred);
+  });
+  return deferred.promise;
+}
+function firestoreClientGetDocumentsViaSnapshotListener(client, query2, options2 = {}) {
+  const deferred = new Deferred();
+  client.asyncQueue.enqueueAndForget(async () => {
+    const eventManager = await getEventManager(client);
+    return executeQueryViaSnapshotListener(eventManager, client.asyncQueue, query2, options2, deferred);
+  });
+  return deferred.promise;
+}
+function firestoreClientRunAggregateQuery(client, query2, aggregates) {
+  const deferred = new Deferred();
+  client.asyncQueue.enqueueAndForget(async () => {
+    try {
+      const datastore = await getDatastore$1(client);
+      deferred.resolve(invokeRunAggregationQueryRpc(datastore, query2, aggregates));
+    } catch (e) {
+      deferred.reject(e);
+    }
   });
   return deferred.promise;
 }
@@ -15568,6 +22282,43 @@ function firestoreClientWrite(client, mutations) {
     return syncEngineWrite(syncEngine, mutations, deferred);
   });
   return deferred.promise;
+}
+function firestoreClientAddSnapshotsInSyncListener(client, observer) {
+  const wrappedObserver = new AsyncObserver(observer);
+  client.asyncQueue.enqueueAndForget(async () => {
+    const eventManager = await getEventManager(client);
+    return addSnapshotsInSyncListener(eventManager, wrappedObserver);
+  });
+  return () => {
+    wrappedObserver.mute();
+    client.asyncQueue.enqueueAndForget(async () => {
+      const eventManager = await getEventManager(client);
+      return removeSnapshotsInSyncListener(eventManager, wrappedObserver);
+    });
+  };
+}
+function firestoreClientTransaction(client, updateFunction, options2) {
+  const deferred = new Deferred();
+  client.asyncQueue.enqueueAndForget(async () => {
+    const datastore = await getDatastore$1(client);
+    new TransactionRunner(client.asyncQueue, datastore, options2, updateFunction, deferred).run();
+  });
+  return deferred.promise;
+}
+async function readDocumentFromCache(localStore, docKey, result) {
+  try {
+    const document = await localStoreReadDocument(localStore, docKey);
+    if (document.isFoundDocument()) {
+      result.resolve(document);
+    } else if (document.isNoDocument()) {
+      result.resolve(null);
+    } else {
+      result.reject(new FirestoreError(Code.UNAVAILABLE, "Failed to get document from cache. (However, this document may exist on the server. Run again without setting 'source' in the GetOptions to attempt to retrieve the document from the server.)"));
+    }
+  } catch (e) {
+    const firestoreError = wrapInUserErrorIfRecoverable(e, `Failed to get document '${docKey} from cache`);
+    result.reject(firestoreError);
+  }
 }
 function readDocumentViaSnapshotListener(eventManager, asyncQueue, key, options2, result) {
   const wrappedObserver = new AsyncObserver({
@@ -15590,6 +22341,82 @@ function readDocumentViaSnapshotListener(eventManager, asyncQueue, key, options2
     waitForSyncWhenOnline: true
   });
   return eventManagerListen(eventManager, listener);
+}
+async function executeQueryFromCache(localStore, query2, result) {
+  try {
+    const queryResult = await localStoreExecuteQuery(
+      localStore,
+      query2,
+      /* usePreviousResults= */
+      true
+    );
+    const view = new View(query2, queryResult.remoteKeys);
+    const viewDocChanges = view.computeDocChanges(queryResult.documents);
+    const viewChange = view.applyChanges(
+      viewDocChanges,
+      /* limboResolutionEnabled= */
+      false
+    );
+    result.resolve(viewChange.snapshot);
+  } catch (e) {
+    const firestoreError = wrapInUserErrorIfRecoverable(e, `Failed to execute query '${query2} against cache`);
+    result.reject(firestoreError);
+  }
+}
+function executeQueryViaSnapshotListener(eventManager, asyncQueue, query2, options2, result) {
+  const wrappedObserver = new AsyncObserver({
+    next: (snapshot) => {
+      wrappedObserver.mute();
+      asyncQueue.enqueueAndForget(() => eventManagerUnlisten(eventManager, listener));
+      if (snapshot.fromCache && options2.source === "server") {
+        result.reject(new FirestoreError(Code.UNAVAILABLE, 'Failed to get documents from server. (However, these documents may exist in the local cache. Run again without setting source to "server" to retrieve the cached documents.)'));
+      } else {
+        result.resolve(snapshot);
+      }
+    },
+    error: (e) => result.reject(e)
+  });
+  const listener = new QueryListener(query2, wrappedObserver, {
+    includeMetadataChanges: true,
+    waitForSyncWhenOnline: true
+  });
+  return eventManagerListen(eventManager, listener);
+}
+function firestoreClientLoadBundle(client, databaseId, data, resultTask) {
+  const reader = createBundleReader(data, newSerializer(databaseId));
+  client.asyncQueue.enqueueAndForget(async () => {
+    syncEngineLoadBundle(await getSyncEngine(client), reader, resultTask);
+  });
+}
+function firestoreClientGetNamedQuery(client, queryName) {
+  return client.asyncQueue.enqueue(async () => localStoreGetNamedQuery(await getLocalStore(client), queryName));
+}
+function createBundleReader(data, serializer) {
+  let content;
+  if (typeof data === "string") {
+    content = newTextEncoder().encode(data);
+  } else {
+    content = data;
+  }
+  return newBundleReader(toByteStreamReader(content), serializer);
+}
+function createBundleReaderSync(bundleData, serializer) {
+  return newBundleReaderSync(bundleData, serializer);
+}
+function firestoreClientSetIndexConfiguration(client, indexes) {
+  return client.asyncQueue.enqueue(async () => {
+    return localStoreConfigureFieldIndexes(await getLocalStore(client), indexes);
+  });
+}
+function firestoreClientSetPersistentCacheIndexAutoCreationEnabled(client, isEnabled) {
+  return client.asyncQueue.enqueue(async () => {
+    return localStoreSetIndexAutoCreationEnabled(await getLocalStore(client), isEnabled);
+  });
+}
+function firestoreClientDeleteAllFieldIndexes(client) {
+  return client.asyncQueue.enqueue(async () => {
+    return localStoreDeleteAllFieldIndexes(await getLocalStore(client));
+  });
 }
 function longPollingOptionsEqual(options1, options2) {
   return options1.timeoutSeconds === options2.timeoutSeconds;
@@ -15932,6 +22759,19 @@ function collection(parent, path, ...pathSegments) {
     );
   }
 }
+function collectionGroup(firestore, collectionId) {
+  firestore = cast(firestore, Firestore$1);
+  validateNonEmptyArgument("collectionGroup", "collection id", collectionId);
+  if (collectionId.indexOf("/") >= 0) {
+    throw new FirestoreError(Code.INVALID_ARGUMENT, `Invalid collection ID '${collectionId}' passed to function collectionGroup(). Collection IDs must not contain '/'.`);
+  }
+  return new Query(
+    firestore,
+    /* converter= */
+    null,
+    newQueryForCollectionGroup(collectionId)
+  );
+}
 function doc(parent, path, ...pathSegments) {
   parent = getModularInstance(parent);
   if (arguments.length === 1) {
@@ -15955,6 +22795,22 @@ function doc(parent, path, ...pathSegments) {
     validateDocumentPath(absolutePath);
     return new DocumentReference(parent.firestore, parent instanceof CollectionReference ? parent.converter : null, new DocumentKey(absolutePath));
   }
+}
+function refEqual(left, right) {
+  left = getModularInstance(left);
+  right = getModularInstance(right);
+  if ((left instanceof DocumentReference || left instanceof CollectionReference) && (right instanceof DocumentReference || right instanceof CollectionReference)) {
+    return left.firestore === right.firestore && left.path === right.path && left.converter === right.converter;
+  }
+  return false;
+}
+function queryEqual(left, right) {
+  left = getModularInstance(left);
+  right = getModularInstance(right);
+  if (left instanceof Query && right instanceof Query) {
+    return left.firestore === right.firestore && queryEquals(left._query, right._query) && left.converter === right.converter;
+  }
+  return false;
 }
 const LOG_TAG = "AsyncQueue";
 class AsyncQueueImpl {
@@ -16140,6 +22996,94 @@ function getMessageOrStack(error) {
   }
   return message;
 }
+class LoadBundleTask {
+  constructor() {
+    this._progressObserver = {};
+    this._taskCompletionResolver = new Deferred();
+    this._lastProgress = {
+      taskState: "Running",
+      totalBytes: 0,
+      totalDocuments: 0,
+      bytesLoaded: 0,
+      documentsLoaded: 0
+    };
+  }
+  /**
+   * Registers functions to listen to bundle loading progress events.
+   * @param next - Called when there is a progress update from bundle loading. Typically `next` calls occur
+   *   each time a Firestore document is loaded from the bundle.
+   * @param error - Called when an error occurs during bundle loading. The task aborts after reporting the
+   *   error, and there should be no more updates after this.
+   * @param complete - Called when the loading task is complete.
+   */
+  onProgress(next, error, complete) {
+    this._progressObserver = {
+      next,
+      error,
+      complete
+    };
+  }
+  /**
+   * Implements the `Promise<LoadBundleTaskProgress>.catch` interface.
+   *
+   * @param onRejected - Called when an error occurs during bundle loading.
+   */
+  catch(onRejected) {
+    return this._taskCompletionResolver.promise.catch(onRejected);
+  }
+  /**
+   * Implements the `Promise<LoadBundleTaskProgress>.then` interface.
+   *
+   * @param onFulfilled - Called on the completion of the loading task with a final `LoadBundleTaskProgress` update.
+   *   The update will always have its `taskState` set to `"Success"`.
+   * @param onRejected - Called when an error occurs during bundle loading.
+   */
+  then(onFulfilled, onRejected) {
+    return this._taskCompletionResolver.promise.then(onFulfilled, onRejected);
+  }
+  /**
+   * Notifies all observers that bundle loading has completed, with a provided
+   * `LoadBundleTaskProgress` object.
+   *
+   * @private
+   */
+  _completeWith(progress) {
+    this._updateProgress(progress);
+    if (this._progressObserver.complete) {
+      this._progressObserver.complete();
+    }
+    this._taskCompletionResolver.resolve(progress);
+  }
+  /**
+   * Notifies all observers that bundle loading has failed, with a provided
+   * `Error` as the reason.
+   *
+   * @private
+   */
+  _failWith(error) {
+    this._lastProgress.taskState = "Error";
+    if (this._progressObserver.next) {
+      this._progressObserver.next(this._lastProgress);
+    }
+    if (this._progressObserver.error) {
+      this._progressObserver.error(error);
+    }
+    this._taskCompletionResolver.reject(error);
+  }
+  /**
+   * Notifies a progress update of loading a bundle.
+   * @param progress - The new progress.
+   *
+   * @private
+   */
+  _updateProgress(progress) {
+    this._lastProgress = progress;
+    if (this._progressObserver.next) {
+      this._progressObserver.next(progress);
+    }
+  }
+}
+const CACHE_SIZE_UNLIMITED = LRU_COLLECTION_DISABLED;
 class Firestore extends Firestore$1 {
   /** @hideconstructor */
   constructor(authCredentialsProvider, appCheckCredentialsProvider, databaseId, app) {
@@ -16150,16 +23094,46 @@ class Firestore extends Firestore$1 {
   }
   async _terminate() {
     if (this._firestoreClient) {
-      const terminate = this._firestoreClient.terminate();
-      this._queue = new AsyncQueueImpl(terminate);
+      const terminate2 = this._firestoreClient.terminate();
+      this._queue = new AsyncQueueImpl(terminate2);
       this._firestoreClient = void 0;
-      await terminate;
+      await terminate2;
     }
   }
 }
+function initializeFirestore(app, settings, databaseId) {
+  if (!databaseId) {
+    databaseId = DEFAULT_DATABASE_NAME;
+  }
+  const provider = _getProvider(app, "firestore");
+  if (provider.isInitialized(databaseId)) {
+    const existingInstance = provider.getImmediate({
+      identifier: databaseId
+    });
+    const initialSettings = provider.getOptions(databaseId);
+    if (deepEqual(initialSettings, settings)) {
+      return existingInstance;
+    } else {
+      throw new FirestoreError(Code.FAILED_PRECONDITION, "initializeFirestore() has already been called with different options. To avoid this error, call initializeFirestore() with the same options as when it was originally called, or call getFirestore() to return the already initialized instance.");
+    }
+  }
+  if (settings.cacheSizeBytes !== void 0 && settings.localCache !== void 0) {
+    throw new FirestoreError(Code.INVALID_ARGUMENT, `cache and cacheSizeBytes cannot be specified at the same time as cacheSizeBytes willbe deprecated. Instead, specify the cache size in the cache object`);
+  }
+  if (settings.cacheSizeBytes !== void 0 && settings.cacheSizeBytes !== CACHE_SIZE_UNLIMITED && settings.cacheSizeBytes < LRU_MINIMUM_CACHE_SIZE_BYTES) {
+    throw new FirestoreError(Code.INVALID_ARGUMENT, `cacheSizeBytes must be at least ${LRU_MINIMUM_CACHE_SIZE_BYTES}`);
+  }
+  if (settings.host && isCloudWorkstation(settings.host)) {
+    void pingServer(settings.host);
+  }
+  return provider.initialize({
+    options: settings,
+    instanceIdentifier: databaseId
+  });
+}
 function getFirestore(appOrDatabaseId, optionalDatabaseId) {
   const app = typeof appOrDatabaseId === "object" ? appOrDatabaseId : getApp();
-  const databaseId = typeof appOrDatabaseId === "string" ? appOrDatabaseId : DEFAULT_DATABASE_NAME;
+  const databaseId = typeof appOrDatabaseId === "string" ? appOrDatabaseId : optionalDatabaseId || DEFAULT_DATABASE_NAME;
   const db = _getProvider(app, "firestore").getImmediate({
     identifier: databaseId
   });
@@ -16199,6 +23173,93 @@ function buildComponentProvider(componentsProvider) {
     _offline: componentsProvider?._offline.build(online),
     _online: online
   };
+}
+function enableIndexedDbPersistence(firestore, persistenceSettings) {
+  logWarn("enableIndexedDbPersistence() will be deprecated in the future, you can use `FirestoreSettings.cache` instead.");
+  const settings = firestore._freezeSettings();
+  setPersistenceProviders(firestore, OnlineComponentProvider.provider, {
+    build: (onlineComponents) => new IndexedDbOfflineComponentProvider(onlineComponents, settings.cacheSizeBytes, persistenceSettings?.forceOwnership)
+  });
+  return Promise.resolve();
+}
+async function enableMultiTabIndexedDbPersistence(firestore) {
+  logWarn("enableMultiTabIndexedDbPersistence() will be deprecated in the future, you can use `FirestoreSettings.cache` instead.");
+  const settings = firestore._freezeSettings();
+  setPersistenceProviders(firestore, OnlineComponentProvider.provider, {
+    build: (onlineComponents) => new MultiTabOfflineComponentProvider(onlineComponents, settings.cacheSizeBytes)
+  });
+}
+function setPersistenceProviders(firestore, onlineComponentProvider, offlineComponentProvider) {
+  firestore = cast(firestore, Firestore);
+  if (firestore._firestoreClient || firestore._terminated) {
+    throw new FirestoreError(Code.FAILED_PRECONDITION, "Firestore has already been started and persistence can no longer be enabled. You can only enable persistence before calling any other methods on a Firestore object.");
+  }
+  if (firestore._componentsProvider || firestore._getSettings().localCache) {
+    throw new FirestoreError(Code.FAILED_PRECONDITION, "SDK cache is already specified.");
+  }
+  firestore._componentsProvider = {
+    _online: onlineComponentProvider,
+    _offline: offlineComponentProvider
+  };
+  configureFirestore(firestore);
+}
+function clearIndexedDbPersistence(firestore) {
+  if (firestore._initialized && !firestore._terminated) {
+    throw new FirestoreError(Code.FAILED_PRECONDITION, "Persistence can only be cleared before a Firestore instance is initialized or after it is terminated.");
+  }
+  const deferred = new Deferred();
+  firestore._queue.enqueueAndForgetEvenWhileRestricted(async () => {
+    try {
+      await indexedDbClearPersistence(indexedDbStoragePrefix(firestore._databaseId, firestore._persistenceKey));
+      deferred.resolve();
+    } catch (e) {
+      deferred.reject(e);
+    }
+  });
+  return deferred.promise;
+}
+function waitForPendingWrites(firestore) {
+  firestore = cast(firestore, Firestore);
+  const client = ensureFirestoreConfigured(firestore);
+  return firestoreClientWaitForPendingWrites(client);
+}
+function enableNetwork(firestore) {
+  firestore = cast(firestore, Firestore);
+  const client = ensureFirestoreConfigured(firestore);
+  return firestoreClientEnableNetwork(client);
+}
+function disableNetwork(firestore) {
+  firestore = cast(firestore, Firestore);
+  const client = ensureFirestoreConfigured(firestore);
+  return firestoreClientDisableNetwork(client);
+}
+function terminate(firestore) {
+  _removeServiceInstance(firestore.app, "firestore", firestore._databaseId.database);
+  return firestore._delete();
+}
+function loadBundle(firestore, bundleData) {
+  firestore = cast(firestore, Firestore);
+  const client = ensureFirestoreConfigured(firestore);
+  const resultTask = new LoadBundleTask();
+  firestoreClientLoadBundle(client, firestore._databaseId, bundleData, resultTask);
+  return resultTask;
+}
+function namedQuery(firestore, name2) {
+  firestore = cast(firestore, Firestore);
+  const client = ensureFirestoreConfigured(firestore);
+  return firestoreClientGetNamedQuery(client, name2).then((namedQuery2) => {
+    if (!namedQuery2) {
+      return null;
+    }
+    return new Query(firestore, null, namedQuery2.query);
+  });
+}
+class AggregateImpl {
+  constructor(alias, aggregateType, fieldPath) {
+    this.alias = alias;
+    this.aggregateType = aggregateType;
+    this.fieldPath = fieldPath;
+  }
 }
 class Bytes {
   /** @hideconstructor */
@@ -16312,6 +23373,9 @@ class FieldPath {
   isEqual(other) {
     return this._internalPath.isEqual(other._internalPath);
   }
+}
+function documentId() {
+  return new FieldPath(DOCUMENT_KEY_NAME);
 }
 class FieldValue {
   /**
@@ -16637,12 +23701,99 @@ class DeleteFieldValueImpl extends FieldValue {
     return other instanceof DeleteFieldValueImpl;
   }
 }
+function createSentinelChildContext(fieldValue, context, arrayElement) {
+  return new ParseContextImpl({
+    dataSource: 3,
+    targetDoc: context.settings.targetDoc,
+    methodName: fieldValue._methodName,
+    arrayElement
+  }, context.databaseId, context.serializer, context.ignoreUndefinedProperties);
+}
 class ServerTimestampFieldValueImpl extends FieldValue {
   _toFieldTransform(context) {
     return new FieldTransform(context.path, new ServerTimestampTransform());
   }
   isEqual(other) {
     return other instanceof ServerTimestampFieldValueImpl;
+  }
+}
+class ArrayUnionFieldValueImpl extends FieldValue {
+  constructor(methodName, _elements) {
+    super(methodName);
+    this._elements = _elements;
+  }
+  _toFieldTransform(context) {
+    const parseContext = createSentinelChildContext(
+      this,
+      context,
+      /*array=*/
+      true
+    );
+    const parsedElements = this._elements.map((element) => parseData(element, parseContext));
+    const arrayUnion2 = new ArrayUnionTransformOperation(parsedElements);
+    return new FieldTransform(context.path, arrayUnion2);
+  }
+  isEqual(other) {
+    return other instanceof ArrayUnionFieldValueImpl && deepEqual(this._elements, other._elements);
+  }
+}
+class ArrayRemoveFieldValueImpl extends FieldValue {
+  constructor(methodName, _elements) {
+    super(methodName);
+    this._elements = _elements;
+  }
+  _toFieldTransform(context) {
+    const parseContext = createSentinelChildContext(
+      this,
+      context,
+      /*array=*/
+      true
+    );
+    const parsedElements = this._elements.map((element) => parseData(element, parseContext));
+    const arrayUnion2 = new ArrayRemoveTransformOperation(parsedElements);
+    return new FieldTransform(context.path, arrayUnion2);
+  }
+  isEqual(other) {
+    return other instanceof ArrayRemoveFieldValueImpl && deepEqual(this._elements, other._elements);
+  }
+}
+class NumericIncrementFieldValueImpl extends FieldValue {
+  constructor(methodName, _operand) {
+    super(methodName);
+    this._operand = _operand;
+  }
+  _toFieldTransform(context) {
+    const numericIncrement = new NumericIncrementTransformOperation(context.serializer, toNumber(context.serializer, this._operand));
+    return new FieldTransform(context.path, numericIncrement);
+  }
+  isEqual(other) {
+    return other instanceof NumericIncrementFieldValueImpl && (this._operand === other._operand || Number.isNaN(this._operand) && Number.isNaN(other._operand));
+  }
+}
+class NumericMinimumFieldValueImpl extends FieldValue {
+  constructor(methodName, _operand) {
+    super(methodName);
+    this._operand = _operand;
+  }
+  _toFieldTransform(context) {
+    const numericMinimum = new NumericMinimumTransformOperation(context.serializer, toNumber(context.serializer, this._operand));
+    return new FieldTransform(context.path, numericMinimum);
+  }
+  isEqual(other) {
+    return other instanceof NumericMinimumFieldValueImpl && (this._operand === other._operand || Number.isNaN(this._operand) && Number.isNaN(other._operand));
+  }
+}
+class NumericMaximumFieldValueImpl extends FieldValue {
+  constructor(methodName, _operand) {
+    super(methodName);
+    this._operand = _operand;
+  }
+  _toFieldTransform(context) {
+    const numericMaximum = new NumericMaximumTransformOperation(context.serializer, toNumber(context.serializer, this._operand));
+    return new FieldTransform(context.path, numericMaximum);
+  }
+  isEqual(other) {
+    return other instanceof NumericMaximumFieldValueImpl && (this._operand === other._operand || Number.isNaN(this._operand) && Number.isNaN(other._operand));
   }
 }
 function parseUpdateData(userDataReader, methodName, targetDoc, input) {
@@ -17029,8 +24180,56 @@ class ExpUserDataWriter extends AbstractUserDataWriter {
     );
   }
 }
+function deleteField() {
+  return new DeleteFieldValueImpl("deleteField");
+}
 function serverTimestamp() {
   return new ServerTimestampFieldValueImpl("serverTimestamp");
+}
+function arrayUnion(...elements) {
+  return new ArrayUnionFieldValueImpl("arrayUnion", elements);
+}
+function arrayRemove(...elements) {
+  return new ArrayRemoveFieldValueImpl("arrayRemove", elements);
+}
+function increment(n) {
+  return new NumericIncrementFieldValueImpl("increment", n);
+}
+function minimum(n) {
+  return new NumericMinimumFieldValueImpl("minimum", n);
+}
+function maximum(n) {
+  return new NumericMaximumFieldValueImpl("maximum", n);
+}
+function vector(values) {
+  return new VectorValue(values);
+}
+function _internalQueryToProtoQueryTarget(query2) {
+  const firestore = cast(query2.firestore, Firestore);
+  const client = ensureFirestoreConfigured(firestore);
+  const serializer = client._onlineComponents?.datastore.serializer;
+  if (serializer === void 0) {
+    return null;
+  }
+  return toQueryTarget(serializer, queryToTarget(query2._query)).queryTarget;
+}
+function _internalAggregationQueryToProtoRunAggregationQueryRequest(query2, aggregateSpec) {
+  const aggregates = mapToArray(aggregateSpec, (aggregate, alias) => {
+    return new AggregateImpl(alias, aggregate.aggregateType, aggregate._internalFieldPath);
+  });
+  const firestore = cast(query2.firestore, Firestore);
+  const client = ensureFirestoreConfigured(firestore);
+  const serializer = client._onlineComponents?.datastore.serializer;
+  if (serializer === void 0) {
+    return null;
+  }
+  return toRunAggregationQueryRequest(
+    serializer,
+    queryToAggregateTarget(query2._query),
+    aggregates,
+    /* skipAliasing= */
+    true
+  ).request;
 }
 const name$1 = "@firebase/firestore";
 const version = "4.15.0";
@@ -17045,6 +24244,56 @@ function registerFirestore(variant, useFetchStreams = true) {
   }, "PUBLIC").setMultipleInstances(true));
   registerVersion(name$1, version, variant);
   registerVersion(name$1, version, "esm2020");
+}
+class AggregateField {
+  /**
+   * Create a new AggregateField<T>
+   * @param aggregateType - Specifies the type of aggregation operation to perform.
+   * @param _internalFieldPath - Optionally specifies the field that is aggregated.
+   * @internal
+   */
+  constructor(aggregateType = "count", _internalFieldPath) {
+    this._internalFieldPath = _internalFieldPath;
+    this.type = "AggregateField";
+    this.aggregateType = aggregateType;
+  }
+}
+class AggregateQuerySnapshot {
+  /** @hideconstructor */
+  constructor(query2, _userDataWriter, _data) {
+    this._userDataWriter = _userDataWriter;
+    this._data = _data;
+    this.type = "AggregateQuerySnapshot";
+    this.query = query2;
+  }
+  /**
+   * Returns the results of the aggregations performed over the underlying
+   * query.
+   *
+   * The keys of the returned object will be the same as those of the
+   * `AggregateSpec` object specified to the aggregation method, and the values
+   * will be the corresponding aggregation result.
+   *
+   * @returns The results of the aggregations performed over the underlying
+   * query.
+   */
+  data() {
+    return this._userDataWriter.convertObjectMap(this._data);
+  }
+  /**
+   * @internal
+   * @private
+   *
+   * Retrieves all fields in the snapshot as a proto value.
+   *
+   * @returns An `Object` containing all fields in the snapshot.
+   */
+  _fieldsProto() {
+    const dataClone = new ObjectValue({
+      mapValue: { fields: this._data }
+    }).clone();
+    return dataClone.value.mapValue.fields;
+  }
 }
 class DocumentSnapshot$1 {
   // Note: This class is stripped down version of the DocumentSnapshot in
@@ -17233,6 +24482,149 @@ class QueryCompositeFilterConstraint extends AppliableConstraint {
     return this.type === "and" ? "and" : "or";
   }
 }
+function or(...queryConstraints) {
+  queryConstraints.forEach((queryConstraint) => validateQueryFilterConstraint("or", queryConstraint));
+  return QueryCompositeFilterConstraint._create("or", queryConstraints);
+}
+function and(...queryConstraints) {
+  queryConstraints.forEach((queryConstraint) => validateQueryFilterConstraint("and", queryConstraint));
+  return QueryCompositeFilterConstraint._create("and", queryConstraints);
+}
+class QueryOrderByConstraint extends QueryConstraint {
+  /**
+   * @internal
+   */
+  constructor(_field, _direction) {
+    super();
+    this._field = _field;
+    this._direction = _direction;
+    this.type = "orderBy";
+  }
+  static _create(_field, _direction) {
+    return new QueryOrderByConstraint(_field, _direction);
+  }
+  _apply(query2) {
+    const orderBy2 = newQueryOrderBy(query2._query, this._field, this._direction);
+    return new Query(query2.firestore, query2.converter, queryWithAddedOrderBy(query2._query, orderBy2));
+  }
+}
+function orderBy(fieldPath, directionStr = "asc") {
+  const direction = directionStr;
+  const path = fieldPathFromArgument("orderBy", fieldPath);
+  return QueryOrderByConstraint._create(path, direction);
+}
+class QueryLimitConstraint extends QueryConstraint {
+  /**
+   * @internal
+   */
+  constructor(type, _limit, _limitType) {
+    super();
+    this.type = type;
+    this._limit = _limit;
+    this._limitType = _limitType;
+  }
+  static _create(type, _limit, _limitType) {
+    return new QueryLimitConstraint(type, _limit, _limitType);
+  }
+  _apply(query2) {
+    return new Query(query2.firestore, query2.converter, queryWithLimit(query2._query, this._limit, this._limitType));
+  }
+}
+function limit(limit2) {
+  validatePositiveNumber("limit", limit2);
+  return QueryLimitConstraint._create(
+    "limit",
+    limit2,
+    "F"
+    /* LimitType.First */
+  );
+}
+function limitToLast(limit2) {
+  validatePositiveNumber("limitToLast", limit2);
+  return QueryLimitConstraint._create(
+    "limitToLast",
+    limit2,
+    "L"
+    /* LimitType.Last */
+  );
+}
+class QueryStartAtConstraint extends QueryConstraint {
+  /**
+   * @internal
+   */
+  constructor(type, _docOrFields, _inclusive) {
+    super();
+    this.type = type;
+    this._docOrFields = _docOrFields;
+    this._inclusive = _inclusive;
+  }
+  static _create(type, _docOrFields, _inclusive) {
+    return new QueryStartAtConstraint(type, _docOrFields, _inclusive);
+  }
+  _apply(query2) {
+    const bound = newQueryBoundFromDocOrFields(query2, this.type, this._docOrFields, this._inclusive);
+    return new Query(query2.firestore, query2.converter, queryWithStartAt(query2._query, bound));
+  }
+}
+function startAt(...docOrFields) {
+  return QueryStartAtConstraint._create(
+    "startAt",
+    docOrFields,
+    /*inclusive=*/
+    true
+  );
+}
+function startAfter(...docOrFields) {
+  return QueryStartAtConstraint._create(
+    "startAfter",
+    docOrFields,
+    /*inclusive=*/
+    false
+  );
+}
+class QueryEndAtConstraint extends QueryConstraint {
+  /**
+   * @internal
+   */
+  constructor(type, _docOrFields, _inclusive) {
+    super();
+    this.type = type;
+    this._docOrFields = _docOrFields;
+    this._inclusive = _inclusive;
+  }
+  static _create(type, _docOrFields, _inclusive) {
+    return new QueryEndAtConstraint(type, _docOrFields, _inclusive);
+  }
+  _apply(query2) {
+    const bound = newQueryBoundFromDocOrFields(query2, this.type, this._docOrFields, this._inclusive);
+    return new Query(query2.firestore, query2.converter, queryWithEndAt(query2._query, bound));
+  }
+}
+function endBefore(...docOrFields) {
+  return QueryEndAtConstraint._create(
+    "endBefore",
+    docOrFields,
+    /*inclusive=*/
+    false
+  );
+}
+function endAt(...docOrFields) {
+  return QueryEndAtConstraint._create(
+    "endAt",
+    docOrFields,
+    /*inclusive=*/
+    true
+  );
+}
+function newQueryBoundFromDocOrFields(query2, methodName, docOrFields, inclusive) {
+  docOrFields[0] = getModularInstance(docOrFields[0]);
+  if (docOrFields[0] instanceof DocumentSnapshot$1) {
+    return newQueryBoundFromDocument(query2._query, query2.firestore._databaseId, methodName, docOrFields[0]._document, inclusive);
+  } else {
+    const reader = newUserDataReader(query2.firestore);
+    return newQueryBoundFromFields(query2._query, query2.firestore._databaseId, reader, methodName, docOrFields, inclusive);
+  }
+}
 function newQueryFilter(query2, methodName, dataReader, databaseId, fieldPath, op, value) {
   let fieldValue;
   if (fieldPath.isKeyField()) {
@@ -17263,6 +24655,67 @@ function newQueryFilter(query2, methodName, dataReader, databaseId, fieldPath, o
   }
   const filter = FieldFilter.create(fieldPath, op, fieldValue);
   return filter;
+}
+function newQueryOrderBy(query2, fieldPath, direction) {
+  if (query2.startAt !== null) {
+    throw new FirestoreError(Code.INVALID_ARGUMENT, "Invalid query. You must not call startAt() or startAfter() before calling orderBy().");
+  }
+  if (query2.endAt !== null) {
+    throw new FirestoreError(Code.INVALID_ARGUMENT, "Invalid query. You must not call endAt() or endBefore() before calling orderBy().");
+  }
+  const orderBy2 = new OrderBy(fieldPath, direction);
+  return orderBy2;
+}
+function newQueryBoundFromDocument(query2, databaseId, methodName, doc3, inclusive) {
+  if (!doc3) {
+    throw new FirestoreError(Code.NOT_FOUND, `Can't use a DocumentSnapshot that doesn't exist for ${methodName}().`);
+  }
+  const components = [];
+  for (const orderBy2 of queryNormalizedOrderBy(query2)) {
+    if (orderBy2.field.isKeyField()) {
+      components.push(refValue(databaseId, doc3.key));
+    } else {
+      const value = doc3.data.field(orderBy2.field);
+      if (isServerTimestamp(value)) {
+        throw new FirestoreError(Code.INVALID_ARGUMENT, 'Invalid query. You are trying to start or end a query using a document for which the field "' + orderBy2.field + '" is an uncommitted server timestamp. (Since the value of this field is unknown, you cannot start/end a query with it.)');
+      } else if (value !== null) {
+        components.push(value);
+      } else {
+        const field = orderBy2.field.canonicalString();
+        throw new FirestoreError(Code.INVALID_ARGUMENT, `Invalid query. You are trying to start or end a query using a document for which the field '${field}' (used as the orderBy) does not exist.`);
+      }
+    }
+  }
+  return new Bound(components, inclusive);
+}
+function newQueryBoundFromFields(query2, databaseId, dataReader, methodName, values, inclusive) {
+  const orderBy2 = query2.explicitOrderBy;
+  if (values.length > orderBy2.length) {
+    throw new FirestoreError(Code.INVALID_ARGUMENT, `Too many arguments provided to ${methodName}(). The number of arguments must be less than or equal to the number of orderBy() clauses`);
+  }
+  const components = [];
+  for (let i = 0; i < values.length; i++) {
+    const rawValue = values[i];
+    const orderByComponent = orderBy2[i];
+    if (orderByComponent.field.isKeyField()) {
+      if (typeof rawValue !== "string") {
+        throw new FirestoreError(Code.INVALID_ARGUMENT, `Invalid query. Expected a string for document ID in ${methodName}(), but got a ${typeof rawValue}`);
+      }
+      if (!isCollectionGroupQuery(query2) && rawValue.indexOf("/") !== -1) {
+        throw new FirestoreError(Code.INVALID_ARGUMENT, `Invalid query. When querying a collection and ordering by documentId(), the value passed to ${methodName}() must be a plain document ID, but '${rawValue}' contains a slash.`);
+      }
+      const path = query2.path.child(ResourcePath.fromString(rawValue));
+      if (!DocumentKey.isDocumentKey(path)) {
+        throw new FirestoreError(Code.INVALID_ARGUMENT, `Invalid query. When querying a collection group and ordering by documentId(), the value passed to ${methodName}() must result in a valid document path, but '${path}' is not because it contains an odd number of segments.`);
+      }
+      const key = new DocumentKey(path);
+      components.push(refValue(databaseId, key));
+    } else {
+      const wrapped = parseQueryValue(dataReader, methodName, rawValue);
+      components.push(wrapped);
+    }
+  }
+  return new Bound(components, inclusive);
 }
 function parseDocumentIdValue(databaseId, query2, documentIdValue) {
   documentIdValue = getModularInstance(documentIdValue);
@@ -17343,6 +24796,11 @@ function findOpInsideFilters(filters, operators) {
   }
   return null;
 }
+function validateQueryFilterConstraint(functionName, queryConstraint) {
+  if (!(queryConstraint instanceof QueryFieldFilterConstraint) && !(queryConstraint instanceof QueryCompositeFilterConstraint)) {
+    throw new FirestoreError(Code.INVALID_ARGUMENT, `Function ${functionName}() requires AppliableConstraints created with a call to 'where(...)', 'or(...)', or 'and(...)'.`);
+  }
+}
 function validateQueryConstraintArray(queryConstraint) {
   const compositeFilterCount = queryConstraint.filter((filter) => filter instanceof QueryCompositeFilterConstraint).length;
   const fieldFilterCount = queryConstraint.filter((filter) => filter instanceof QueryFieldFilterConstraint).length;
@@ -17353,13 +24811,174 @@ function validateQueryConstraintArray(queryConstraint) {
 function applyFirestoreDataConverter(converter, value, options2) {
   let convertedValue;
   if (converter) {
-    {
+    if (options2 && (options2.merge || options2.mergeFields)) {
+      convertedValue = converter.toFirestore(value, options2);
+    } else {
       convertedValue = converter.toFirestore(value);
     }
   } else {
     convertedValue = value;
   }
   return convertedValue;
+}
+class LiteUserDataWriter extends AbstractUserDataWriter {
+  constructor(firestore) {
+    super();
+    this.firestore = firestore;
+  }
+  convertBytes(bytes) {
+    return new Bytes(bytes);
+  }
+  convertReference(name2) {
+    const key = this.convertDocumentKey(name2, this.firestore._databaseId);
+    return new DocumentReference(
+      this.firestore,
+      /* converter= */
+      null,
+      key
+    );
+  }
+}
+function sum(field) {
+  return new AggregateField("sum", fieldPathFromArgument("sum", field));
+}
+function average(field) {
+  return new AggregateField("avg", fieldPathFromArgument("average", field));
+}
+function count() {
+  return new AggregateField("count");
+}
+function aggregateFieldEqual(left, right) {
+  return left instanceof AggregateField && right instanceof AggregateField && left.aggregateType === right.aggregateType && left._internalFieldPath?.canonicalString() === right._internalFieldPath?.canonicalString();
+}
+function aggregateQuerySnapshotEqual(left, right) {
+  return queryEqual(left.query, right.query) && deepEqual(left.data(), right.data());
+}
+function getCountFromServer(query2) {
+  const countQuerySpec = {
+    count: count()
+  };
+  return getAggregateFromServer(query2, countQuerySpec);
+}
+function getAggregateFromServer(query2, aggregateSpec) {
+  const firestore = cast(query2.firestore, Firestore);
+  const client = ensureFirestoreConfigured(firestore);
+  const internalAggregates = mapToArray(aggregateSpec, (aggregate, alias) => {
+    return new AggregateImpl(alias, aggregate.aggregateType, aggregate._internalFieldPath);
+  });
+  return firestoreClientRunAggregateQuery(client, query2._query, internalAggregates).then((aggregateResult) => convertToAggregateQuerySnapshot(firestore, query2, aggregateResult));
+}
+function convertToAggregateQuerySnapshot(firestore, query2, aggregateResult) {
+  const userDataWriter = new ExpUserDataWriter(firestore);
+  const querySnapshot = new AggregateQuerySnapshot(query2, userDataWriter, aggregateResult);
+  return querySnapshot;
+}
+class MemoryLocalCacheImpl {
+  constructor(settings) {
+    this.kind = "memory";
+    this._onlineComponentProvider = OnlineComponentProvider.provider;
+    if (settings?.garbageCollector) {
+      this._offlineComponentProvider = settings.garbageCollector._offlineComponentProvider;
+    } else {
+      this._offlineComponentProvider = {
+        build: () => new LruGcMemoryOfflineComponentProvider(void 0)
+      };
+    }
+  }
+  toJSON() {
+    return { kind: this.kind };
+  }
+}
+class PersistentLocalCacheImpl {
+  constructor(settings) {
+    this.kind = "persistent";
+    let tabManager;
+    if (settings?.tabManager) {
+      settings.tabManager._initialize(settings);
+      tabManager = settings.tabManager;
+    } else {
+      tabManager = persistentSingleTabManager(void 0);
+      tabManager._initialize(settings);
+    }
+    this._onlineComponentProvider = tabManager._onlineComponentProvider;
+    this._offlineComponentProvider = tabManager._offlineComponentProvider;
+  }
+  toJSON() {
+    return { kind: this.kind };
+  }
+}
+class MemoryEagerGarbageCollectorImpl {
+  constructor() {
+    this.kind = "memoryEager";
+    this._offlineComponentProvider = MemoryOfflineComponentProvider.provider;
+  }
+  toJSON() {
+    return { kind: this.kind };
+  }
+}
+class MemoryLruGarbageCollectorImpl {
+  constructor(cacheSize) {
+    this.kind = "memoryLru";
+    this._offlineComponentProvider = {
+      build: () => new LruGcMemoryOfflineComponentProvider(cacheSize)
+    };
+  }
+  toJSON() {
+    return { kind: this.kind };
+  }
+}
+function memoryEagerGarbageCollector() {
+  return new MemoryEagerGarbageCollectorImpl();
+}
+function memoryLruGarbageCollector(settings) {
+  return new MemoryLruGarbageCollectorImpl(settings?.cacheSizeBytes);
+}
+function memoryLocalCache(settings) {
+  return new MemoryLocalCacheImpl(settings);
+}
+function persistentLocalCache(settings) {
+  return new PersistentLocalCacheImpl(settings);
+}
+class SingleTabManagerImpl {
+  constructor(forceOwnership) {
+    this.forceOwnership = forceOwnership;
+    this.kind = "persistentSingleTab";
+  }
+  toJSON() {
+    return { kind: this.kind };
+  }
+  /**
+   * @internal
+   */
+  _initialize(settings) {
+    this._onlineComponentProvider = OnlineComponentProvider.provider;
+    this._offlineComponentProvider = {
+      build: (onlineComponents) => new IndexedDbOfflineComponentProvider(onlineComponents, settings?.cacheSizeBytes, this.forceOwnership)
+    };
+  }
+}
+class MultiTabManagerImpl {
+  constructor() {
+    this.kind = "PersistentMultipleTab";
+  }
+  toJSON() {
+    return { kind: this.kind };
+  }
+  /**
+   * @internal
+   */
+  _initialize(settings) {
+    this._onlineComponentProvider = OnlineComponentProvider.provider;
+    this._offlineComponentProvider = {
+      build: (onlineComponents) => new MultiTabOfflineComponentProvider(onlineComponents, settings?.cacheSizeBytes)
+    };
+  }
+}
+function persistentSingleTabManager(settings) {
+  return new SingleTabManagerImpl(settings?.forceOwnership);
+}
+function persistentMultipleTabManager() {
+  return new MultiTabManagerImpl();
 }
 const encoder = newTextEncoder();
 function lengthPrefixedString(o) {
@@ -17571,8 +25190,8 @@ class BundleBuilder {
    */
   build() {
     let bundleString = "";
-    for (const namedQuery of this.namedQueries.values()) {
-      bundleString += this.lengthPrefixedString({ namedQuery });
+    for (const namedQuery2 of this.namedQueries.values()) {
+      bundleString += this.lengthPrefixedString({ namedQuery: namedQuery2 });
     }
     for (const bundledDocument of this.documents.values()) {
       const documentMetadata = bundledDocument.metadata;
@@ -17625,6 +25244,7 @@ function documentToDocumentSnapshotBundleData(path, documentData, document) {
     versionTime: document.version.toTimestamp()
   };
 }
+const NOT_SUPPORTED = "NOT SUPPORTED";
 class SnapshotMetadata {
   /** @hideconstructor */
   constructor(hasPendingWrites, fromCache) {
@@ -17745,6 +25365,32 @@ DocumentSnapshot._jsonSchema = {
   bundleName: property("string"),
   bundle: property("string")
 };
+function documentSnapshotFromJSON(db, json, converter) {
+  if (validateJSON(json, DocumentSnapshot._jsonSchema)) {
+    if (json.bundle === NOT_SUPPORTED) {
+      throw new FirestoreError(Code.INVALID_ARGUMENT, "The provided JSON object was created in a client environment, which is not supported.");
+    }
+    const serializer = newSerializer(db._databaseId);
+    const bundleReader = createBundleReaderSync(json.bundle, serializer);
+    const elements = bundleReader.getElements();
+    const bundleLoader = new BundleLoader(bundleReader.getMetadata(), serializer);
+    for (const element of elements) {
+      bundleLoader.addSizedElement(element);
+    }
+    const bundledDocuments = bundleLoader.documents;
+    if (bundledDocuments.length !== 1) {
+      throw new FirestoreError(Code.INVALID_ARGUMENT, `Expected bundle data to contain 1 document, but it contains ${bundledDocuments.length} documents.`);
+    }
+    const document = fromDocument(serializer, bundledDocuments[0].document);
+    const documentKey = new DocumentKey(ResourcePath.fromString(json.bundleName));
+    return new DocumentSnapshot(db, new LiteUserDataWriter(db), documentKey, document, new SnapshotMetadata(
+      /* hasPendingWrites= */
+      false,
+      /* fromCache= */
+      false
+    ), converter ? converter : null);
+  }
+}
 class QueryDocumentSnapshot extends DocumentSnapshot {
   /**
    * Retrieves all fields in the document as an `Object`.
@@ -17857,6 +25503,41 @@ QuerySnapshot._jsonSchema = {
   bundleName: property("string"),
   bundle: property("string")
 };
+function querySnapshotFromJSON(db, json, converter) {
+  if (validateJSON(json, QuerySnapshot._jsonSchema)) {
+    if (json.bundle === NOT_SUPPORTED) {
+      throw new FirestoreError(Code.INVALID_ARGUMENT, "The provided JSON object was created in a client environment, which is not supported.");
+    }
+    const serializer = newSerializer(db._databaseId);
+    const bundleReader = createBundleReaderSync(json.bundle, serializer);
+    const elements = bundleReader.getElements();
+    const bundleLoader = new BundleLoader(bundleReader.getMetadata(), serializer);
+    for (const element of elements) {
+      bundleLoader.addSizedElement(element);
+    }
+    if (bundleLoader.queries.length !== 1) {
+      throw new FirestoreError(Code.INVALID_ARGUMENT, `Snapshot data expected 1 query but found ${bundleLoader.queries.length} queries.`);
+    }
+    const query2 = fromBundledQuery(bundleLoader.queries[0].bundledQuery);
+    const bundledDocuments = bundleLoader.documents;
+    let documentSet = new DocumentSet();
+    bundledDocuments.map((bundledDocument) => {
+      const document = fromDocument(serializer, bundledDocument.document);
+      documentSet = documentSet.add(document);
+    });
+    const viewSnapshot = ViewSnapshot.fromInitialDocuments(
+      query2,
+      documentSet,
+      documentKeySet(),
+      /* fromCache= */
+      false,
+      /* hasCachedResults= */
+      false
+    );
+    const externalQuery = new Query(db, converter ? converter : null, query2);
+    return new QuerySnapshot(db, new LiteUserDataWriter(db), externalQuery, viewSnapshot);
+  }
+}
 function changesFromSnapshot(querySnapshot, includeMetadataChanges) {
   if (querySnapshot._snapshot.oldDocs.isEmpty()) {
     let index = 0;
@@ -17909,6 +25590,196 @@ function resultChangeType(type) {
       return fail(61501, { type });
   }
 }
+function snapshotEqual(left, right) {
+  if (left instanceof DocumentSnapshot && right instanceof DocumentSnapshot) {
+    return left._firestore === right._firestore && left._key.isEqual(right._key) && (left._document === null ? right._document === null : left._document.isEqual(right._document)) && left._converter === right._converter;
+  } else if (left instanceof QuerySnapshot && right instanceof QuerySnapshot) {
+    return left._firestore === right._firestore && queryEqual(left.query, right.query) && left.metadata.isEqual(right.metadata) && left._snapshot.isEqual(right._snapshot);
+  }
+  return false;
+}
+const DEFAULT_TRANSACTION_OPTIONS = {
+  maxAttempts: 5
+};
+function validateTransactionOptions(options2) {
+  if (options2.maxAttempts < 1) {
+    throw new FirestoreError(Code.INVALID_ARGUMENT, "Max attempts must be at least 1");
+  }
+}
+class WriteBatch {
+  /** @hideconstructor */
+  constructor(_firestore, _commitHandler) {
+    this._firestore = _firestore;
+    this._commitHandler = _commitHandler;
+    this._mutations = [];
+    this._committed = false;
+    this._dataReader = newUserDataReader(_firestore);
+  }
+  set(documentRef, data, options2) {
+    this._verifyNotCommitted();
+    const ref = validateReference(documentRef, this._firestore);
+    const convertedValue = applyFirestoreDataConverter(ref.converter, data, options2);
+    const parsed = parseSetData(this._dataReader, "WriteBatch.set", ref._key, convertedValue, ref.converter !== null, options2);
+    this._mutations.push(parsed.toMutation(ref._key, Precondition.none()));
+    return this;
+  }
+  update(documentRef, fieldOrUpdateData, value, ...moreFieldsAndValues) {
+    this._verifyNotCommitted();
+    const ref = validateReference(documentRef, this._firestore);
+    fieldOrUpdateData = getModularInstance(fieldOrUpdateData);
+    let parsed;
+    if (typeof fieldOrUpdateData === "string" || fieldOrUpdateData instanceof FieldPath) {
+      parsed = parseUpdateVarargs(this._dataReader, "WriteBatch.update", ref._key, fieldOrUpdateData, value, moreFieldsAndValues);
+    } else {
+      parsed = parseUpdateData(this._dataReader, "WriteBatch.update", ref._key, fieldOrUpdateData);
+    }
+    this._mutations.push(parsed.toMutation(ref._key, Precondition.exists(true)));
+    return this;
+  }
+  /**
+   * Deletes the document referred to by the provided {@link DocumentReference}.
+   *
+   * @param documentRef - A reference to the document to be deleted.
+   * @returns This `WriteBatch` instance. Used for chaining method calls.
+   */
+  delete(documentRef) {
+    this._verifyNotCommitted();
+    const ref = validateReference(documentRef, this._firestore);
+    this._mutations = this._mutations.concat(new DeleteMutation(ref._key, Precondition.none()));
+    return this;
+  }
+  /**
+   * Commits all of the writes in this write batch as a single atomic unit.
+   *
+   * The result of these writes will only be reflected in document reads that
+   * occur after the returned promise resolves. If the client is offline, the
+   * write fails. If you would like to see local modifications or buffer writes
+   * until the client is online, use the full Firestore SDK.
+   *
+   * @returns A `Promise` resolved once all of the writes in the batch have been
+   * successfully written to the backend as an atomic unit (note that it won't
+   * resolve while you're offline).
+   */
+  commit() {
+    this._verifyNotCommitted();
+    this._committed = true;
+    if (this._mutations.length > 0) {
+      return this._commitHandler(this._mutations);
+    }
+    return Promise.resolve();
+  }
+  _verifyNotCommitted() {
+    if (this._committed) {
+      throw new FirestoreError(Code.FAILED_PRECONDITION, "A write batch can no longer be used after commit() has been called.");
+    }
+  }
+}
+function validateReference(documentRef, firestore) {
+  documentRef = getModularInstance(documentRef);
+  if (documentRef.firestore !== firestore) {
+    throw new FirestoreError(Code.INVALID_ARGUMENT, "Provided document reference is from a different Firestore instance.");
+  } else {
+    return documentRef;
+  }
+}
+class Transaction$1 {
+  /** @hideconstructor */
+  constructor(_firestore, _transaction) {
+    this._firestore = _firestore;
+    this._transaction = _transaction;
+    this._dataReader = newUserDataReader(_firestore);
+  }
+  /**
+   * Reads the document referenced by the provided {@link DocumentReference}.
+   *
+   * @param documentRef - A reference to the document to be read.
+   * @returns A `DocumentSnapshot` with the read data.
+   */
+  get(documentRef) {
+    const ref = validateReference(documentRef, this._firestore);
+    const userDataWriter = new LiteUserDataWriter(this._firestore);
+    return this._transaction.lookup([ref._key]).then((docs) => {
+      if (!docs || docs.length !== 1) {
+        return fail(24041);
+      }
+      const doc3 = docs[0];
+      if (doc3.isFoundDocument()) {
+        return new DocumentSnapshot$1(this._firestore, userDataWriter, doc3.key, doc3, ref.converter);
+      } else if (doc3.isNoDocument()) {
+        return new DocumentSnapshot$1(this._firestore, userDataWriter, ref._key, null, ref.converter);
+      } else {
+        throw fail(18433, {
+          doc: doc3
+        });
+      }
+    });
+  }
+  set(documentRef, value, options2) {
+    const ref = validateReference(documentRef, this._firestore);
+    const convertedValue = applyFirestoreDataConverter(ref.converter, value, options2);
+    const parsed = parseSetData(this._dataReader, "Transaction.set", ref._key, convertedValue, ref.converter !== null, options2);
+    this._transaction.set(ref._key, parsed);
+    return this;
+  }
+  update(documentRef, fieldOrUpdateData, value, ...moreFieldsAndValues) {
+    const ref = validateReference(documentRef, this._firestore);
+    fieldOrUpdateData = getModularInstance(fieldOrUpdateData);
+    let parsed;
+    if (typeof fieldOrUpdateData === "string" || fieldOrUpdateData instanceof FieldPath) {
+      parsed = parseUpdateVarargs(this._dataReader, "Transaction.update", ref._key, fieldOrUpdateData, value, moreFieldsAndValues);
+    } else {
+      parsed = parseUpdateData(this._dataReader, "Transaction.update", ref._key, fieldOrUpdateData);
+    }
+    this._transaction.update(ref._key, parsed);
+    return this;
+  }
+  /**
+   * Deletes the document referred to by the provided {@link DocumentReference}.
+   *
+   * @param documentRef - A reference to the document to be deleted.
+   * @returns This `Transaction` instance. Used for chaining method calls.
+   */
+  delete(documentRef) {
+    const ref = validateReference(documentRef, this._firestore);
+    this._transaction.delete(ref._key);
+    return this;
+  }
+}
+class Transaction2 extends Transaction$1 {
+  // This class implements the same logic as the Transaction API in the Lite SDK
+  // but is subclassed in order to return its own DocumentSnapshot types.
+  /** @hideconstructor */
+  constructor(_firestore, _transaction) {
+    super(_firestore, _transaction);
+    this._firestore = _firestore;
+  }
+  /**
+   * Reads the document referenced by the provided {@link DocumentReference}.
+   *
+   * @param documentRef - A reference to the document to be read.
+   * @returns A `DocumentSnapshot` with the read data.
+   */
+  get(documentRef) {
+    const ref = validateReference(documentRef, this._firestore);
+    const userDataWriter = new ExpUserDataWriter(this._firestore);
+    return super.get(documentRef).then((liteDocumentSnapshot) => new DocumentSnapshot(this._firestore, userDataWriter, ref._key, liteDocumentSnapshot._document, new SnapshotMetadata(
+      /* hasPendingWrites= */
+      false,
+      /* fromCache= */
+      false
+    ), ref.converter));
+  }
+}
+function runTransaction(firestore, updateFunction, options2) {
+  firestore = cast(firestore, Firestore);
+  const optionsWithDefaults = {
+    ...DEFAULT_TRANSACTION_OPTIONS,
+    ...options2
+  };
+  validateTransactionOptions(optionsWithDefaults);
+  const client = ensureFirestoreConfigured(firestore);
+  return firestoreClientTransaction(client, (internalTransaction) => updateFunction(new Transaction2(firestore, internalTransaction)), optionsWithDefaults);
+}
 function isPartialObserver(obj) {
   return implementsAnyMethods(obj, ["next", "error", "complete"]);
 }
@@ -17930,10 +25801,53 @@ function getDoc(reference) {
   const client = ensureFirestoreConfigured(firestore);
   return firestoreClientGetDocumentViaSnapshotListener(client, reference._key).then((snapshot) => convertToDocSnapshot(firestore, reference, snapshot));
 }
+function getDocFromCache(reference) {
+  reference = cast(reference, DocumentReference);
+  const firestore = cast(reference.firestore, Firestore);
+  const client = ensureFirestoreConfigured(firestore);
+  const userDataWriter = new ExpUserDataWriter(firestore);
+  return firestoreClientGetDocumentFromLocalCache(client, reference._key).then((doc3) => new DocumentSnapshot(firestore, userDataWriter, reference._key, doc3, new SnapshotMetadata(
+    doc3 !== null && doc3.hasLocalMutations,
+    /* fromCache= */
+    true
+  ), reference.converter));
+}
+function getDocFromServer(reference) {
+  reference = cast(reference, DocumentReference);
+  const firestore = cast(reference.firestore, Firestore);
+  const client = ensureFirestoreConfigured(firestore);
+  return firestoreClientGetDocumentViaSnapshotListener(client, reference._key, {
+    source: "server"
+  }).then((snapshot) => convertToDocSnapshot(firestore, reference, snapshot));
+}
+function getDocs(query2) {
+  query2 = cast(query2, Query);
+  const firestore = cast(query2.firestore, Firestore);
+  const client = ensureFirestoreConfigured(firestore);
+  const userDataWriter = new ExpUserDataWriter(firestore);
+  validateHasExplicitOrderByForLimitToLast(query2._query);
+  return firestoreClientGetDocumentsViaSnapshotListener(client, query2._query).then((snapshot) => new QuerySnapshot(firestore, userDataWriter, query2, snapshot));
+}
+function getDocsFromCache(query2) {
+  query2 = cast(query2, Query);
+  const firestore = cast(query2.firestore, Firestore);
+  const client = ensureFirestoreConfigured(firestore);
+  const userDataWriter = new ExpUserDataWriter(firestore);
+  return firestoreClientGetDocumentsFromLocalCache(client, query2._query).then((snapshot) => new QuerySnapshot(firestore, userDataWriter, query2, snapshot));
+}
+function getDocsFromServer(query2) {
+  query2 = cast(query2, Query);
+  const firestore = cast(query2.firestore, Firestore);
+  const client = ensureFirestoreConfigured(firestore);
+  const userDataWriter = new ExpUserDataWriter(firestore);
+  return firestoreClientGetDocumentsViaSnapshotListener(client, query2._query, {
+    source: "server"
+  }).then((snapshot) => new QuerySnapshot(firestore, userDataWriter, query2, snapshot));
+}
 function setDoc(reference, data, options2) {
   reference = cast(reference, DocumentReference);
   const firestore = cast(reference.firestore, Firestore);
-  const convertedValue = applyFirestoreDataConverter(reference.converter, data);
+  const convertedValue = applyFirestoreDataConverter(reference.converter, data, options2);
   const dataReader = newUserDataReader(firestore);
   const parsed = parseSetData(dataReader, "setDoc", reference._key, convertedValue, reference.converter !== null, options2);
   const mutation = parsed.toMutation(reference._key, Precondition.none());
@@ -18021,6 +25935,63 @@ function onSnapshot(reference, ...args) {
   const client = ensureFirestoreConfigured(firestore);
   return firestoreClientListen(client, internalQuery, internalOptions, observer);
 }
+function onSnapshotResume(reference, snapshotJson, ...args) {
+  const db = getModularInstance(reference);
+  const json = normalizeSnapshotJsonFields(snapshotJson);
+  if (json.error) {
+    throw new FirestoreError(Code.INVALID_ARGUMENT, json.error);
+  }
+  let curArg = 0;
+  let options2 = void 0;
+  if (typeof args[curArg] === "object" && !isPartialObserver(args[curArg])) {
+    options2 = args[curArg++];
+  }
+  if (json.bundleSource === "QuerySnapshot") {
+    let observer = null;
+    if (typeof args[curArg] === "object" && isPartialObserver(args[curArg])) {
+      const userObserver = args[curArg++];
+      observer = {
+        next: userObserver.next,
+        error: userObserver.error,
+        complete: userObserver.complete
+      };
+    } else {
+      observer = {
+        next: args[curArg++],
+        error: args[curArg++],
+        complete: args[curArg++]
+      };
+    }
+    return onSnapshotQuerySnapshotBundle(db, json, options2, observer, args[curArg]);
+  } else if (json.bundleSource === "DocumentSnapshot") {
+    let observer = null;
+    if (typeof args[curArg] === "object" && isPartialObserver(args[curArg])) {
+      const userObserver = args[curArg++];
+      observer = {
+        next: userObserver.next,
+        error: userObserver.error,
+        complete: userObserver.complete
+      };
+    } else {
+      observer = {
+        next: args[curArg++],
+        error: args[curArg++],
+        complete: args[curArg++]
+      };
+    }
+    return onSnapshotDocumentSnapshotBundle(db, json, options2, observer, args[curArg]);
+  } else {
+    throw new FirestoreError(Code.INVALID_ARGUMENT, `unsupported bundle source: ${json.bundleSource}`);
+  }
+}
+function onSnapshotsInSync(firestore, arg) {
+  firestore = cast(firestore, Firestore);
+  const client = ensureFirestoreConfigured(firestore);
+  const observer = isPartialObserver(arg) ? arg : {
+    next: arg
+  };
+  return firestoreClientAddSnapshotsInSyncListener(client, observer);
+}
 function executeWrite(firestore, mutations) {
   const client = ensureFirestoreConfigured(firestore);
   return firestoreClientWrite(client, mutations);
@@ -18030,18 +26001,360 @@ function convertToDocSnapshot(firestore, ref, snapshot) {
   const userDataWriter = new ExpUserDataWriter(firestore);
   return new DocumentSnapshot(firestore, userDataWriter, ref._key, doc3, new SnapshotMetadata(snapshot.hasPendingWrites, snapshot.fromCache), ref.converter);
 }
+function normalizeSnapshotJsonFields(snapshotJson) {
+  const result = {
+    bundle: "",
+    bundleName: "",
+    bundleSource: ""
+  };
+  const requiredKeys = ["bundle", "bundleName", "bundleSource"];
+  for (const key of requiredKeys) {
+    if (!(key in snapshotJson)) {
+      result.error = `snapshotJson missing required field: ${key}`;
+      break;
+    }
+    const value = snapshotJson[key];
+    if (typeof value !== "string") {
+      result.error = `snapshotJson field '${key}' must be a string.`;
+      break;
+    }
+    if (value.length === 0) {
+      result.error = `snapshotJson field '${key}' cannot be an empty string.`;
+      break;
+    }
+    if (key === "bundle") {
+      result.bundle = value;
+    } else if (key === "bundleName") {
+      result.bundleName = value;
+    } else if (key === "bundleSource") {
+      result.bundleSource = value;
+    }
+  }
+  return result;
+}
+function onSnapshotDocumentSnapshotBundle(db, json, options2, observer, converter) {
+  let unsubscribed = false;
+  let internalUnsubscribe;
+  const loadTask = loadBundle(db, json.bundle);
+  loadTask.then(() => {
+    if (!unsubscribed) {
+      const docReference = new DocumentReference(db, converter ? converter : null, DocumentKey.fromPath(json.bundleName));
+      internalUnsubscribe = onSnapshot(docReference, options2 ? options2 : {}, observer);
+    }
+  }).catch((e) => {
+    if (observer.error) {
+      observer.error(e);
+    }
+    return () => {
+    };
+  });
+  return () => {
+    if (unsubscribed) {
+      return;
+    }
+    unsubscribed = true;
+    if (internalUnsubscribe) {
+      internalUnsubscribe();
+    }
+  };
+}
+function onSnapshotQuerySnapshotBundle(db, json, options2, observer, converter) {
+  let unsubscribed = false;
+  let internalUnsubscribe;
+  const loadTask = loadBundle(db, json.bundle);
+  loadTask.then(() => namedQuery(db, json.bundleName)).then((query2) => {
+    if (query2 && !unsubscribed) {
+      const realQuery = query2;
+      if (converter) {
+        realQuery.withConverter(converter);
+      }
+      internalUnsubscribe = onSnapshot(query2, options2 ? options2 : {}, observer);
+    }
+  }).catch((e) => {
+    if (observer.error) {
+      observer.error(e);
+    }
+    return () => {
+    };
+  });
+  return () => {
+    if (unsubscribed) {
+      return;
+    }
+    unsubscribed = true;
+    if (internalUnsubscribe) {
+      internalUnsubscribe();
+    }
+  };
+}
+function writeBatch(firestore) {
+  firestore = cast(firestore, Firestore);
+  ensureFirestoreConfigured(firestore);
+  return new WriteBatch(firestore, (mutations) => executeWrite(firestore, mutations));
+}
+function setIndexConfiguration(firestore, jsonOrConfiguration) {
+  firestore = cast(firestore, Firestore);
+  const client = ensureFirestoreConfigured(firestore);
+  if (!client._uninitializedComponentsProvider || client._uninitializedComponentsProvider._offline.kind === "memory") {
+    logWarn("Cannot enable indexes when persistence is disabled");
+    return Promise.resolve();
+  }
+  const parsedIndexes = parseIndexes(jsonOrConfiguration);
+  return firestoreClientSetIndexConfiguration(client, parsedIndexes);
+}
+function parseIndexes(jsonOrConfiguration) {
+  const indexConfiguration = typeof jsonOrConfiguration === "string" ? tryParseJson(jsonOrConfiguration) : jsonOrConfiguration;
+  const parsedIndexes = [];
+  if (Array.isArray(indexConfiguration.indexes)) {
+    for (const index of indexConfiguration.indexes) {
+      const collectionGroup2 = tryGetString(index, "collectionGroup");
+      const segments = [];
+      if (Array.isArray(index.fields)) {
+        for (const field of index.fields) {
+          const fieldPathString = tryGetString(field, "fieldPath");
+          const fieldPath = fieldPathFromDotSeparatedString("setIndexConfiguration", fieldPathString);
+          if (field.arrayConfig === "CONTAINS") {
+            segments.push(new IndexSegment(
+              fieldPath,
+              2
+              /* IndexKind.CONTAINS */
+            ));
+          } else if (field.order === "ASCENDING") {
+            segments.push(new IndexSegment(
+              fieldPath,
+              0
+              /* IndexKind.ASCENDING */
+            ));
+          } else if (field.order === "DESCENDING") {
+            segments.push(new IndexSegment(
+              fieldPath,
+              1
+              /* IndexKind.DESCENDING */
+            ));
+          }
+        }
+      }
+      parsedIndexes.push(new FieldIndex(FieldIndex.UNKNOWN_ID, collectionGroup2, segments, IndexState.empty()));
+    }
+  }
+  return parsedIndexes;
+}
+function tryParseJson(json) {
+  try {
+    return JSON.parse(json);
+  } catch (e) {
+    throw new FirestoreError(Code.INVALID_ARGUMENT, "Failed to parse JSON: " + e?.message);
+  }
+}
+function tryGetString(data, property2) {
+  if (typeof data[property2] !== "string") {
+    throw new FirestoreError(Code.INVALID_ARGUMENT, "Missing string value for: " + property2);
+  }
+  return data[property2];
+}
+class PersistentCacheIndexManager {
+  /** @hideconstructor */
+  constructor(_firestore) {
+    this._firestore = _firestore;
+    this.type = "PersistentCacheIndexManager";
+  }
+}
+function getPersistentCacheIndexManager(firestore) {
+  firestore = cast(firestore, Firestore);
+  const cachedInstance = persistentCacheIndexManagerByFirestore.get(firestore);
+  if (cachedInstance) {
+    return cachedInstance;
+  }
+  const client = ensureFirestoreConfigured(firestore);
+  if (client._uninitializedComponentsProvider?._offline.kind !== "persistent") {
+    return null;
+  }
+  const instance = new PersistentCacheIndexManager(firestore);
+  persistentCacheIndexManagerByFirestore.set(firestore, instance);
+  return instance;
+}
+function enablePersistentCacheIndexAutoCreation(indexManager) {
+  setPersistentCacheIndexAutoCreationEnabled(indexManager, true);
+}
+function disablePersistentCacheIndexAutoCreation(indexManager) {
+  setPersistentCacheIndexAutoCreationEnabled(indexManager, false);
+}
+function deleteAllPersistentCacheIndexes(indexManager) {
+  const client = ensureFirestoreConfigured(indexManager._firestore);
+  const promise = firestoreClientDeleteAllFieldIndexes(client);
+  promise.then((_) => logDebug("deleting all persistent cache indexes succeeded")).catch((error) => logWarn("deleting all persistent cache indexes failed", error));
+}
+function setPersistentCacheIndexAutoCreationEnabled(indexManager, isEnabled) {
+  const client = ensureFirestoreConfigured(indexManager._firestore);
+  const promise = firestoreClientSetPersistentCacheIndexAutoCreationEnabled(client, isEnabled);
+  promise.then((_) => logDebug(`setting persistent cache index auto creation isEnabled=${isEnabled} succeeded`)).catch((error) => logWarn(`setting persistent cache index auto creation isEnabled=${isEnabled} failed`, error));
+}
+const persistentCacheIndexManagerByFirestore = /* @__PURE__ */ new WeakMap();
+class TestingHooks {
+  constructor() {
+    throw new Error("instances of this class should not be created");
+  }
+  /**
+   * Registers a callback to be notified when an existence filter mismatch
+   * occurs in the Watch listen stream.
+   *
+   * The relative order in which callbacks are notified is unspecified; do not
+   * rely on any particular ordering. If a given callback is registered multiple
+   * times then it will be notified multiple times, once per registration.
+   *
+   * @param callback - the callback to invoke upon existence filter mismatch.
+   *
+   * @returns a function that, when called, unregisters the given callback; only
+   * the first invocation of the returned function does anything; all subsequent
+   * invocations do nothing.
+   */
+  static onExistenceFilterMismatch(callback) {
+    return TestingHooksSpiImpl.instance.onExistenceFilterMismatch(callback);
+  }
+}
+class TestingHooksSpiImpl {
+  constructor() {
+    this.existenceFilterMismatchCallbacksById = /* @__PURE__ */ new Map();
+  }
+  static get instance() {
+    if (!testingHooksSpiImplInstance) {
+      testingHooksSpiImplInstance = new TestingHooksSpiImpl();
+      setTestingHooksSpi(testingHooksSpiImplInstance);
+    }
+    return testingHooksSpiImplInstance;
+  }
+  notifyOnExistenceFilterMismatch(info) {
+    this.existenceFilterMismatchCallbacksById.forEach((callback) => callback(info));
+  }
+  onExistenceFilterMismatch(callback) {
+    const id = /* @__PURE__ */ Symbol();
+    const callbacks = this.existenceFilterMismatchCallbacksById;
+    callbacks.set(id, callback);
+    return () => callbacks.delete(id);
+  }
+}
+let testingHooksSpiImplInstance = null;
 registerFirestore("node");
 export {
-  addDoc as a,
-  setDoc as b,
+  aggregateQuerySnapshotEqual as $,
+  AbstractUserDataWriter as A,
+  Bytes as B,
+  CACHE_SIZE_UNLIMITED as C,
+  DocumentReference as D,
+  DocumentKey as E,
+  FieldPath as F,
+  GeoPoint as G,
+  EmptyAppCheckTokenProvider as H,
+  EmptyAuthCredentialsProvider as I,
+  FieldPath$1 as J,
+  TestingHooks as K,
+  LoadBundleTask as L,
+  cast as M,
+  debugAssert as N,
+  _internalQueryToProtoQueryTarget as O,
+  PersistentCacheIndexManager as P,
+  Query as Q,
+  isBase64Available as R,
+  SnapshotMetadata as S,
+  Timestamp as T,
+  logWarn as U,
+  VectorValue as V,
+  WriteBatch as W,
+  validateIsNotUsedTogether as X,
+  addDoc as Y,
+  aggregateFieldEqual as Z,
+  _internalAggregationQueryToProtoRunAggregationQueryRequest as _,
+  AggregateField as a,
+  terminate as a$,
+  and as a0,
+  arrayRemove as a1,
+  arrayUnion as a2,
+  average as a3,
+  clearIndexedDbPersistence as a4,
+  collectionGroup as a5,
+  connectFirestoreEmulator as a6,
+  count as a7,
+  deleteAllPersistentCacheIndexes as a8,
+  deleteDoc as a9,
+  limitToLast as aA,
+  loadBundle as aB,
+  maximum as aC,
+  memoryEagerGarbageCollector as aD,
+  memoryLocalCache as aE,
+  memoryLruGarbageCollector as aF,
+  minimum as aG,
+  namedQuery as aH,
+  onSnapshotResume as aI,
+  onSnapshotsInSync as aJ,
+  or as aK,
+  orderBy as aL,
+  persistentLocalCache as aM,
+  persistentMultipleTabManager as aN,
+  persistentSingleTabManager as aO,
+  queryEqual as aP,
+  querySnapshotFromJSON as aQ,
+  refEqual as aR,
+  runTransaction as aS,
+  serverTimestamp as aT,
+  setDoc as aU,
+  setIndexConfiguration as aV,
+  setLogLevel as aW,
+  snapshotEqual as aX,
+  startAfter as aY,
+  startAt as aZ,
+  sum as a_,
+  deleteField as aa,
+  disableNetwork as ab,
+  disablePersistentCacheIndexAutoCreation as ac,
+  documentId as ad,
+  documentSnapshotFromJSON as ae,
+  enableIndexedDbPersistence as af,
+  enableMultiTabIndexedDbPersistence as ag,
+  enableNetwork as ah,
+  enablePersistentCacheIndexAutoCreation as ai,
+  endAt as aj,
+  endBefore as ak,
+  ensureFirestoreConfigured as al,
+  executeWrite as am,
+  getAggregateFromServer as an,
+  getCountFromServer as ao,
+  getDoc as ap,
+  getDocFromCache as aq,
+  getDocFromServer as ar,
+  getDocs as as,
+  getDocsFromCache as at,
+  getDocsFromServer as au,
+  getFirestore as av,
+  getPersistentCacheIndexManager as aw,
+  increment as ax,
+  initializeFirestore as ay,
+  limit as az,
+  AggregateQuerySnapshot as b,
+  vector as b0,
+  waitForPendingWrites as b1,
+  writeBatch as b2,
   collection as c,
   doc as d,
-  getDoc as e,
-  deleteDoc as f,
-  getFirestore as g,
+  CollectionReference as e,
+  DocumentSnapshot as f,
+  FieldValue as g,
+  Firestore as h,
+  FirestoreError as i,
+  QueryCompositeFilterConstraint as j,
+  QueryConstraint as k,
+  QueryDocumentSnapshot as l,
+  QueryEndAtConstraint as m,
+  QueryFieldFilterConstraint as n,
   onSnapshot as o,
+  QueryLimitConstraint as p,
   query as q,
-  serverTimestamp as s,
+  QueryOrderByConstraint as r,
+  QuerySnapshot as s,
+  QueryStartAtConstraint as t,
   updateDoc as u,
-  where as w
+  Transaction2 as v,
+  where as w,
+  AutoId as x,
+  ByteString as y,
+  DatabaseId as z
 };
