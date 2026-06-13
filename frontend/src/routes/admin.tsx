@@ -3,7 +3,7 @@ import {
   LayoutDashboard, Users, User, ShoppingCart, Settings, 
   LogOut, Bell, Search, Activity, DollarSign, Package,
   Briefcase, CheckCircle2, XCircle, Edit, Trash2, MapPin, Gift,
-  Download, Menu, X, FileText, Loader2, Eye, EyeOff
+  Download, Menu, X, FileText, Loader2, Eye, EyeOff, Clock
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { db } from "@/lib/firebase";
@@ -133,6 +133,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   const [dealers, setDealers] = useState<any[]>([]);
   const [bookings, setBookings] = useState<any[]>([]);
   const [customRevenues, setCustomRevenues] = useState<any[]>([]);
+  const [dealerLogins, setDealerLogins] = useState<any[]>([]);
   
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingDealerId, setEditingDealerId] = useState<string | null>(null);
@@ -158,6 +159,8 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
 
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
   const [showCustomerModal, setShowCustomerModal] = useState(false);
+  const [selectedDealer, setSelectedDealer] = useState<any>(null);
+  const [showDealerModal, setShowDealerModal] = useState(false);
 
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
 
@@ -199,12 +202,19 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
        setCustomRevenues(revs);
     });
 
+    const unsubscribeDealerLogins = onSnapshot(collection(db, "dealer_logins"), (snapshot) => {
+       const logins: any[] = [];
+       snapshot.forEach(d => logins.push({ id: d.id, ...d.data() }));
+       setDealerLogins(logins);
+    });
+
     return () => {
       unsubscribeBookings();
       unsubscribeServices();
       unsubscribeOffers();
       unsubscribeDealers();
       unsubscribeRevenue();
+      unsubscribeDealerLogins();
     };
   }, []);
 
@@ -585,24 +595,14 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   };
 
   const handleResetStats = async () => {
-    if (window.confirm("Are you sure you want to reset all financial overview statistics? This will permanently delete all bookings, dealers, and custom revenues from the database.")) {
+    if (window.confirm("Are you sure you want to reset the financial overview statistics? This will permanently delete all custom revenues from the database.")) {
       try {
-        const bookingsSnapshot = await getDocs(collection(db, "bookings"));
-        const bookingsDeletePromises = bookingsSnapshot.docs.map(d => deleteDoc(doc(db, "bookings", d.id)));
-        
-        const dealersSnapshot = await getDocs(collection(db, "dealers"));
-        const dealersDeletePromises = dealersSnapshot.docs.map(d => deleteDoc(doc(db, "dealers", d.id)));
-        
         const customSnapshot = await getDocs(collection(db, "custom_revenues"));
         const customDeletePromises = customSnapshot.docs.map(d => deleteDoc(doc(db, "custom_revenues", d.id)));
         
-        await Promise.all([
-          ...bookingsDeletePromises,
-          ...dealersDeletePromises,
-          ...customDeletePromises
-        ]);
+        await Promise.all(customDeletePromises);
         
-        alert("Database statistics successfully reset to zero!");
+        alert("Financial overview statistics successfully reset!");
       } catch (error) {
         console.error("Failed to reset statistics:", error);
         alert("Failed to reset statistics. Please try again.");
@@ -614,13 +614,13 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   const bookingRevenue = bookings.reduce((acc, b) => acc + (Number(b.numericAmount) || 0), 0);
   const customRevTotal = customRevenues.reduce((acc, c) => acc + (Number(c.amount) || 0), 0);
   
-  const expectedRevenue = dealerRevenue + bookingRevenue + customRevTotal;
+  const expectedRevenue = bookingRevenue + customRevTotal;
   
   const receivedBookingRev = bookings.filter(b => b.paymentStatus === 'Paid').reduce((acc, b) => acc + (Number(b.numericAmount) || 0), 0);
   const receivedCustomRev = customRevenues.filter(c => c.paymentStatus === 'Received').reduce((acc, c) => acc + (Number(c.amount) || 0), 0);
   const receivedDealerRev = dealers.filter(d => d.paymentStatus === 'Verified').reduce((acc, d) => acc + (Number(d.amount) || 4999), 0);
   
-  const receivedRevenue = receivedDealerRev + receivedBookingRev + receivedCustomRev;
+  const receivedRevenue = receivedBookingRev + receivedCustomRev;
   
   const remainingRevenue = expectedRevenue - receivedRevenue;
 
@@ -658,6 +658,18 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
          id: b.id || b.bookingId,
          type: 'booking',
          message: `New Service Request: ${b.customerName} booked ${b.serviceName || b.service}`,
+         timeMs: timeMs
+       };
+    }),
+    ...dealerLogins.map(l => {
+       let timeMs = Date.now();
+       if (l.createdAt?.toMillis) timeMs = l.createdAt.toMillis();
+       else if (l.loginTime?.toMillis) timeMs = l.loginTime.toMillis();
+       
+       return {
+         id: l.id,
+         type: 'login',
+         message: `Partner Login: ${l.dealerName} (${l.dealerId}) logged in from ${l.location || 'Unknown Location'}`,
          timeMs: timeMs
        };
     })
@@ -725,14 +737,6 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
               {isMobileNavOpen ? <X className="h-6 w-6 text-slate-700" /> : <Menu className="h-6 w-6 text-slate-700" />}
             </button>
             <h1 className="text-xl md:text-2xl font-bold text-foreground">{activeTab}</h1>
-            <div className="hidden lg:flex items-center bg-slate-100 rounded-full px-4 py-2 w-96 ml-8">
-              <Search className="h-5 w-5 text-slate-400" />
-              <input 
-                type="text" 
-                placeholder="Search anything..." 
-                className="bg-transparent border-none outline-none ml-2 w-full text-sm text-slate-700"
-              />
-            </div>
           </div>
           
           <div className="flex items-center gap-6">
@@ -768,8 +772,14 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                       <div className="divide-y divide-border">
                         {notifications.map((n, i) => (
                           <div key={`${n.id}-${i}`} className="p-4 hover:bg-slate-50 transition-colors flex gap-3 items-start">
-                            <div className={`mt-0.5 p-2 rounded-full shrink-0 ${n.type === 'dealer' ? 'bg-purple-100 text-purple-600' : 'bg-blue-100 text-blue-600'}`}>
-                              {n.type === 'dealer' ? <Briefcase className="h-4 w-4" /> : <User className="h-4 w-4" />}
+                            <div className={`mt-0.5 p-2 rounded-full shrink-0 ${
+                              n.type === 'dealer' ? 'bg-purple-100 text-purple-600' : 
+                              n.type === 'login' ? 'bg-emerald-100 text-emerald-600' : 
+                              'bg-blue-100 text-blue-600'
+                            }`}>
+                              {n.type === 'dealer' ? <Briefcase className="h-4 w-4" /> : 
+                               n.type === 'login' ? <MapPin className="h-4 w-4" /> : 
+                               <User className="h-4 w-4" />}
                             </div>
                             <div>
                               <p className="text-sm font-medium text-slate-800 leading-snug">{n.message}</p>
@@ -996,6 +1006,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                   <table className="w-full text-left border-collapse min-w-[1000px]">
                     <thead>
                       <tr className="bg-slate-50 border-b border-border">
+                        <th className="py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider">Dealer ID</th>
                         <th className="py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider">Business Info</th>
                         <th className="py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider">Contact</th>
                         <th className="py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider">Plan & Payment</th>
@@ -1005,7 +1016,12 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                     </thead>
                     <tbody className="divide-y divide-border">
                       {dealers.map((dealer, i) => (
-                        <tr key={i} className="hover:bg-slate-50 transition-colors">
+                        <tr key={i} className="hover:bg-slate-50 transition-colors cursor-pointer" onClick={() => { setSelectedDealer(dealer); setShowDealerModal(true); }}>
+                          <td className="py-4 px-6">
+                             <span className="font-mono text-xs font-bold text-slate-700 bg-slate-100 border border-slate-200 px-2.5 py-1.5 rounded-lg select-all">
+                                {dealer.id}
+                             </span>
+                          </td>
                           <td className="py-4 px-6">
                              <div className="font-bold text-slate-800">{dealer.businessName || dealer.name}</div>
                              <div className="text-xs text-brand font-bold bg-brand/10 inline-block px-2 py-0.5 rounded-full mt-1.5">{dealer.category || dealer.expertise || 'CCTV Surveillance'}</div>
@@ -1031,18 +1047,18 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                                {dealer.status || 'Pending'}
                              </span>
                           </td>
-                          <td className="py-4 px-6 text-right space-x-2 whitespace-nowrap">
+                          <td className="py-4 px-6 text-right space-x-2 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                              {dealer.status !== 'Suspended' && (
-                                <button onClick={() => updateStatus(dealer.id, 'Suspended')} className="p-1.5 bg-amber-50 text-amber-600 hover:bg-amber-100 rounded-lg transition-colors" title="Suspend">
+                                <button onClick={(e) => { e.stopPropagation(); updateStatus(dealer.id, 'Suspended'); }} className="p-1.5 bg-amber-50 text-amber-600 hover:bg-amber-100 rounded-lg transition-colors" title="Suspend">
                                    <XCircle className="h-5 w-5" />
                                 </button>
                              )}
                              {dealer.status === 'Suspended' && (
-                                <button onClick={() => updateStatus(dealer.id, 'Active')} className="p-1.5 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 rounded-lg transition-colors" title="Activate">
+                                <button onClick={(e) => { e.stopPropagation(); updateStatus(dealer.id, 'Active'); }} className="p-1.5 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 rounded-lg transition-colors" title="Activate">
                                    <CheckCircle2 className="h-5 w-5" />
                                 </button>
                              )}
-                             <button onClick={() => handleDelete(dealer.id)} className="p-1.5 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg transition-colors" title="Delete">
+                             <button onClick={(e) => { e.stopPropagation(); handleDelete(dealer.id); }} className="p-1.5 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg transition-colors" title="Delete">
                                 <Trash2 className="h-5 w-5" />
                              </button>
                           </td>
@@ -1051,7 +1067,66 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                     </tbody>
                   </table>
                 </div>
-              </div>
+               </div>
+
+               {/* Dealer Login History */}
+               <div className="bg-white rounded-3xl border border-border shadow-sm overflow-hidden mt-8">
+                 <div className="p-6 border-b border-border flex items-center justify-between bg-slate-50">
+                    <div>
+                       <h3 className="text-lg font-bold text-foreground">Dealer Login History</h3>
+                       <p className="text-xs text-slate-500 mt-0.5">Real-time tracker of active dealer sessions and login locations.</p>
+                    </div>
+                 </div>
+                 <div className="overflow-x-auto">
+                   <table className="w-full text-left border-collapse min-w-[600px]">
+                     <thead>
+                       <tr className="bg-slate-50 border-b border-border">
+                         <th className="py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider">Dealer ID</th>
+                         <th className="py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider">Dealer Name</th>
+                         <th className="py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider">Login Time</th>
+                         <th className="py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider">Login Location</th>
+                       </tr>
+                     </thead>
+                     <tbody className="divide-y divide-border">
+                       {dealerLogins.length === 0 ? (
+                         <tr>
+                           <td colSpan={4} className="py-8 text-center text-slate-500 font-medium">No dealer login logs found.</td>
+                         </tr>
+                       ) : (
+                         [...dealerLogins]
+                           .sort((a, b) => {
+                             const aTime = a.createdAt?.toMillis ? a.createdAt.toMillis() : (a.loginTime?.toMillis ? a.loginTime.toMillis() : 0);
+                             const bTime = b.createdAt?.toMillis ? b.createdAt.toMillis() : (b.loginTime?.toMillis ? b.loginTime.toMillis() : 0);
+                             return bTime - aTime;
+                           })
+                           .map((log, i) => (
+                             <tr key={i} className="hover:bg-slate-50 transition-colors">
+                               <td className="py-4 px-6">
+                                 <span className="font-mono text-xs font-bold text-slate-700 bg-slate-100 border border-slate-200 px-2.5 py-1.5 rounded-lg select-all">
+                                   {log.dealerId}
+                                 </span>
+                               </td>
+                               <td className="py-4 px-6 font-bold text-slate-800">{log.dealerName}</td>
+                               <td className="py-4 px-6 text-sm text-slate-600">
+                                 {log.createdAt?.toMillis 
+                                   ? new Date(log.createdAt.toMillis()).toLocaleString() 
+                                   : log.loginTime?.toMillis 
+                                     ? new Date(log.loginTime.toMillis()).toLocaleString() 
+                                     : "N/A"}
+                               </td>
+                               <td className="py-4 px-6 text-sm text-slate-600">
+                                 <span className="inline-flex items-center gap-1">
+                                   <MapPin className="h-4 w-4 text-brand shrink-0" />
+                                   {log.location || "Unknown Location"}
+                                 </span>
+                               </td>
+                             </tr>
+                           ))
+                       )}
+                     </tbody>
+                   </table>
+                 </div>
+               </div>
             </div>
           ) : activeTab === "Customers" ? (
             <div className="max-w-7xl mx-auto space-y-6">
@@ -1357,6 +1432,58 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                        </div>
                      </div>
                    )}
+                   
+                   {/* Work Milestone Steps Progress */}
+                   <div className="col-span-1 sm:col-span-2 border-t border-slate-100 pt-4 mt-2">
+                     <p className="text-xs text-slate-500 font-bold uppercase mb-4">Work Steps Completion</p>
+                     {selectedCustomer.workSteps && Array.isArray(selectedCustomer.workSteps) ? (
+                       <div className="space-y-0 pl-2">
+                         {selectedCustomer.workSteps.map((step: any, idx: number) => {
+                           const isCompleted = step.completed;
+                           const isLast = idx === selectedCustomer.workSteps.length - 1;
+                           const isLineActive = isCompleted;
+                           return (
+                             <div key={step.id || idx} className="relative flex gap-4 items-start pb-4">
+                               {/* Left Timeline Column */}
+                               <div className="flex flex-col items-center shrink-0 relative">
+                                 <div className={`w-6 h-6 rounded-full flex items-center justify-center border-2 transition-all z-10 ${
+                                   isCompleted 
+                                     ? "bg-emerald-500 border-emerald-500 text-white shadow-[0_0_8px_rgba(16,185,129,0.3)]" 
+                                     : "bg-white border-slate-300 text-slate-400 font-extrabold text-[10px]"
+                                 }`}>
+                                   {isCompleted ? (
+                                     <CheckCircle2 className="h-3.5 w-3.5" />
+                                   ) : (
+                                     <span>{idx + 1}</span>
+                                   )}
+                                 </div>
+                                 {!isLast && (
+                                   <div className={`w-0.5 absolute top-6 bottom-0 left-3 -translate-x-1/2 transition-colors ${
+                                     isLineActive ? "bg-emerald-500" : "bg-slate-200"
+                                   }`} />
+                                 )}
+                               </div>
+                               {/* Right Details Column */}
+                               <div className="pt-0.5">
+                                 <span className={`text-xs font-bold block ${
+                                   isCompleted ? "text-slate-800" : "text-slate-500"
+                                 }`}>
+                                   {step.name}
+                                 </span>
+                                 <span className={`text-[9px] font-bold uppercase tracking-wider block mt-0.5 ${
+                                   isCompleted ? "text-emerald-600" : "text-slate-400"
+                                 }`}>
+                                   {isCompleted ? "Completed" : "Pending"}
+                                 </span>
+                               </div>
+                             </div>
+                           );
+                         })}
+                       </div>
+                     ) : (
+                       <p className="text-xs text-slate-400 italic">Work steps have not been initialized by the partner yet.</p>
+                     )}
+                   </div>
                  </div>
                </div>
                <div className="p-4 border-t border-border bg-slate-50 text-right">
@@ -1367,6 +1494,176 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
             </div>
           </div>
         )}
+
+         {/* Dealer Details & Tracking Modal */}
+         {showDealerModal && selectedDealer && (
+           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+             <div className="bg-white rounded-[2rem] w-full max-w-2xl shadow-xl overflow-hidden max-h-[90vh] flex flex-col">
+                <div className="p-6 border-b border-border flex justify-between items-center bg-slate-50 shrink-0">
+                   <div>
+                      <h3 className="font-bold text-xl text-slate-800">
+                         Partner Activity & Tracking
+                      </h3>
+                      <p className="text-xs text-slate-500 mt-0.5">{selectedDealer.businessName || selectedDealer.name} ({selectedDealer.id})</p>
+                   </div>
+                   <button onClick={() => setShowDealerModal(false)} className="text-slate-400 hover:text-red-500 transition-colors">
+                      <XCircle className="h-6 w-6" />
+                   </button>
+                </div>
+                
+                <div className="p-6 space-y-6 overflow-y-auto flex-1 custom-scrollbar">
+                   {/* Part 1: Work Progress Tracking */}
+                   <div>
+                      <h4 className="text-sm font-bold text-slate-800 uppercase tracking-wider mb-3 flex items-center gap-1.5 border-b border-slate-100 pb-2">
+                         <Activity className="h-4 w-4 text-brand" /> Work Progress & Assignments
+                      </h4>
+                      {(() => {
+                         const dealerBookings = bookings.filter(b => b.dealerId === selectedDealer.id);
+                         if (dealerBookings.length === 0) {
+                            return <p className="text-sm text-slate-500 italic bg-slate-50 p-4 rounded-2xl border border-dashed border-slate-200">No active customer assignments found for this partner.</p>;
+                         }
+                         return (
+                            <div className="space-y-4">
+                               {dealerBookings.map((b) => {
+                                  const defaultSteps = [
+                                     { id: "step1", name: "Site Survey & Consultation", completed: false },
+                                     { id: "step2", name: "Material Procurement", completed: false },
+                                     { id: "step3", name: "Installation & Execution", completed: false },
+                                     { id: "step4", name: "Quality Check & Handover", completed: false }
+                                  ];
+                                  const steps = b.workSteps || defaultSteps;
+                                  const completedSteps = steps.filter((s: any) => s.completed).length;
+                                  const pct = Math.round((completedSteps / 4) * 100);
+                                  
+                                  return (
+                                     <div key={b.id} className="bg-slate-50 p-4 rounded-2xl border border-slate-100 space-y-3">
+                                        <div className="flex justify-between items-start flex-wrap gap-2">
+                                           <div>
+                                              <span className="bg-slate-200 text-slate-700 text-[10px] font-bold px-2 py-0.5 rounded-full select-all font-mono">
+                                                 {b.bookingId || b.id}
+                                              </span>
+                                              <h5 className="font-bold text-slate-800 text-sm mt-1">{b.customerName}</h5>
+                                              <p className="text-xs text-brand font-bold">{b.service}</p>
+                                           </div>
+                                           <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold border ${
+                                              b.status === 'Completed' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
+                                              b.status === 'In Progress' ? 'bg-brand/10 text-brand' :
+                                              'bg-amber-50 text-amber-700 border-amber-100'
+                                           }`}>
+                                              {b.status}
+                                           </span>
+                                        </div>
+                                        
+                                        <div className="text-xs text-slate-500 flex items-center gap-1">
+                                           <MapPin className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                                           <span>{b.customerAddress || b.city}</span>
+                                        </div>
+
+                                        {/* Progress Bar */}
+                                        <div className="space-y-1">
+                                           <div className="flex justify-between text-xs font-bold text-slate-600">
+                                              <span>Work Milestones</span>
+                                              <span>{pct}% ({completedSteps}/4 completed)</span>
+                                           </div>
+                                           <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+                                              <div className="bg-brand h-full transition-all duration-500" style={{ width: `${pct}%` }}></div>
+                                           </div>
+                                                         {/* Step details (Flipkart Style Tracker) */}
+                                         <div className="space-y-0 pl-1 pt-2">
+                                            {steps.map((s: any, idx: number) => {
+                                               const isCompleted = s.completed;
+                                               const isLast = idx === steps.length - 1;
+                                               const isLineActive = isCompleted;
+                                               return (
+                                                  <div key={s.id || idx} className="relative flex gap-3 items-start pb-3">
+                                                     {/* Left Timeline Column */}
+                                                     <div className="flex flex-col items-center shrink-0 relative">
+                                                        <div className={`w-5 h-5 rounded-full flex items-center justify-center border-2 transition-all z-10 ${
+                                                           isCompleted 
+                                                             ? "bg-emerald-500 border-emerald-500 text-white shadow-[0_0_6px_rgba(16,185,129,0.3)]" 
+                                                             : "bg-white border-slate-300 text-slate-400 font-extrabold text-[10px]"
+                                                        }`}>
+                                                           {isCompleted ? (
+                                                              <CheckCircle2 className="h-3 w-3" />
+                                                           ) : (
+                                                              <span>{idx + 1}</span>
+                                                           )}
+                                                        </div>
+                                                        {!isLast && (
+                                                           <div className={`w-0.5 absolute top-5 bottom-0 left-2.5 -translate-x-1/2 transition-colors ${
+                                                              isLineActive ? "bg-emerald-500" : "bg-slate-200"
+                                                           }`} />
+                                                        )}
+                                                     </div>
+                                                     {/* Right Details Column */}
+                                                     <div className="pt-0.5">
+                                                        <span className={`text-xs font-bold block ${
+                                                           isCompleted ? "text-slate-700" : "text-slate-400 font-semibold"
+                                                        }`}>
+                                                           {s.name}
+                                                        </span>
+                                                     </div>
+                                                  </div>
+                                               );
+                                            })}
+                                         </div>
+                                        </div>
+                                     </div>
+                                  );
+                               })}
+                            </div>
+                         );
+                      })()}
+                   </div>
+
+                   {/* Part 2: Login History & Locations */}
+                   <div>
+                      <h4 className="text-sm font-bold text-slate-800 uppercase tracking-wider mb-3 flex items-center gap-1.5 border-b border-slate-100 pb-2">
+                         <Clock className="h-4 w-4 text-brand" /> Login History & Geolocation
+                      </h4>
+                      {(() => {
+                         const dealerLogs = dealerLogins.filter(l => l.dealerId === selectedDealer.id);
+                         if (dealerLogs.length === 0) {
+                            return <p className="text-sm text-slate-500 italic bg-slate-50 p-4 rounded-2xl border border-dashed border-slate-200">No login logs recorded for this partner.</p>;
+                         }
+                         return (
+                            <div className="bg-slate-50 rounded-2xl border border-slate-100 overflow-hidden divide-y divide-slate-200">
+                               {[...dealerLogs]
+                                  .sort((a, b) => {
+                                     const aTime = a.createdAt?.toMillis ? a.createdAt.toMillis() : (a.loginTime?.toMillis ? a.loginTime.toMillis() : 0);
+                                     const bTime = b.createdAt?.toMillis ? b.createdAt.toMillis() : (b.loginTime?.toMillis ? b.loginTime.toMillis() : 0);
+                                     return bTime - aTime;
+                                  })
+                                  .map((log, i) => (
+                                     <div key={i} className="p-3 flex justify-between items-center text-xs text-slate-600 hover:bg-slate-100 transition-colors">
+                                        <div className="flex items-center gap-2">
+                                           <MapPin className="h-3.5 w-3.5 text-brand shrink-0" />
+                                           <span className="font-medium">{log.location || "Unknown Location"}</span>
+                                        </div>
+                                        <span className="text-slate-500 font-mono">
+                                           {log.createdAt?.toMillis 
+                                              ? new Date(log.createdAt.toMillis()).toLocaleString() 
+                                              : log.loginTime?.toMillis 
+                                                 ? new Date(log.loginTime.toMillis()).toLocaleString() 
+                                                 : "N/A"}
+                                        </span>
+                                     </div>
+                                  ))
+                               }
+                            </div>
+                         );
+                      })()}
+                   </div>
+                </div>
+
+                <div className="p-4 border-t border-border bg-slate-50 text-right shrink-0">
+                   <button onClick={() => setShowDealerModal(false)} className="bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold py-2 px-6 rounded-xl transition-colors">
+                      Close Tracker
+                   </button>
+                </div>
+             </div>
+           </div>
+         )}
 
         {/* Add/Edit Dealer Modal */}
         {showAddModal && (

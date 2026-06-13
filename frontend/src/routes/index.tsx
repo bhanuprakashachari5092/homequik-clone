@@ -8,6 +8,8 @@ import PartnerMarquee from "@/components/PartnerMarquee";
 import { useState, useEffect, useRef } from "react";
 import { db } from "@/lib/firebase";
 import { collection, onSnapshot } from "firebase/firestore";
+import { SafeImage } from "@/hooks/useLocalSafeImage";
+
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -179,9 +181,7 @@ function Home() {
               <Link to="/quote" className="bg-brand hover:bg-brand-hover text-white font-bold py-3 px-6 rounded-full shadow-md transition-all hover:-translate-y-1 block">
                 Get Free Quote
               </Link>
-              <Link to="/dealer" className="bg-white border-2 border-slate-200 text-slate-800 hover:border-brand hover:text-brand font-bold py-3 px-6 rounded-full shadow-sm transition-all hover:-translate-y-1 block">
-                Find Nearest Dealer
-              </Link>
+
               <Link to="/book" className="bg-slate-800 hover:bg-slate-700 text-white font-bold py-3 px-6 rounded-full shadow-md transition-all hover:-translate-y-1 block">
                 Book Service
               </Link>
@@ -253,7 +253,7 @@ function Home() {
                      <motion.div key={service.id} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="bg-white rounded-3xl border border-border shadow-sm overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col">
                         {service.imageUrl ? (
                            <div className="h-56 w-full overflow-hidden relative group">
-                              <img 
+                              <SafeImage 
                                 src={service.imageUrl} 
                                 alt={service.title} 
                                 className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"

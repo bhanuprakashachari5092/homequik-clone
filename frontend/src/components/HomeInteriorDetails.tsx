@@ -3,7 +3,8 @@ import { BookingModal } from "@/components/BookingModal";
 import { Link } from "@tanstack/react-router";
 import { 
   ArrowLeft, ShieldCheck, 
-  Phone, Sparkles, BoxSelect, AlertCircle, Info
+  Phone, Sparkles, BoxSelect, AlertCircle, Info,
+  LayoutTemplate, Paintbrush, Home
 } from "lucide-react";
 import { DynamicPrice } from "@/components/DynamicPrice";
 
@@ -345,6 +346,7 @@ export function HomeInteriorDetails() {
         onClose={() => setIsModalOpen(false)} 
         serviceName={activeService} 
         selectedItems={selectedItems} 
+        onSuccess={() => setSelectedItems([])}
       />
 </div>
   );

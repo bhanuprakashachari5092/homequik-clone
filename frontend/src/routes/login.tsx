@@ -257,6 +257,12 @@ function Login() {
               </motion.button>
             </form>
 
+            <div className="mt-6 text-center">
+              <Link to="/dealer-portal" className="text-sm font-bold text-brand hover:underline">
+                Are you a Service Partner? Login here →
+              </Link>
+            </div>
+
             <p className="mt-8 text-center text-xs font-medium text-muted-foreground">
               By continuing you agree to our{" "}
               <Link to="/" className="text-foreground font-bold hover:underline">Terms</Link> &{" "}

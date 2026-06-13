@@ -688,6 +688,7 @@ export function CCTVSurveillanceDetails() {
         onClose={() => setIsModalOpen(false)} 
         serviceName="CCTV & Surveillance" 
         selectedItems={modalItems} 
+        onSuccess={() => setSelectedItems([])}
       />
     </div>
   );

@@ -4,7 +4,8 @@ import {
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { db } from "@/lib/firebase";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { useLocation } from "@/context/LocationContext";
 
 export const Route = createFileRoute("/dealer-portal")({
   head: () => ({
@@ -21,6 +22,13 @@ function DealerPortal() {
   const [phone, setPhone] = useState("");
   const [error, setError] = useState("");
   const [currentDealer, setCurrentDealer] = useState<any>(null);
+  const { location, fetchDynamicLocation } = useLocation();
+
+  useEffect(() => {
+    if (fetchDynamicLocation) {
+      fetchDynamicLocation(true);
+    }
+  }, [fetchDynamicLocation]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,13 +42,29 @@ function DealerPortal() {
       if (docSnap.exists()) {
         const dealerData = docSnap.data();
         
-        // Verify phone number acts as password in this flow
-        if (dealerData.phone === phone) {
+        // Verify phone number (acts as password) - ignore formatting by matching the last 10 digits
+        const cleanDbPhone = (dealerData.phone || "").replace(/\D/g, "");
+        const cleanInputPhone = (phone || "").replace(/\D/g, "");
+        
+        if (cleanDbPhone.slice(-10) === cleanInputPhone.slice(-10) && cleanInputPhone.length >= 10) {
           if (dealerData.status !== "Active") {
             setError("Your account is currently " + dealerData.status + ". Please contact admin.");
             return;
           }
           
+          // Log login details to Firestore
+          try {
+            await addDoc(collection(db, "dealer_logins"), {
+              dealerId: dealerId,
+              dealerName: dealerData.businessName || dealerData.ownerName || "Dealer",
+              location: location || "Unknown Location",
+              loginTime: serverTimestamp(),
+              createdAt: serverTimestamp()
+            });
+          } catch (logErr) {
+            console.error("Failed to log dealer login event:", logErr);
+          }
+
           setCurrentDealer({
             id: dealerId,
             name: dealerData.businessName,
@@ -148,6 +172,38 @@ function DealerDashboard({ currentDealer, onLogout }: { currentDealer: any, onLo
       await updateDoc(doc(db, "bookings", bookingId), { status: newStatus });
     } catch (err) {
       console.error("Failed to update status:", err);
+    }
+  };
+
+  const toggleWorkStep = async (bookingId: string, currentSteps: any[], stepIdx: number) => {
+    const updatedSteps = currentSteps.map((step, idx) => 
+       idx === stepIdx ? { ...step, completed: !step.completed } : step
+    );
+    
+    // Determine overall status automatically based on steps
+    const allDone = updatedSteps.every(s => s.completed);
+    const someDone = updatedSteps.some(s => s.completed);
+    
+    const targetBooking = bookings.find(b => b.id === bookingId);
+    let newStatus = targetBooking?.status || "Pending";
+    if (allDone) {
+       newStatus = "Completed";
+    } else if (someDone && targetBooking?.status === "Pending") {
+       newStatus = "In Progress";
+    }
+
+    // Optimistic UI update locally
+    setBookings(bookings.map(b => b.id === bookingId ? { ...b, workSteps: updatedSteps, status: newStatus } : b));
+    
+    // Update Firebase
+    try {
+      const { doc, updateDoc } = await import("firebase/firestore");
+      await updateDoc(doc(db, "bookings", bookingId), { 
+         workSteps: updatedSteps,
+         status: newStatus
+      });
+    } catch (err) {
+      console.error("Failed to update work steps:", err);
     }
   };
 
@@ -262,6 +318,71 @@ function DealerDashboard({ currentDealer, onLogout }: { currentDealer: any, onLo
                               <div className="flex items-center gap-1.5 bg-slate-100 px-3 py-1.5 rounded-lg">
                                  <MapPin className="h-4 w-4 text-slate-400 shrink-0" />
                                  <span className="truncate max-w-[200px] sm:max-w-xs">{booking.customerAddress || booking.city}</span>
+                              </div>
+                           </div>
+
+                           {/* Work Milestone Steps Progress */}
+                           <div className="mt-4 pt-4 border-t border-slate-100">
+                              <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Work Milestone Steps</p>
+                              <div className="space-y-0 pl-1 mt-4">
+                                 {(() => {
+                                    const defaultSteps = [
+                                       { id: "step1", name: "Site Survey & Consultation", completed: false },
+                                       { id: "step2", name: "Material Procurement", completed: false },
+                                       { id: "step3", name: "Installation & Execution", completed: false },
+                                       { id: "step4", name: "Quality Check & Handover", completed: false }
+                                    ];
+                                    const steps = booking.workSteps || defaultSteps;
+                                    return steps.map((step: any, idx: number) => {
+                                       const isCompleted = step.completed;
+                                       const isLast = idx === steps.length - 1;
+                                       const isLineActive = isCompleted;
+                                       return (
+                                          <button
+                                             key={step.id}
+                                             onClick={() => toggleWorkStep(booking.id, steps, idx)}
+                                             className="relative flex gap-4 items-start text-left w-full group p-2.5 rounded-2xl hover:bg-slate-100/60 transition-all focus:outline-none"
+                                          >
+                                             {/* Left Column (Dot & Line) */}
+                                             <div className="flex flex-col items-center shrink-0 relative">
+                                                {/* Dot */}
+                                                <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 transition-all z-10 ${
+                                                   isCompleted 
+                                                      ? "bg-emerald-500 border-emerald-500 text-white shadow-[0_0_12px_rgba(16,185,129,0.35)] group-hover:scale-105" 
+                                                      : "bg-white border-slate-300 text-slate-400 font-extrabold text-sm group-hover:border-brand group-hover:text-brand group-hover:scale-105"
+                                                }`}>
+                                                   {isCompleted ? (
+                                                      <CheckCircle2 className="h-4 w-4" />
+                                                   ) : (
+                                                      <span>{idx + 1}</span>
+                                                   )}
+                                                </div>
+                                                
+                                                {/* Line segment */}
+                                                {!isLast && (
+                                                   <div className={`w-0.5 absolute top-8 bottom-[-10px] left-4 -translate-x-1/2 transition-colors ${
+                                                      isLineActive ? "bg-emerald-500" : "bg-slate-200"
+                                                   }`} />
+                                                )}
+                                             </div>
+                                             
+                                             {/* Right Column */}
+                                             <div className="pt-1 flex-grow">
+                                                <span className={`text-sm font-bold block transition-colors ${
+                                                   isCompleted ? "text-slate-800" : "text-slate-500 group-hover:text-slate-700"
+                                                }`}>
+                                                   {step.name}
+                                                </span>
+                                                <span className={`text-[10px] font-bold uppercase tracking-wider block mt-0.5 transition-colors ${
+                                                   isCompleted ? "text-emerald-600" : "text-slate-400 group-hover:text-brand"
+                                                }`}>
+                                                   {isCompleted ? "Completed (Click to undo)" : "Pending (Click to complete)"}
+                                                </span>
+                                             </div>
+                                          </button>
+                                       );
+                                    });
+                                 })()}
                               </div>
                            </div>
                         </div>

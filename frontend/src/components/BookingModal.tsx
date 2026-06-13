@@ -8,18 +8,23 @@ import { useAuth } from "@/context/AuthContext";
 import { useNavigate } from "@tanstack/react-router";
 import { Loader } from "@/components/Loader";
 import { useOffers } from "@/context/OfferContext";
+import { useLocation } from "@/context/LocationContext";
+import { NearestDealers } from "@/components/NearestDealers";
+
 
 interface BookingModalProps {
   isOpen: boolean;
   onClose: () => void;
   serviceName: string;
   selectedItems?: string[];
+  onSuccess?: () => void;
 }
 
-export function BookingModal({ isOpen, onClose, serviceName, selectedItems = [] }: BookingModalProps) {
+export function BookingModal({ isOpen, onClose, serviceName, selectedItems = [], onSuccess }: BookingModalProps) {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { getApplicableOffer } = useOffers();
+  const { location: userLocation } = useLocation();
   const [step, setStep] = useState<"form" | "submitting" | "success">("form");
   const [bookingId, setBookingId] = useState("");
   const [whatsappLink, setWhatsappLink] = useState("");
@@ -187,6 +192,9 @@ export function BookingModal({ isOpen, onClose, serviceName, selectedItems = [] 
   };
 
   const resetAndClose = () => {
+    if (step === "success" && onSuccess) {
+      onSuccess();
+    }
     setStep("form");
     const today = new Date();
     setFormData({ 
@@ -207,10 +215,10 @@ export function BookingModal({ isOpen, onClose, serviceName, selectedItems = [] 
           initial={{ opacity: 0, scale: 0.9, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.9, y: 20 }}
-          className="bg-white rounded-[2rem] shadow-premium w-full max-w-lg overflow-hidden relative"
+          className="bg-white rounded-[2rem] shadow-premium w-full max-w-lg max-h-[85vh] flex flex-col overflow-hidden relative"
         >
           {/* Header */}
-          <div className="bg-gradient-premium p-6 text-white relative">
+          <div className="bg-gradient-premium p-6 text-white relative shrink-0">
             <button 
               onClick={resetAndClose}
               className="absolute top-4 right-4 h-8 w-8 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center transition-colors"
@@ -221,7 +229,7 @@ export function BookingModal({ isOpen, onClose, serviceName, selectedItems = [] 
             <p className="text-white/80 text-sm mt-1">{serviceName}</p>
           </div>
 
-          <div className="p-6">
+          <div className="p-6 overflow-y-auto custom-scrollbar flex-1">
             {step === "form" && (
               <motion.form 
                 initial={{ opacity: 0 }} animate={{ opacity: 1 }}
@@ -378,6 +386,10 @@ export function BookingModal({ isOpen, onClose, serviceName, selectedItems = [] 
                     <span className="font-bold text-emerald-600 text-base">₹{getPriceDetails().finalAmount.toLocaleString('en-IN')}</span>
                   </div>
                 </motion.div>
+
+                <div className="w-full max-h-[260px] overflow-y-auto pr-1.5 mb-6 border-b border-slate-100 pb-2 custom-scrollbar">
+                  <NearestDealers targetCity={userLocation} address={formData.address} />
+                </div>
 
                 <motion.button 
                   whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.95 }}

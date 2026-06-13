@@ -4,6 +4,11 @@ import { ShoppingBag, Trash2, Loader2, CheckCircle2, ArrowRight } from "lucide-r
 import { motion, AnimatePresence } from "framer-motion";
 import { useCart } from "@/context/CartContext";
 import { useAuth } from "@/context/AuthContext";
+import { SafeImage } from "@/hooks/useLocalSafeImage";
+import { useLocation } from "@/context/LocationContext";
+import { NearestDealers } from "@/components/NearestDealers";
+
+
 import { toast } from "sonner";
 import { db } from "@/lib/firebase";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
@@ -19,6 +24,7 @@ export const Route = createFileRoute("/cart")({
 function CartPage() {
   const { items, removeFromCart, checkout, isCheckingOut, totalItems } = useCart();
   const { user } = useAuth();
+  const { location } = useLocation();
   const router = useRouter();
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [address, setAddress] = useState("");
@@ -121,7 +127,7 @@ function CartPage() {
                   >
                     {item.image && (
                       <div className="h-28 w-28 bg-muted rounded-2xl overflow-hidden shrink-0 shadow-inner">
-                        <img src={item.image} alt={item.title} className="h-full w-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                        <SafeImage src={item.image} alt={item.title} className="h-full w-full object-cover group-hover:scale-110 transition-transform duration-500" />
                       </div>
                     )}
                     <div className="flex-1">
@@ -218,6 +224,11 @@ function CartPage() {
               <p className="text-muted-foreground mb-8 text-lg leading-relaxed">
                 Thank you for your booking. We have sent a confirmation message to your WhatsApp and our AI representative will call you shortly!
               </p>
+              
+              <div className="max-h-[260px] overflow-y-auto pr-1.5 mb-8 border-b border-slate-100 pb-2 custom-scrollbar text-left">
+                <NearestDealers targetCity={location} address={address} />
+              </div>
+
               <button
                 onClick={closeSuccessModal}
                 className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold py-4 rounded-2xl transition-all shadow-lg hover:shadow-xl"

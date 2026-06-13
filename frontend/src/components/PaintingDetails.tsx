@@ -407,6 +407,7 @@ export function PaintingDetails() {
         onClose={() => setIsModalOpen(false)} 
         serviceName={activeService} 
         selectedItems={selectedItems} 
+        onSuccess={() => setSelectedItems([])}
       />
 </div>
   );

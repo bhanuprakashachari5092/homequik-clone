@@ -10,6 +10,7 @@ import { useLocation } from "@/context/LocationContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { db } from "@/lib/firebase";
 import { doc, setDoc } from "firebase/firestore";
+import { sendWelcomeEmailFn } from "@/lib/email.server";
 
 export const Route = createFileRoute("/partner")({
   head: () => ({
@@ -53,7 +54,7 @@ const PLANS = [
   {
     id: "premium",
     name: "Premium Plan",
-    price: 15000,
+    price: 1,
     description: "Exclusive district-wise leads for maximum impact.",
     features: [
       "150 Exclusive Leads",
@@ -235,6 +236,21 @@ function PartnerPage() {
         }
       } catch(e) {
         console.error("Failed to send welcome email webhook", e);
+      }
+
+      // Send actual welcome email via nodemailer SMTP server function
+      try {
+        await sendWelcomeEmailFn({
+          data: {
+            email: formData.email,
+            dealerId: newDealerId,
+            planName: selectedPlan.name,
+            ownerName: formData.ownerName
+          }
+        });
+        console.log("Sent welcome email successfully via SMTP server function");
+      } catch (emailErr) {
+        console.error("Failed to send welcome email via SMTP server function:", emailErr);
       }
 
       setTransactionDetails({

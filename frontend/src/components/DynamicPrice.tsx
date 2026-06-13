@@ -48,7 +48,7 @@ export function DynamicPrice({ originalPrice, category, className = "", discount
 
   return (
     <div className={`flex flex-col sm:flex-row sm:items-center gap-1.5 ${className}`}>
-      <strike className="text-slate-400 text-sm font-medium">{originalPrice}</strike>
+      <span className="line-through text-slate-400 text-sm font-medium">{originalPrice}</span>
       <span className={discountClassName}>{discountedStr}</span>
     </div>
   );

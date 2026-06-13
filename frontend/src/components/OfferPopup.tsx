@@ -3,6 +3,8 @@ import { db } from "@/lib/firebase";
 import { collection, onSnapshot, query, where, orderBy } from "firebase/firestore";
 import { X, Gift, Copy, CheckCircle2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { SafeImage } from "@/hooks/useLocalSafeImage";
+
 
 export function OfferPopup() {
   const [activeOffer, setActiveOffer] = useState<any | null>(null);
@@ -104,7 +106,7 @@ export function OfferPopup() {
           >
             {activeOffer.imageUrl ? (
                <div className={`w-full relative ${activeOffer.imageSize ? activeOffer.imageSize.split(' ')[0] : 'h-48'}`}>
-                  <img src={activeOffer.imageUrl} alt={activeOffer.title} className={`w-full h-full ${activeOffer.imageSize ? activeOffer.imageSize.split(' ').slice(1).join(' ') : 'object-cover'}`} />
+                  <SafeImage src={activeOffer.imageUrl} alt={activeOffer.title} className={`w-full h-full ${activeOffer.imageSize ? activeOffer.imageSize.split(' ').slice(1).join(' ') : 'object-cover'}`} />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                </div>
             ) : (
