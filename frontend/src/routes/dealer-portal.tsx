@@ -6,6 +6,8 @@ import { useState, useEffect } from "react";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { useLocation } from "@/context/LocationContext";
+import { motion } from "framer-motion";
+import { Loader } from "@/components/Loader";
 
 export const Route = createFileRoute("/dealer-portal")({
   head: () => ({
@@ -22,6 +24,8 @@ function DealerPortal() {
   const [phone, setPhone] = useState("");
   const [error, setError] = useState("");
   const [currentDealer, setCurrentDealer] = useState<any>(null);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [loginStep, setLoginStep] = useState<"verifying" | "success" | "none">("none");
   const { location, fetchDynamicLocation } = useLocation();
 
   useEffect(() => {
@@ -33,6 +37,8 @@ function DealerPortal() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setIsLoggingIn(true);
+    setLoginStep("verifying");
     
     try {
       // Fetch dealer from Firebase Firestore
@@ -49,6 +55,8 @@ function DealerPortal() {
         if (cleanDbPhone.slice(-10) === cleanInputPhone.slice(-10) && cleanInputPhone.length >= 10) {
           if (dealerData.status !== "Active") {
             setError("Your account is currently " + dealerData.status + ". Please contact admin.");
+            setIsLoggingIn(false);
+            setLoginStep("none");
             return;
           }
           
@@ -65,25 +73,84 @@ function DealerPortal() {
             console.error("Failed to log dealer login event:", logErr);
           }
 
-          setCurrentDealer({
-            id: dealerId,
-            name: dealerData.businessName,
-            contact: dealerData.ownerName,
-            status: dealerData.status,
-            ...dealerData
-          });
-          setIsAuthenticated(true);
+          setLoginStep("success");
+          setTimeout(() => {
+            setCurrentDealer({
+              id: dealerId,
+              name: dealerData.businessName,
+              contact: dealerData.ownerName,
+              status: dealerData.status,
+              ...dealerData
+            });
+            setIsAuthenticated(true);
+            setIsLoggingIn(false);
+            setLoginStep("none");
+          }, 2000);
         } else {
           setError("Invalid Dealer ID or Phone Number");
+          setIsLoggingIn(false);
+          setLoginStep("none");
         }
       } else {
         setError("Invalid Dealer ID or Phone Number");
+        setIsLoggingIn(false);
+        setLoginStep("none");
       }
     } catch (err: any) {
       console.error(err);
       setError("Failed to connect to authentication server. Please check your Firestore rules.");
+      setIsLoggingIn(false);
+      setLoginStep("none");
     }
   };
+
+  if (isLoggingIn) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center font-sans p-4 relative overflow-hidden">
+        {/* Background Decorations */}
+        <div className="absolute top-[-10%] left-[-10%] w-96 h-96 bg-brand/10 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-[-10%] right-[-10%] w-96 h-96 bg-blue-500/10 rounded-full blur-3xl"></div>
+
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="bg-white p-10 rounded-[2.5rem] shadow-2xl border border-white/50 w-full max-w-md text-center relative z-10 backdrop-blur-sm bg-white/80"
+        >
+          {loginStep === "verifying" && (
+            <div className="flex flex-col items-center py-8 space-y-6">
+              <div className="w-32 h-32 relative flex items-center justify-center">
+                <Loader size="md" text="" />
+                {/* Glowing ring overlay */}
+                <div className="absolute inset-0 rounded-full border-2 border-brand/20 animate-ping" />
+              </div>
+              <div className="space-y-2">
+                <h3 className="text-xl font-bold text-slate-800">Verifying Partner Profile</h3>
+                <p className="text-sm text-slate-500 font-medium animate-pulse">Connecting to secure authentication node...</p>
+              </div>
+            </div>
+          )}
+
+          {loginStep === "success" && (
+            <div className="flex flex-col items-center py-8 space-y-6">
+              <motion.div 
+                initial={{ scale: 0 }}
+                animate={{ scale: 1, rotate: 360 }}
+                transition={{ type: "spring", stiffness: 260, damping: 20 }}
+                className="w-20 h-20 bg-emerald-500 rounded-2xl flex items-center justify-center shadow-xl shadow-emerald-500/30"
+              >
+                <CheckCircle2 className="h-10 w-10 text-white" />
+              </motion.div>
+              <div className="space-y-2">
+                <h3 className="text-2xl font-black text-slate-800 tracking-tight">Access Granted</h3>
+                <p className="text-sm text-emerald-600 font-semibold uppercase tracking-wider">Establishing Secure Session...</p>
+                <p className="text-xs text-slate-400 font-medium animate-pulse">Syncing active customer bookings...</p>
+              </div>
+            </div>
+          )}
+        </motion.div>
+      </div>
+    );
+  }
 
   if (!isAuthenticated) {
     return (
