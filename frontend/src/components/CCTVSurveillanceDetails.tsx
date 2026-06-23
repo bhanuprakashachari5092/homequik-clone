@@ -298,50 +298,59 @@ export function CCTVSurveillanceDetails() {
 
 
         {/* Navigation Tabs (Hero Area) */}
-        <div className="bg-[#1e293b] rounded-[2rem] overflow-hidden mb-8 shadow-xl relative">
+        <div className="bg-slate-900 rounded-[2.5rem] overflow-hidden mb-12 shadow-[0_20px_50px_rgba(0,0,0,0.1)] relative border border-slate-800">
            {/* Hero Image Section */}
-           <div className="relative h-[280px] md:h-[400px] w-full overflow-hidden bg-black transition-all duration-500">
+           <div className="relative h-[450px] w-full overflow-hidden transition-all duration-500 group">
+             <div className="absolute inset-0 bg-gradient-to-r from-slate-900 via-slate-900/80 to-transparent z-10"></div>
              <img 
                src={activeTab === 'buy' ? '/cctv_hero_buy.png' : '/cctv_hero.png'}  
                alt="CCTV Expert" 
-               className="w-full h-full object-cover object-[50%_15%] opacity-90 transition-opacity duration-500" 
+               className="absolute right-0 top-0 w-3/4 h-full object-cover object-[50%_15%] opacity-70 transition-transform duration-1000 group-hover:scale-105" 
+               onError={(e) => {
+                 e.currentTarget.style.display = 'none';
+               }}
              />
-             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent"></div>
-             <div className="absolute bottom-0 left-0 w-full p-8 md:p-10 text-left">
-               <h2 className="text-2xl md:text-4xl font-extrabold text-white tracking-tight leading-snug">
-                 <span className="text-[#f97316]">Vendor99:</span> Professional CCTV Solutions.<br/>
-                 Certified Experts.<br/>
-                 Clean, Minimalist Installations.
-               </h2>
+             <div className="absolute inset-0 z-20 flex flex-col justify-center p-8 md:p-16 w-full md:w-2/3">
+               <motion.h2 
+                 initial={{ opacity: 0, y: 20 }}
+                 animate={{ opacity: 1, y: 0 }}
+                 key={activeTab}
+                 className="text-4xl md:text-6xl font-black text-white tracking-tight leading-tight mb-6"
+               >
+                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand to-rose-500">Vendor99:</span><br/>
+                 Premium CCTV<br/>Solutions.
+               </motion.h2>
+               <p className="text-slate-300 font-medium text-lg md:text-xl max-w-md">
+                 Certified Experts. Clean, Minimalist Installations. Transparent Pricing.
+               </p>
              </div>
            </div>
 
-           <div className="p-8 md:p-12 pt-2">
-             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+           <div className="absolute bottom-6 left-6 right-6 md:left-12 md:right-auto md:w-auto z-30">
+             <div className="flex flex-col md:flex-row gap-3 bg-white/10 backdrop-blur-2xl p-3 rounded-3xl border border-white/20 shadow-2xl">
               <button 
                  onClick={() => setActiveTab("buy")}
-                 className={`flex flex-col items-center justify-center gap-2 py-4 px-2 rounded-2xl font-extrabold text-sm md:text-base transition-all ${activeTab === 'buy' ? 'bg-white text-slate-800 shadow-[0_0_20px_rgba(255,255,255,0.2)] scale-105' : 'bg-white/10 text-white hover:bg-white/20'}`}
+                 className={`flex items-center gap-4 py-4 px-6 rounded-2xl font-bold text-sm md:text-base transition-all duration-300 ${activeTab === 'buy' ? 'bg-white text-slate-900 shadow-[0_10px_30px_rgba(255,255,255,0.2)]' : 'text-white hover:bg-white/10'}`}
               >
-                 <ShoppingCart className={`h-6 w-6 md:h-8 md:w-8 ${activeTab === 'buy' ? 'text-brand' : 'text-white/70'}`} />
-                 <span className="text-center leading-tight">Product<br/>Price List</span>
+                 <div className={`p-2.5 rounded-xl transition-colors ${activeTab === 'buy' ? 'bg-brand/10 text-brand' : 'bg-white/10 text-white'}`}><ShoppingCart className="h-6 w-6" /></div>
+                 <span className="text-left leading-tight">Product<br/>Price List</span>
               </button>
 
               <button 
                  onClick={() => setActiveTab("installation")}
-                 className={`flex flex-col items-center justify-center gap-2 py-4 px-2 rounded-2xl font-extrabold text-sm md:text-base transition-all ${activeTab === 'installation' ? 'bg-white text-slate-800 shadow-[0_0_20px_rgba(255,255,255,0.2)] scale-105' : 'bg-white/10 text-white hover:bg-white/20'}`}
+                 className={`flex items-center gap-4 py-4 px-6 rounded-2xl font-bold text-sm md:text-base transition-all duration-300 ${activeTab === 'installation' ? 'bg-white text-slate-900 shadow-[0_10px_30px_rgba(255,255,255,0.2)]' : 'text-white hover:bg-white/10'}`}
               >
-                 <Settings className={`h-6 w-6 md:h-8 md:w-8 ${activeTab === 'installation' ? 'text-brand' : 'text-white/70'}`} />
-                 <span className="text-center leading-tight">Only<br/>Installation</span>
+                 <div className={`p-2.5 rounded-xl transition-colors ${activeTab === 'installation' ? 'bg-brand/10 text-brand' : 'bg-white/10 text-white'}`}><Settings className="h-6 w-6" /></div>
+                 <span className="text-left leading-tight">Only<br/>Installation</span>
               </button>
               
               <button 
                  onClick={() => setActiveTab("repair")}
-                 className={`flex flex-col items-center justify-center gap-2 py-4 px-2 rounded-2xl font-extrabold text-sm md:text-base transition-all ${activeTab === 'repair' ? 'bg-white text-slate-800 shadow-[0_0_20px_rgba(255,255,255,0.2)] scale-105' : 'bg-white/10 text-white hover:bg-white/20'}`}
+                 className={`flex items-center gap-4 py-4 px-6 rounded-2xl font-bold text-sm md:text-base transition-all duration-300 ${activeTab === 'repair' ? 'bg-white text-slate-900 shadow-[0_10px_30px_rgba(255,255,255,0.2)]' : 'text-white hover:bg-white/10'}`}
               >
-                 <Wrench className={`h-6 w-6 md:h-8 md:w-8 ${activeTab === 'repair' ? 'text-brand' : 'text-white/70'}`} />
-                 <span className="text-center leading-tight">CCTV Repair<br/>& Service</span>
+                 <div className={`p-2.5 rounded-xl transition-colors ${activeTab === 'repair' ? 'bg-brand/10 text-brand' : 'bg-white/10 text-white'}`}><Wrench className="h-6 w-6" /></div>
+                 <span className="text-left leading-tight">CCTV Repair<br/>& Service</span>
               </button>
-
            </div>
          </div>
         </div>
@@ -357,44 +366,62 @@ export function CCTVSurveillanceDetails() {
                     <motion.div 
                        key="installation"
                        initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
-                       className="bg-white rounded-[2rem] border border-border shadow-md overflow-hidden"
+                       className="bg-white rounded-[2rem] border border-slate-100 shadow-[0_8px_30px_rgba(0,0,0,0.04)] overflow-hidden"
                     >
-                       <div className="bg-[#2c3e50] p-6 text-white">
-                          <h3 className="text-xl font-bold">Book Only Installation</h3>
+                       <div className="bg-gradient-to-r from-brand to-rose-600 p-8 text-white relative overflow-hidden">
+                          <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+                          <h3 className="text-2xl font-black relative z-10 flex items-center gap-3"><Settings className="h-8 w-8" /> Book Only Installation</h3>
+                          <p className="text-white/80 mt-2 relative z-10">Select the specific installation services you require.</p>
                        </div>
                        
-                       <div className="p-8 space-y-8">
+                       <div className="p-8 space-y-10">
                           
                           {/* Installation Service */}
                           <div>
-                             <h4 className="bg-[#e2e8f0] p-3 rounded-t-xl font-bold text-slate-700">Installation Service</h4>
-                             <div className="border border-t-0 border-[#e2e8f0] rounded-b-xl p-4 bg-white">
-                                <div 
-                                  className={`p-4 border rounded-xl flex items-center cursor-pointer transition-colors relative overflow-hidden ${selectedItems.includes("Installation: CAMERA [₹499/-]") ? 'bg-brand/10 border-brand' : 'border-slate-200 hover:bg-slate-50'}`} 
-                                  onClick={() => toggleSelection("Installation: CAMERA [₹499/-]")}
-                                >
-                                   {selectedItems.includes("Installation: CAMERA [₹499/-]") && <div className="absolute left-0 top-0 bottom-0 w-1 bg-brand"></div>}
-                                   <span className="font-bold text-slate-800 ml-2">CAMERA [₹499/-]</span>
-                                </div>
+                             <div className="flex items-center gap-3 mb-4">
+                               <div className="h-8 w-1 bg-brand rounded-full"></div>
+                               <h4 className="font-bold text-xl text-slate-800">Installation Service</h4>
+                             </div>
+                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                               <div 
+                                 className={`p-5 rounded-2xl border-2 flex items-center cursor-pointer transition-all duration-300 relative overflow-hidden group ${selectedItems.includes("Installation: CAMERA [₹499/-]") ? 'bg-brand/5 border-brand shadow-[0_8px_20px_rgba(217,46,16,0.1)]' : 'border-slate-100 hover:border-brand/30 hover:bg-slate-50'}`} 
+                                 onClick={() => toggleSelection("Installation: CAMERA [₹499/-]")}
+                               >
+                                  <div className={`mr-4 p-2 rounded-xl transition-colors ${selectedItems.includes("Installation: CAMERA [₹499/-]") ? 'bg-brand text-white' : 'bg-slate-100 text-slate-400 group-hover:text-brand group-hover:bg-brand/10'}`}>
+                                    {selectedItems.includes("Installation: CAMERA [₹499/-]") ? <CheckCircle2 className="h-6 w-6" /> : <Video className="h-6 w-6" />}
+                                  </div>
+                                  <div>
+                                    <span className="block font-bold text-slate-800 text-lg">CAMERA</span>
+                                    <span className="block font-black text-brand">₹499/-</span>
+                                  </div>
+                               </div>
                              </div>
                           </div>
 
                           {/* NVR and DVR */}
                           <div>
-                             <h4 className="bg-primary text-white p-3 rounded-t-xl font-bold">NVR and DVR</h4>
-                             <div className="border border-t-0 border-[#e2e8f0] rounded-b-xl p-4 grid grid-cols-1 md:grid-cols-3 gap-4 bg-white">
+                             <div className="flex items-center gap-3 mb-4">
+                               <div className="h-8 w-1 bg-slate-800 rounded-full"></div>
+                               <h4 className="font-bold text-xl text-slate-800">NVR and DVR</h4>
+                             </div>
+                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 {[
-                                   { id: "NVR/DVR: 4chl [₹1000/-]", label: "4chl- [₹1000/-]" },
-                                   { id: "NVR/DVR: 8chl [₹2000/-]", label: "8chl- [₹2000/-]" },
-                                   { id: "NVR/DVR: 16chl [₹4000/-]", label: "16chl- [₹4000/-]" }
+                                   { id: "NVR/DVR: 4chl [₹1000/-]", label: "4 Channel", price: "₹1000/-" },
+                                   { id: "NVR/DVR: 8chl [₹2000/-]", label: "8 Channel", price: "₹2000/-" },
+                                   { id: "NVR/DVR: 16chl [₹4000/-]", label: "16 Channel", price: "₹4000/-" }
                                 ].map((item, idx) => (
                                    <div 
                                       key={idx}
-                                      className={`p-3 border rounded-xl flex items-center cursor-pointer transition-colors relative overflow-hidden ${selectedItems.includes(item.id) ? 'bg-brand/10 border-brand' : 'border-slate-200 hover:bg-slate-50'}`} 
+                                      className={`p-5 rounded-2xl border-2 flex items-center cursor-pointer transition-all duration-300 relative overflow-hidden group ${selectedItems.includes(item.id) ? 'bg-slate-800 border-slate-800 shadow-xl' : 'border-slate-100 hover:border-slate-300 hover:bg-slate-50'}`} 
                                       onClick={() => toggleSelection(item.id)}
                                    >
-                                      {selectedItems.includes(item.id) && <div className="absolute left-0 top-0 bottom-0 w-1 bg-brand"></div>}
-                                      <span className="font-bold text-slate-800 ml-2">{item.label}</span>
+                                      <div className={`mr-4 p-2 rounded-xl transition-colors ${selectedItems.includes(item.id) ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-400 group-hover:text-slate-800 group-hover:bg-slate-200'}`}>
+                                        {selectedItems.includes(item.id) ? <CheckCircle2 className="h-6 w-6" /> : <Server className="h-6 w-6" />}
+                                      </div>
+                                      <div>
+                                        <span className={`block font-bold text-lg ${selectedItems.includes(item.id) ? 'text-white' : 'text-slate-800'}`}>{item.label}</span>
+                                        <span className={`block font-black ${selectedItems.includes(item.id) ? 'text-white/80' : 'text-brand'}`}>{item.price}</span>
+                                      </div>
                                    </div>
                                 ))}
                              </div>
@@ -402,20 +429,26 @@ export function CCTVSurveillanceDetails() {
 
                           {/* Cabling */}
                           <div>
-                             <h4 className="bg-[#334155] text-white p-3 rounded-t-xl font-bold">Cabling</h4>
-                             <div className="border border-t-0 border-[#e2e8f0] rounded-b-xl p-4 grid grid-cols-1 md:grid-cols-3 gap-4 bg-white">
+                             <div className="flex items-center gap-3 mb-4">
+                               <div className="h-8 w-1 bg-orange-500 rounded-full"></div>
+                               <h4 className="font-bold text-xl text-slate-800">Cabling</h4>
+                             </div>
+                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 {[
-                                   { id: "Cabling: Open cabling [₹20/-]", label: "Open cabling [₹20/-]" },
-                                   { id: "Cabling: Pipe cabling [₹40/-]", label: "Pipe cabling [₹40/-]" },
-                                   { id: "Cabling: Internal cabling [₹40/-]", label: "Internal cabling [₹40/-]" }
+                                   { id: "Cabling: Open cabling [₹20/-]", label: "Open cabling", price: "₹20/- per meter" },
+                                   { id: "Cabling: Pipe cabling [₹40/-]", label: "Pipe cabling", price: "₹40/- per meter" },
+                                   { id: "Cabling: Internal cabling [₹40/-]", label: "Internal cabling", price: "₹40/- per meter" }
                                 ].map((item, idx) => (
                                    <div 
                                       key={idx}
-                                      className={`p-3 border rounded-xl flex items-center cursor-pointer transition-colors relative overflow-hidden ${selectedItems.includes(item.id) ? 'bg-brand/10 border-brand' : 'border-slate-200 hover:bg-slate-50'}`} 
+                                      className={`p-4 rounded-2xl border-2 flex flex-col justify-center cursor-pointer transition-all duration-300 relative overflow-hidden group ${selectedItems.includes(item.id) ? 'bg-orange-500/10 border-orange-500 shadow-lg' : 'border-slate-100 hover:border-orange-500/30 hover:bg-orange-500/5'}`} 
                                       onClick={() => toggleSelection(item.id)}
                                    >
-                                      {selectedItems.includes(item.id) && <div className="absolute left-0 top-0 bottom-0 w-1 bg-brand"></div>}
-                                      <span className="font-bold text-slate-800 ml-2">{item.label}</span>
+                                      <div className="flex justify-between items-start mb-2">
+                                        <span className={`font-bold text-lg ${selectedItems.includes(item.id) ? 'text-orange-700' : 'text-slate-800'}`}>{item.label}</span>
+                                        {selectedItems.includes(item.id) && <CheckCircle2 className="h-5 w-5 text-orange-500" />}
+                                      </div>
+                                      <span className={`font-black text-sm ${selectedItems.includes(item.id) ? 'text-orange-600' : 'text-slate-500'}`}>{item.price}</span>
                                    </div>
                                 ))}
                              </div>
@@ -423,27 +456,33 @@ export function CCTVSurveillanceDetails() {
 
                           {/* Rack Installation */}
                           <div>
-                             <h4 className="bg-[#1e293b] text-white p-3 rounded-t-xl font-bold">Rack installation</h4>
-                             <div className="border border-t-0 border-[#e2e8f0] rounded-b-xl p-4 grid grid-cols-1 md:grid-cols-3 gap-4 bg-white">
+                             <div className="flex items-center gap-3 mb-4">
+                               <div className="h-8 w-1 bg-blue-500 rounded-full"></div>
+                               <h4 className="font-bold text-xl text-slate-800">Rack installation</h4>
+                             </div>
+                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 {[
-                                   { id: "Rack: Small [₹300/-]", label: "Small [₹300/-]" },
-                                   { id: "Rack: Medium [₹700/-]", label: "Medium [₹700/-]" },
-                                   { id: "Rack: Big [₹3000/-]", label: "Big [₹3000/-]" }
+                                   { id: "Rack: Small [₹300/-]", label: "Small Rack", price: "₹300/-" },
+                                   { id: "Rack: Medium [₹700/-]", label: "Medium Rack", price: "₹700/-" },
+                                   { id: "Rack: Big [₹3000/-]", label: "Big Rack", price: "₹3000/-" }
                                 ].map((item, idx) => (
                                    <div 
                                       key={idx}
-                                      className={`p-3 border rounded-xl flex items-center cursor-pointer transition-colors relative overflow-hidden ${selectedItems.includes(item.id) ? 'bg-brand/10 border-brand' : 'border-slate-200 hover:bg-slate-50'}`} 
+                                      className={`p-4 rounded-2xl border-2 flex flex-col justify-center cursor-pointer transition-all duration-300 relative overflow-hidden group ${selectedItems.includes(item.id) ? 'bg-blue-500/10 border-blue-500 shadow-lg' : 'border-slate-100 hover:border-blue-500/30 hover:bg-blue-500/5'}`} 
                                       onClick={() => toggleSelection(item.id)}
                                    >
-                                      {selectedItems.includes(item.id) && <div className="absolute left-0 top-0 bottom-0 w-1 bg-brand"></div>}
-                                      <span className="font-bold text-slate-800 ml-2">{item.label}</span>
+                                      <div className="flex justify-between items-start mb-2">
+                                        <span className={`font-bold text-lg ${selectedItems.includes(item.id) ? 'text-blue-700' : 'text-slate-800'}`}>{item.label}</span>
+                                        {selectedItems.includes(item.id) && <CheckCircle2 className="h-5 w-5 text-blue-500" />}
+                                      </div>
+                                      <span className={`font-black text-sm ${selectedItems.includes(item.id) ? 'text-blue-600' : 'text-slate-500'}`}>{item.price}</span>
                                    </div>
                                 ))}
                              </div>
                           </div>
                           
-                          <div className="pt-4 text-center">
-                             <button onClick={() => handleWhatsApp()} className="bg-primary hover:bg-primary/90 text-white font-bold py-3 px-8 rounded-xl transition-colors shadow-md">
+                          <div className="pt-8 text-center border-t border-slate-100">
+                             <button onClick={() => handleWhatsApp()} className="bg-brand hover:bg-rose-600 text-white font-black text-lg py-4 px-12 rounded-2xl transition-all shadow-[0_8px_20px_rgba(217,46,16,0.3)] hover:-translate-y-1 hover:shadow-[0_15px_30px_rgba(217,46,16,0.4)]">
                                 Proceed to Booking
                              </button>
                           </div>
@@ -457,46 +496,56 @@ export function CCTVSurveillanceDetails() {
                     <motion.div 
                        key="repair"
                        initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
-                       className="bg-white rounded-[2rem] border border-border shadow-md overflow-hidden"
+                       className="bg-white rounded-[2rem] border border-slate-100 shadow-[0_8px_30px_rgba(0,0,0,0.04)] overflow-hidden"
                     >
-                       <div className="bg-[#2c3e50] p-6 text-white flex justify-between items-center">
-                          <h3 className="text-xl font-bold">CCTV Repair and Service</h3>
-                          <span className="font-bold text-lg bg-white/20 px-4 py-1.5 rounded-full">₹ 450/-</span>
+                       <div className="bg-gradient-to-r from-orange-500 to-amber-500 p-8 text-white relative overflow-hidden flex justify-between items-center">
+                          <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+                          <div className="relative z-10">
+                            <h3 className="text-2xl font-black flex items-center gap-3"><Wrench className="h-8 w-8" /> CCTV Repair & Service</h3>
+                            <p className="text-white/80 mt-2">Select the specific parts or services you need repaired.</p>
+                          </div>
+                          <span className="font-black text-xl bg-white/20 px-6 py-2 rounded-2xl relative z-10 shadow-lg border border-white/20 backdrop-blur-md">₹ 450/- <span className="text-sm font-medium opacity-80 block text-center">Visit Charge</span></span>
                        </div>
                        
-                       <div className="p-8 space-y-4">
-                          {repairServices.map((service, idx) => {
-                             const repairString = `Repair: ${service.label}`;
-                             const isSelected = selectedItems.includes(repairString);
-                             return (
-                                <div 
-                                   key={idx} 
-                                   onClick={() => toggleSelection(repairString)}
-                                   className={`flex justify-between items-center p-4 border rounded-xl cursor-pointer transition-colors relative overflow-hidden ${isSelected ? 'border-brand bg-brand/10' : 'border-slate-200 hover:bg-slate-50'}`}
-                                >
-                                   {isSelected && <div className="absolute left-0 top-0 bottom-0 w-1 bg-brand"></div>}
-                                   <div className="flex items-center gap-3">
-                                      <span className="font-bold text-slate-800 ml-2">{service.label}</span>
+                       <div className="p-8 space-y-8">
+                          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                             {repairServices.map((service, idx) => {
+                                const repairString = `Repair: ${service.label}`;
+                                const isSelected = selectedItems.includes(repairString);
+                                return (
+                                   <div 
+                                      key={idx} 
+                                      onClick={() => toggleSelection(repairString)}
+                                      className={`flex flex-col items-center justify-center p-6 border-2 rounded-2xl cursor-pointer transition-all duration-300 relative overflow-hidden group ${isSelected ? 'border-orange-500 bg-orange-500/10 shadow-lg scale-105' : 'border-slate-100 hover:border-orange-500/30 hover:bg-orange-500/5'}`}
+                                   >
+                                      {isSelected && <div className="absolute top-3 right-3"><CheckCircle2 className="h-5 w-5 text-orange-500" /></div>}
+                                      <div className={`p-4 rounded-full mb-3 transition-colors ${isSelected ? 'bg-orange-500 text-white' : 'bg-slate-100 text-slate-400 group-hover:text-orange-500 group-hover:bg-orange-500/10'}`}>
+                                         <Settings className="h-8 w-8" />
+                                      </div>
+                                      <span className={`font-bold text-center leading-tight ${isSelected ? 'text-orange-700' : 'text-slate-700'}`}>{service.label}</span>
                                    </div>
-                                </div>
-                             );
-                          })}
+                                );
+                             })}
+                          </div>
                           
-                          <div className="mt-6 pt-6 border-t border-border">
-                             <div className="flex justify-between items-center bg-slate-50 p-4 rounded-xl border border-slate-200 mb-3">
-                                <span className="font-bold text-slate-800">Visit & Service Charge</span>
-                                <span className="font-extrabold text-brand text-xl">₹ 450/-</span>
+                          <div className="mt-8 pt-8 border-t border-slate-100">
+                             <div className="flex justify-between items-center bg-orange-50/50 p-6 rounded-2xl border border-orange-100 mb-4">
+                                <div className="flex items-center gap-3">
+                                  <div className="bg-orange-100 p-2 rounded-xl"><CheckCircle2 className="h-6 w-6 text-orange-600" /></div>
+                                  <span className="font-bold text-slate-800 text-lg">Visit & Service Charge</span>
+                                </div>
+                                <span className="font-black text-orange-600 text-2xl">₹ 450/-</span>
                              </div>
-                             <p className="text-sm font-semibold text-slate-500 leading-relaxed">
+                             <p className="text-sm font-semibold text-slate-500 leading-relaxed text-center">
                                 Note: If any spare parts or multiple visits are required, they will be charged extra.
                              </p>
                           </div>
                           
                            <div className="pt-6 flex flex-col sm:flex-row gap-4 justify-center">
-                             <button onClick={() => handleAddToCart()} className="bg-slate-800 hover:bg-slate-700 w-full sm:w-auto text-white font-bold py-4 px-8 rounded-xl transition-colors shadow-md text-lg">
+                             <button onClick={() => handleAddToCart()} className="bg-slate-800 hover:bg-slate-900 w-full sm:w-auto text-white font-bold py-4 px-10 rounded-2xl transition-all shadow-[0_8px_20px_rgba(0,0,0,0.1)] hover:-translate-y-1 hover:shadow-xl text-lg">
                                 Add to Cart
                              </button>
-                             <button onClick={() => handleWhatsApp()} className="bg-primary hover:bg-primary/90 w-full sm:w-auto text-white font-bold py-4 px-8 rounded-xl transition-colors shadow-md text-lg">
+                             <button onClick={() => handleWhatsApp()} className="bg-gradient-to-r from-orange-500 to-amber-500 w-full sm:w-auto text-white font-black py-4 px-10 rounded-2xl transition-all shadow-[0_8px_20px_rgba(249,115,22,0.3)] hover:-translate-y-1 hover:shadow-[0_15px_30px_rgba(249,115,22,0.4)] text-lg">
                                 Proceed to Booking
                              </button>
                            </div>
@@ -627,29 +676,33 @@ export function CCTVSurveillanceDetails() {
                  
                  {/* Selection Summary (Visible only if items selected) */}
                  {selectedItems.length > 0 && (
-                    <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-brand text-white rounded-[2rem] p-6 shadow-lg">
-                       <h3 className="font-extrabold text-lg mb-4 flex items-center gap-2"><ShoppingCart className="h-5 w-5" /> Your Selection ({selectedItems.length})</h3>
-                       <div className="max-h-60 overflow-y-auto pr-2 space-y-2 mb-4 custom-scrollbar">
+                    <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-slate-900 text-white rounded-[2rem] p-8 shadow-[0_20px_50px_rgba(0,0,0,0.15)] relative overflow-hidden border border-slate-800">
+                       <div className="absolute top-0 right-0 w-32 h-32 bg-brand/20 blur-3xl rounded-full" />
+                       <h3 className="font-black text-xl mb-6 flex items-center gap-3 relative z-10">
+                         <div className="bg-brand text-white p-2 rounded-xl"><ShoppingCart className="h-5 w-5" /></div> 
+                         Your Selection ({selectedItems.length})
+                       </h3>
+                       <div className="max-h-[300px] overflow-y-auto pr-2 space-y-3 mb-6 custom-scrollbar relative z-10">
                           {selectedItems.map((item, i) => (
-                             <div key={i} className="text-sm bg-white/10 rounded-lg p-2.5 flex justify-between items-start gap-2">
-                                <span className="font-medium">{item}</span>
-                                <button onClick={() => toggleSelection(item)} className="text-white/60 hover:text-white shrink-0">×</button>
+                             <div key={i} className="text-sm bg-white/5 border border-white/10 rounded-xl p-4 flex justify-between items-start gap-3 backdrop-blur-md">
+                                <span className="font-semibold text-slate-200 leading-snug">{item}</span>
+                                <button onClick={() => toggleSelection(item)} className="text-white/40 hover:text-white shrink-0 bg-white/10 hover:bg-brand rounded-full p-1 transition-colors"><CheckCircle2 className="h-4 w-4" /></button>
                              </div>
                           ))}
                        </div>
                        
                        {totalPrice > 0 && (
-                         <div className="bg-white/20 rounded-xl p-4 mb-4 flex justify-between items-center">
-                            <span className="font-bold text-white/90">Today's Cost</span>
-                            <span className="font-black text-xl">₹ {totalPrice.toLocaleString('en-IN')}/-</span>
+                         <div className="bg-brand/10 border border-brand/20 rounded-2xl p-5 mb-6 flex justify-between items-center relative z-10">
+                            <span className="font-bold text-brand">Total Cost</span>
+                            <span className="font-black text-2xl text-white">₹ {totalPrice.toLocaleString('en-IN')}/-</span>
                          </div>
                        )}
 
-                       <div className="space-y-3">
-                         <button onClick={() => handleAddToCart()} className="w-full bg-slate-800 text-white font-bold py-3 rounded-xl hover:bg-slate-700 transition-colors shadow-md">
+                       <div className="space-y-3 relative z-10">
+                         <button onClick={() => handleAddToCart()} className="w-full bg-white/10 text-white font-bold py-4 rounded-xl hover:bg-white/20 transition-colors shadow-md border border-white/10 flex justify-center items-center gap-2">
                             Add to Cart
                          </button>
-                         <button onClick={() => handleWhatsApp()} className="w-full bg-white text-brand font-bold py-3 rounded-xl hover:bg-slate-50 transition-colors shadow-md">
+                         <button onClick={() => handleWhatsApp()} className="w-full bg-gradient-to-r from-brand to-rose-600 text-white font-black py-4 rounded-xl hover:shadow-[0_10px_20px_rgba(217,46,16,0.3)] hover:-translate-y-0.5 transition-all shadow-md flex justify-center items-center gap-2">
                             Proceed to Booking
                          </button>
                        </div>

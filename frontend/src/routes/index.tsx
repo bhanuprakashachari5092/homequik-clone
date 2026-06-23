@@ -9,7 +9,7 @@ import { useState, useEffect, useRef } from "react";
 import { db } from "@/lib/firebase";
 import { collection, onSnapshot } from "firebase/firestore";
 import { SafeImage } from "@/hooks/useLocalSafeImage";
-
+import { Hero3D } from "@/components/Hero3D";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -140,83 +140,18 @@ function Home() {
 
   return (
     <SiteLayout>
-      {/* Hero Section */}
-      <section className="relative overflow-hidden bg-background pt-20 pb-32">
-        {/* Floating gradient shapes */}
-        <div className="absolute top-[-10%] right-[-5%] w-[600px] h-[600px] rounded-full bg-gradient-to-br from-primary/20 to-secondary/20 blur-[100px] opacity-70 animate-pulse" />
-        <div className="absolute bottom-[-10%] left-[-10%] w-[500px] h-[500px] rounded-full bg-gradient-to-tr from-accent/20 to-primary/20 blur-[100px] opacity-60 animate-pulse" style={{ animationDelay: "2s" }} />
-
-        <div className="relative mx-auto max-w-7xl px-6 lg:px-8">
-          <motion.div 
-            initial={{ opacity: 0, y: 50 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, ease: "easeOut" }}
-            className="text-center max-w-4xl mx-auto"
-          >
-            <motion.div 
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ delay: 0.2 }}
-              className="inline-flex items-center gap-2 rounded-full border border-border/50 bg-white/50 backdrop-blur-md px-4 py-1.5 text-sm font-semibold text-foreground shadow-sm mb-8"
-            >
-              <Sparkles className="h-4 w-4 text-primary" /> Premium Services in {location}
-            </motion.div>
-            
-            <h1 className="text-5xl font-extrabold tracking-tight sm:text-7xl text-foreground">
-              Vendor99 – <br />
-              <span className="text-gradient">India's CCTV Dealer Hub</span>
-            </h1>
-            
-            <p className="mt-8 text-xl text-muted-foreground leading-relaxed max-w-2xl mx-auto font-medium">
-              Connect with verified CCTV professionals near you for installation, repair, AMC maintenance, and security solutions at competitive prices.
-            </p>
-
-            {/* Call to Action Buttons */}
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.4 }}
-              className="mt-10 flex flex-wrap justify-center gap-4"
-            >
-              <Link to="/quote" className="bg-brand hover:bg-brand-hover text-white font-bold py-3 px-6 rounded-full shadow-md transition-all hover:-translate-y-1 block">
-                Get Free Quote
-              </Link>
-
-              <Link to="/book" className="bg-slate-800 hover:bg-slate-700 text-white font-bold py-3 px-6 rounded-full shadow-md transition-all hover:-translate-y-1 block">
-                Book Service
-              </Link>
-              <Link to="/partner" className="bg-amber-100 text-amber-800 border-2 border-amber-200 hover:bg-amber-200 font-bold py-3 px-6 rounded-full shadow-sm transition-all hover:-translate-y-1 block">
-                Dealer Registration
-              </Link>
-              <Link to="/dealer-portal" className="bg-emerald-100 text-emerald-800 border-2 border-emerald-200 hover:bg-emerald-200 font-bold py-3 px-6 rounded-full shadow-sm transition-all hover:-translate-y-1 block">
-                Dealer Login
-              </Link>
-              <Link to="/become-partner" className="bg-purple-100 text-purple-800 border-2 border-purple-200 hover:bg-purple-200 font-bold py-3 px-6 rounded-full shadow-sm transition-all hover:-translate-y-1 block">
-                Become a Partner
-              </Link>
-            </motion.div>
-
-            {/* Interactive Search Bar Removed */}
-
-            {/* Trust indicators */}
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.6 }}
-              className="mt-16 flex justify-center items-center gap-8 text-sm font-semibold text-muted-foreground"
-            >
-              <div className="flex items-center gap-2"><ShieldCheck className="h-5 w-5 text-success" /> Verified Experts</div>
-              <div className="flex items-center gap-2"><Star className="h-5 w-5 text-warning" /> 4.9/5 Average Rating</div>
-              <div className="flex items-center gap-2"><Clock className="h-5 w-5 text-primary" /> 24/7 Support</div>
-            </motion.div>
-          </motion.div>
-        </div>
-      </section>
+      <Hero3D location={location} />
 
       {/* Recommended Features Strip */}
-      <section id="services" className="bg-white py-8 border-b border-border/50 shadow-sm relative z-10">
-        <div className="mx-auto max-w-7xl px-6 lg:px-8">
-          <div className="flex flex-wrap justify-center gap-3">
+      <section id="services" className="bg-slate-50/50 py-12 border-b border-slate-100 relative z-10 overflow-hidden">
+        {/* Subtle background glow */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-3xl h-[100px] bg-brand/5 blur-[80px] rounded-full pointer-events-none" />
+        
+        <div className="mx-auto max-w-7xl px-6 lg:px-8 relative">
+          <div className="text-center mb-8">
+            <h3 className="text-sm font-bold tracking-widest text-brand uppercase">Our Expertise</h3>
+          </div>
+          <div className="flex flex-wrap justify-center gap-4">
             {[
               "Buy with Installation",
               "Only Installation",
@@ -224,16 +159,21 @@ function Home() {
               "AMC Maintenance",
               "Upgrade Existing CCTV",
               "Video Door Phone",
-              "Biometric Attendance Systems"
+              "Biometric Systems"
             ].map((feature, idx) => (
               <motion.div 
                 key={idx}
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.6 + (idx * 0.1) }}
-                className="bg-slate-50 border border-slate-200 rounded-full px-5 py-2 text-sm font-bold text-slate-700 flex items-center gap-2 shadow-sm hover:border-brand hover:text-brand transition-colors cursor-default"
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: idx * 0.1, type: "spring", stiffness: 300, damping: 20 }}
+                whileHover={{ y: -5, scale: 1.05 }}
+                className="bg-white border border-slate-200/60 rounded-2xl px-6 py-3 text-sm font-bold text-slate-700 flex items-center gap-3 shadow-[0_8px_20px_rgba(0,0,0,0.04)] hover:shadow-[0_12px_25px_rgba(217,46,16,0.1)] hover:border-brand/30 transition-all cursor-default group"
               >
-                <CheckCircle2 className="h-4 w-4 text-brand" /> {feature}
+                <div className="bg-brand/10 rounded-full p-1 group-hover:bg-brand group-hover:text-white transition-colors">
+                  <CheckCircle2 className="h-4 w-4 text-brand group-hover:text-white transition-colors" />
+                </div>
+                {feature}
               </motion.div>
             ))}
           </div>
@@ -242,21 +182,51 @@ function Home() {
 
       {/* Dynamic Services / Posts */}
       {services.length > 0 && (
-         <section className="bg-slate-50 py-16 border-b border-border/50">
-            <div className="mx-auto max-w-7xl px-6 lg:px-8">
-               <div className="text-center mb-12">
-                 <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight sm:text-4xl">Latest Services & Offers</h2>
-                 <p className="mt-4 text-lg text-slate-600 max-w-2xl mx-auto font-medium">Discover our newest additions, professional offerings, and exclusive updates from Vendor99.</p>
+         <section className="bg-white py-24 relative overflow-hidden">
+            {/* Decorative background grid */}
+            <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSA0MCAwIEwgMCAwIDAgNDAiIGZpbGw9Im5vbmUiIHN0cm9rZT0icmdiYSgwLDAsMCwwLjAyKSIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIi8+PC9zdmc+')] pointer-events-none opacity-50" />
+            
+            <div className="mx-auto max-w-7xl px-6 lg:px-8 relative z-10">
+               <div className="text-center mb-16">
+                 <motion.h2 
+                   initial={{ opacity: 0, y: 20 }}
+                   whileInView={{ opacity: 1, y: 0 }}
+                   viewport={{ once: true }}
+                   className="text-4xl font-black tracking-tight sm:text-5xl text-slate-900"
+                 >
+                   Latest Services & <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand to-orange-500">Offers</span>
+                 </motion.h2>
+                 <motion.p 
+                   initial={{ opacity: 0, y: 20 }}
+                   whileInView={{ opacity: 1, y: 0 }}
+                   viewport={{ once: true }}
+                   transition={{ delay: 0.1 }}
+                   className="mt-6 text-xl text-slate-500 max-w-2xl mx-auto font-medium"
+                 >
+                   Discover our newest additions, professional offerings, and exclusive updates from Vendor99.
+                 </motion.p>
                </div>
-               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                  {services.map((service) => (
-                     <motion.div key={service.id} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="bg-white rounded-3xl border border-border shadow-sm overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col">
+               
+               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+                  {services.map((service, idx) => (
+                     <motion.div 
+                       key={service.id} 
+                       initial={{ opacity: 0, y: 30 }} 
+                       whileInView={{ opacity: 1, y: 0 }} 
+                       viewport={{ once: true, margin: "-100px" }}
+                       transition={{ delay: idx * 0.1, duration: 0.5, ease: "easeOut" }}
+                       className="group bg-white rounded-[2rem] border border-slate-100 shadow-[0_8px_30px_rgba(0,0,0,0.04)] overflow-hidden hover:shadow-[0_20px_40px_rgba(217,46,16,0.1)] hover:-translate-y-2 transition-all duration-500 flex flex-col relative"
+                     >
+                        {/* Shine effect on hover */}
+                        <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/40 to-white/0 opacity-0 group-hover:opacity-100 group-hover:translate-x-full transition-all duration-1000 -skew-x-12 z-20 pointer-events-none" />
+
                         {service.imageUrl ? (
-                           <div className="h-56 w-full overflow-hidden relative group">
+                           <div className="h-64 w-full overflow-hidden relative">
+                              <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 to-transparent z-10" />
                               <SafeImage 
                                 src={service.imageUrl} 
                                 alt={service.title} 
-                                className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
+                                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                                 onError={(e) => {
                                   e.currentTarget.onerror = null; 
                                   e.currentTarget.style.display = 'none';
@@ -266,18 +236,29 @@ function Home() {
                                   e.currentTarget.parentElement?.appendChild(fallback.firstChild as Node);
                                 }}
                               />
+                              <div className="absolute bottom-4 left-6 z-20">
+                                <span className="text-xs font-black text-white bg-brand/90 backdrop-blur-md px-3 py-1.5 rounded-full uppercase tracking-wider shadow-lg">
+                                  {service.category}
+                                </span>
+                              </div>
                            </div>
                         ) : (
-                           <div className="h-56 w-full bg-gradient-to-br from-brand/10 to-brand/5 flex items-center justify-center">
-                              <Sparkles className="h-12 w-12 text-brand/40" />
+                           <div className="h-64 w-full bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center relative">
+                              <Sparkles className="h-16 w-16 text-brand/20 group-hover:scale-110 transition-transform duration-500" />
+                              <div className="absolute bottom-4 left-6 z-20">
+                                <span className="text-xs font-black text-brand bg-white/90 backdrop-blur-md px-3 py-1.5 rounded-full uppercase tracking-wider shadow-sm border border-slate-100">
+                                  {service.category}
+                                </span>
+                              </div>
                            </div>
                         )}
-                        <div className="p-8 flex flex-col flex-1">
-                           <span className="text-xs font-bold text-brand bg-brand/10 px-3 py-1.5 rounded-full uppercase tracking-wider w-fit mb-4">{service.category}</span>
-                           <h3 className="text-xl font-bold text-slate-800 mb-3 line-clamp-2">{service.title}</h3>
-                           <p className="text-sm text-slate-600 line-clamp-3 mb-6 flex-1 leading-relaxed font-medium">{service.description}</p>
-                           <Link to="/book" className="font-bold text-brand hover:text-brand-dark flex items-center gap-2 group mt-auto">
-                              Book Service <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                        <div className="p-8 flex flex-col flex-1 bg-white">
+                           <h3 className="text-2xl font-bold text-slate-800 mb-3 line-clamp-2 group-hover:text-brand transition-colors">{service.title}</h3>
+                           <p className="text-base text-slate-500 line-clamp-3 mb-8 flex-1 leading-relaxed">{service.description}</p>
+                           
+                           <Link to="/book" className="inline-flex items-center justify-center gap-2 bg-slate-50 hover:bg-brand text-slate-700 hover:text-white font-bold py-3.5 px-6 rounded-xl transition-all duration-300 mt-auto group/btn border border-slate-100 hover:border-brand">
+                              Book Service 
+                              <ArrowRight className="h-4 w-4 group-hover/btn:translate-x-1 transition-transform" />
                            </Link>
                         </div>
                      </motion.div>

@@ -1,6 +1,5 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
-import spinnerJson from '../assets/spinner.json';
 
 interface LoaderProps {
   fullScreen?: boolean;
@@ -8,26 +7,36 @@ interface LoaderProps {
   size?: 'xs' | 'sm' | 'md' | 'lg';
 }
 
-export function Loader({ fullScreen = false, text = "Loading...", size = 'md' }: LoaderProps) {
-  // Using the local minimal Lottie spinner to guarantee it works.
+export function Loader({ fullScreen = false, text, size = 'md' }: LoaderProps) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const sizeClasses = {
-    xs: "w-8 h-8",
-    sm: "w-16 h-16",
-    md: "w-32 h-32",
-    lg: "w-48 h-48",
+    xs: "w-16 h-16",
+    sm: "w-24 h-24",
+    md: "w-48 h-48",
+    lg: "w-64 h-64",
   };
 
+  const containerClass = fullScreen ? "w-full h-full" : sizeClasses[size];
+
   const content = (
-    <div className="flex flex-col items-center justify-center gap-2">
-      <div className={`${sizeClasses[size]}`}>
-        <DotLottieReact
-          data={JSON.stringify(spinnerJson)}
-          loop
-          autoplay
-        />
+    <div className={`flex flex-col items-center justify-center gap-4 ${fullScreen ? 'w-screen h-screen' : ''}`}>
+      <div className={`relative flex items-center justify-center ${containerClass}`}>
+        {mounted && (
+          <DotLottieReact
+            src="https://lottie.host/62633530-fdb2-42cf-8665-dda8e16a5abe/uRqILV8jjo.lottie"
+            loop
+            autoplay
+            style={{ width: '100%', height: '100%' }}
+          />
+        )}
       </div>
-      {text && (
-        <p className="text-brand font-semibold text-sm animate-pulse tracking-wide">
+      {text && !fullScreen && (
+        <p className="text-brand font-semibold text-sm animate-pulse tracking-wide mt-2">
           {text}
         </p>
       )}
@@ -36,13 +45,12 @@ export function Loader({ fullScreen = false, text = "Loading...", size = 'md' }:
 
   if (fullScreen) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/60 backdrop-blur-md">
-        <div className="bg-white/80 dark:bg-slate-900/80 p-8 rounded-3xl shadow-premium border border-white/20">
-          {content}
-        </div>
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/90 backdrop-blur-sm">
+        {content}
       </div>
     );
   }
 
   return content;
 }
+

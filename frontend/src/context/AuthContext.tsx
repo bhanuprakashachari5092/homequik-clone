@@ -26,9 +26,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       return;
     }
 
+    const startTime = Date.now();
+    const MIN_LOADING_TIME = 3000; // 3 seconds
+
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
-      setLoading(false);
+      
+      const elapsedTime = Date.now() - startTime;
+      const remainingTime = Math.max(0, MIN_LOADING_TIME - elapsedTime);
+
+      setTimeout(() => {
+        setLoading(false);
+      }, remainingTime);
     });
 
     return () => unsubscribe();
@@ -44,7 +53,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   return (
     <AuthContext.Provider value={{ user, loading, signOut }}>
-      {loading ? <Loader fullScreen text="Initializing..." size="lg" /> : children}
+      {loading ? <Loader fullScreen size="lg" /> : children}
     </AuthContext.Provider>
   );
 };

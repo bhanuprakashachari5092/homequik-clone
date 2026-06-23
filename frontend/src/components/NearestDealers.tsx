@@ -35,7 +35,7 @@ export function NearestDealers({ targetCity, address }: NearestDealersProps) {
             const dealerCity = (dealer.city || "").toLowerCase();
             const words = dealerCity.split(/[\s,]+/);
             // Match any word of length > 2
-            return words.some(word => 
+            return words.some((word: string) => 
               word.length > 2 && (cleanAddress.includes(word) || cleanTargetCity.includes(word))
             );
           });

@@ -35,7 +35,6 @@ const columns = [
       ["Instagram", "/about"],
       ["Facebook", "/about"],
       ["Twitter", "/about"],
-      ["LinkedIn", "/about"],
     ],
   },
 ] as const;
