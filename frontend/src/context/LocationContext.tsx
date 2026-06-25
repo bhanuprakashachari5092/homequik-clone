@@ -3,6 +3,7 @@ import { toast } from "sonner";
 
 interface LocationContextType {
   location: string;
+  coords: { latitude: number; longitude: number } | null;
   isLocating: boolean;
   fetchDynamicLocation: (silent?: boolean) => void;
   updateLocation: (newLocation: string) => void;
@@ -12,18 +13,55 @@ const LocationContext = createContext<LocationContextType | null>(null);
 
 export const LocationProvider = ({ children }: { children: React.ReactNode }) => {
   const [location, setLocation] = useState("Bangalore");
+  const [coords, setCoords] = useState<{ latitude: number; longitude: number } | null>(null);
   const [isLocating, setIsLocating] = useState(false);
 
+  const fetchIpLocation = async (silent = false) => {
+    try {
+      const res = await fetch("https://ipapi.co/json/");
+      if (res.ok) {
+        const data = await res.json();
+        const city = data.city || "";
+        const region = data.region || "";
+        if (city) {
+          const displayLoc = city + (region ? `, ${region}` : "");
+          setLocation(displayLoc);
+          setCoords({
+            latitude: data.latitude || 0,
+            longitude: data.longitude || 0
+          });
+          if (!silent) {
+            toast.success(`Location auto-detected to ${displayLoc}`);
+          }
+          console.log("[LocationContext] Automatically resolved IP location:", displayLoc);
+          return true;
+        }
+      }
+    } catch (err) {
+      console.warn("[LocationContext] IP location fetch failed:", err);
+    }
+    return false;
+  };
+
   const fetchDynamicLocation = (silent = false) => {
-    if (typeof window === "undefined" || !navigator.geolocation) return;
+    if (typeof window === "undefined") return;
     
     setIsLocating(true);
     if (!silent) {
-      toast.info("Please allow location access in your browser popup...", { id: "loc-toast" });
+      toast.info("Detecting your location automatically...", { id: "loc-toast" });
+    }
+
+    if (!navigator.geolocation) {
+      fetchIpLocation(silent).finally(() => setIsLocating(false));
+      return;
     }
 
     navigator.geolocation.getCurrentPosition(
       async (position) => {
+        setCoords({
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude
+        });
         if (!silent) toast.dismiss("loc-toast");
         try {
           let displayLoc = "";
@@ -62,15 +100,11 @@ export const LocationProvider = ({ children }: { children: React.ReactNode }) =>
                   } else {
                     displayLoc = firstResult.formatted_address;
                   }
-                } else {
-                  console.warn("Google Maps geocoding status not OK:", data.status, data.error_message);
                 }
               }
             } catch (e) {
               console.warn("Google Maps geocoding failed, trying fallbacks...", e);
             }
-          } else {
-            console.warn("[LocationContext] Google Maps API key (VITE_GOOGLE_MAPS_API_KEY) is not set in .env. Falling back to free geocoding APIs.");
           }
 
           // 2. Try BigDataCloud reverse geocoding as a fallback
@@ -130,54 +164,57 @@ export const LocationProvider = ({ children }: { children: React.ReactNode }) =>
             setLocation(displayLoc);
             if (!silent) toast.success(`Location set to ${displayLoc}`);
           } else {
-            // Settle silently to default location without throwing hard error stack
-            console.warn("All geocoding APIs failed to resolve coordinates. Keeping default location.");
-            if (!silent) toast.error("Could not resolve location. Please enter it manually.");
+            // Settle by falling back to IP location
+            const success = await fetchIpLocation(silent);
+            if (!success) {
+              console.warn("All geocoding APIs failed to resolve coordinates. Keeping default location.");
+              if (!silent) toast.error("Could not resolve location automatically.");
+            }
           }
         } catch (error) {
           console.error("Unexpected error in geolocation flow:", error);
+          await fetchIpLocation(silent);
         } finally {
           setIsLocating(false);
         }
       },
-      (error) => {
+      async (error) => {
         if (!silent) toast.dismiss("loc-toast");
-        if (error.code === error.PERMISSION_DENIED) {
-          if (!silent) toast.error("Location permission denied. Please allow it in site settings.");
-        } else if (error.code === error.TIMEOUT) {
-          if (!silent) toast.error("Location request timed out.");
-        } else {
-          if (!silent) toast.error("Failed to detect location. Please check your device settings.");
+        console.warn("GPS Geolocation failed or denied, trying IP fallback...", error);
+        // Try IP fallback automatically
+        const success = await fetchIpLocation(silent);
+        if (!success && !silent) {
+          toast.error("Could not detect location. Using default: Bangalore");
         }
         setIsLocating(false);
       },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      { enableHighAccuracy: true, timeout: 6000, maximumAge: 0 }
     );
   };
 
   useEffect(() => {
-    // Check permission state before automatically fetching so we don't spam the user
+    // Automatically fetch on mount: try silent geolocator (which uses GPS if allowed, or falls back to IP)
     if (navigator.permissions) {
       navigator.permissions.query({ name: "geolocation" }).then((result) => {
         if (result.state === "granted") {
-          fetchDynamicLocation(true); // Fetch silently if already granted
-        } else if (result.state === "prompt") {
-          // If it's prompt, we explicitly call it to trigger the browser prompt
-          fetchDynamicLocation(false);
+          fetchDynamicLocation(true); // Fetch silently
+        } else {
+          // If not granted, do IP lookup silently to get a fast correct location
+          fetchIpLocation(true);
         }
       });
     } else {
-      fetchDynamicLocation(false);
+      fetchIpLocation(true);
     }
   }, []);
 
   const updateLocation = (newLocation: string) => {
     setLocation(newLocation);
-    toast.success(`Location manually set to ${newLocation}`);
+    toast.success(`Location set to ${newLocation}`);
   };
 
   return (
-    <LocationContext.Provider value={{ location, isLocating, fetchDynamicLocation, updateLocation }}>
+    <LocationContext.Provider value={{ location, coords, isLocating, fetchDynamicLocation, updateLocation }}>
       {children}
     </LocationContext.Provider>
   );

@@ -154,7 +154,7 @@ export function HomeAutomationDetails() {
           <p className="text-muted-foreground mb-6">Pay-per-node specialized labor solutions for products purchased from other mainstream brands (Philips, Wipro, Oakter, Mi, etc.).</p>
           
           <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm">
-            <div className="grid grid-cols-1 md:grid-cols-[1fr_2fr_150px_150px] gap-4 p-4 bg-secondary/50 border-b border-border text-xs font-bold text-muted-foreground uppercase tracking-wider hidden md:grid">
+            <div className="grid-cols-1 md:grid-cols-[1fr_2fr_150px_150px] gap-4 p-4 bg-secondary/50 border-b border-border text-xs font-bold text-muted-foreground uppercase tracking-wider hidden md:grid">
               <div>Automation Node Type</div>
               <div>Service Scope</div>
               <div className="text-right">Labor Rate</div>

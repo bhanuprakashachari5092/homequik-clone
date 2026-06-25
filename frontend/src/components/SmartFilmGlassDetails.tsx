@@ -135,7 +135,7 @@ export function SmartFilmGlassDetails() {
                   </div>
                   <button 
                     onClick={() => toggleSelection(item.name)} 
-                    className={`px-6 py-2.5 rounded-lg font-bold whitespace-nowrap transition-colors min-w-[120px] ${
+                    className={`px-6 py-2.5 rounded-lg font-bold whitespace-nowrap transition-colors min-w-30 ${
                       selectedItems.includes(item.name)
                         ? "bg-brand text-white"
                         : "bg-foreground text-background hover:bg-foreground/90"
@@ -167,7 +167,7 @@ export function SmartFilmGlassDetails() {
           </div>
 
           <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm">
-            <div className="grid grid-cols-1 md:grid-cols-[1fr_2fr_150px_150px] gap-4 p-4 bg-secondary/50 border-b border-border text-xs font-bold text-muted-foreground uppercase tracking-wider hidden md:grid">
+            <div className="grid-cols-1 md:grid-cols-[1fr_2fr_150px_150px] gap-4 p-4 bg-secondary/50 border-b border-border text-xs font-bold text-muted-foreground uppercase tracking-wider hidden md:grid">
               <div>Integration Task</div>
               <div>Execution Specifics</div>
               <div className="text-right">Service Fee</div>

@@ -89,7 +89,7 @@ export function OfferPopup() {
   return (
     <AnimatePresence>
       {isOpen && activeOffer && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
+        <div className="fixed inset-0 z-100 flex items-center justify-center p-4 sm:p-6">
           <motion.div 
             initial={{ opacity: 0 }} 
             animate={{ opacity: 1 }} 
@@ -107,7 +107,7 @@ export function OfferPopup() {
             {activeOffer.imageUrl ? (
                <div className={`w-full relative ${activeOffer.imageSize ? activeOffer.imageSize.split(' ')[0] : 'h-48'}`}>
                   <SafeImage src={activeOffer.imageUrl} alt={activeOffer.title} className={`w-full h-full ${activeOffer.imageSize ? activeOffer.imageSize.split(' ').slice(1).join(' ') : 'object-cover'}`} />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                  <div className="absolute inset-0 bg-linear-to-t from-black/60 to-transparent" />
                </div>
             ) : (
                <div className="h-32 w-full relative overflow-hidden flex items-center justify-center" style={{ backgroundColor: activeOffer.themeColor || '#f97316' }}>

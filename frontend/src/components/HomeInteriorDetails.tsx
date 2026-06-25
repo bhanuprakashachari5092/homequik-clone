@@ -134,7 +134,7 @@ export function HomeInteriorDetails() {
                   </div>
                   <button 
                     onClick={() => toggleSelection(item.name)} 
-                    className={`px-6 py-2.5 rounded-lg font-bold transition-colors min-w-[120px] ${
+                    className={`px-6 py-2.5 rounded-lg font-bold transition-colors min-w-30 ${
                       selectedItems.includes(item.name)
                         ? "bg-brand text-white"
                         : "bg-foreground text-background hover:bg-foreground/90"
@@ -157,7 +157,7 @@ export function HomeInteriorDetails() {
           <p className="text-muted-foreground mb-6">Fixed transparent rates covering localized residential wall refreshing.</p>
           
           <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm">
-            <div className="grid grid-cols-1 md:grid-cols-[2fr_150px_120px_120px] gap-4 p-4 bg-secondary/50 border-b border-border text-xs font-bold text-muted-foreground uppercase tracking-wider hidden md:grid">
+            <div className="grid-cols-1 md:grid-cols-[2fr_150px_120px_120px] gap-4 p-4 bg-secondary/50 border-b border-border text-xs font-bold text-muted-foreground uppercase tracking-wider hidden md:grid">
               <div>Target Zone</div>
               <div>Timeline</div>
               <div className="text-right">Starting Rate</div>
@@ -204,7 +204,7 @@ export function HomeInteriorDetails() {
           <p className="text-muted-foreground mb-6">Comprehensive multi-room solutions calculated precisely across furnished and raw environments.</p>
           
           <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm">
-            <div className="grid grid-cols-1 md:grid-cols-[1fr_150px_120px_120px_120px] gap-4 p-4 bg-secondary/50 border-b border-border text-xs font-bold text-muted-foreground uppercase tracking-wider hidden md:grid">
+            <div className="grid-cols-1 md:grid-cols-[1fr_150px_120px_120px_120px] gap-4 p-4 bg-secondary/50 border-b border-border text-xs font-bold text-muted-foreground uppercase tracking-wider hidden md:grid">
               <div>Configuration</div>
               <div>Execution Window</div>
               <div>Unfurnished</div>

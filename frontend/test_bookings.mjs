@@ -34,7 +34,7 @@ async function testBooking() {
 
   try {
     console.log("1. Sending to Google Sheets...");
-    const sheetResponse = await fetch("https://script.google.com/macros/s/AKfycbxcEHZaSWkogoxOp6PNL0VhLVTNw0X11YEDekRNmCFobqWhL5V4HfMaB9SKTay6DXkK/exec", {
+    const sheetResponse = await fetch("https://script.google.com/macros/s/AKfycbylfcX1xeYmnGfMR9j6d-VL-9iUCiTolApZ_YURJfpHb3KquLNULAP-mk8K-r6gfVbO/exec", {
       method: "POST",
       // mode: 'no-cors' is only needed in browsers to bypass CORS errors for cross-origin requests.
       // Since this is a Node script, we don't need it.

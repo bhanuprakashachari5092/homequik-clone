@@ -3,7 +3,8 @@ import {
   LayoutDashboard, Users, User, ShoppingCart, Settings, 
   LogOut, Bell, Search, Activity, DollarSign, Package,
   Briefcase, CheckCircle2, XCircle, Edit, Trash2, MapPin, Gift,
-  Download, Menu, X, FileText, Loader2, Eye, EyeOff, Clock
+  Download, Menu, X, FileText, Loader2, Eye, EyeOff, Clock,
+  Phone, MessageCircle, ArrowRight
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { db } from "@/lib/firebase";
@@ -126,6 +127,140 @@ function AdminPage() {
   return <AdminDashboard onLogout={() => setIsAuthenticated(false)} />;
 }
 
+const getDistrictFromAddress = (address: string): string => {
+  if (!address) return "Other / Unknown";
+  
+  const addressLower = address.toLowerCase();
+
+  // Define mappings of cities/towns to their districts
+  const cityToDistrictMap: { [key: string]: string } = {
+    "visakhapatnam": "Visakhapatnam",
+    "vizag": "Visakhapatnam",
+    "anakapalle": "Visakhapatnam",
+    "bheemunipatnam": "Visakhapatnam",
+
+    "kakinada": "East Godavari",
+    "rajahmundry": "East Godavari",
+    "amalapuram": "East Godavari",
+    "konaseema": "East Godavari",
+    "mandapeta": "East Godavari",
+    "peddapuram": "East Godavari",
+
+    "eluru": "West Godavari",
+    "bhimavaram": "West Godavari",
+    "tadepalligudem": "West Godavari",
+    "palakollu": "West Godavari",
+    "narsapuram": "West Godavari",
+    "tanuku": "West Godavari",
+
+    "vijayawada": "Krishna",
+    "machilipatnam": "Krishna",
+    "gudivada": "Krishna",
+    "nuzvid": "Krishna",
+
+    "guntur": "Guntur",
+    "tenali": "Guntur",
+    "bapatla": "Guntur",
+    "narasaraopet": "Guntur",
+    "chilakaluripet": "Guntur",
+    "sattenapalli": "Guntur",
+    "piduguralla": "Guntur",
+    "mangalagiri": "Guntur",
+
+    "ongole": "Prakasam",
+    "chirala": "Prakasam",
+    "kandukur": "Prakasam",
+    "markapur": "Prakasam",
+
+    "nellore": "Nellore",
+    "gudur": "Nellore",
+    "kavali": "Nellore",
+    "sullurpeta": "Nellore",
+
+    "chittoor": "Chittoor",
+    "tirupati": "Chittoor",
+    "madanapalle": "Chittoor",
+    "srikalahasti": "Chittoor",
+    "puttur": "Chittoor",
+
+    "anantapur": "Anantapur",
+    "hindupur": "Anantapur",
+    "guntakal": "Anantapur",
+    "tadpatri": "Anantapur",
+    "dharmavaram": "Anantapur",
+    "kadiri": "Anantapur",
+    "puttaparthi": "Anantapur",
+
+    "kurnool": "Kurnool",
+    "nandyal": "Kurnool",
+    "adoni": "Kurnool",
+    "yemmiganur": "Kurnool",
+    "dhone": "Kurnool",
+
+    "srikakulam": "Srikakulam",
+    "palasa": "Srikakulam",
+
+    "vizianagaram": "Vizianagaram",
+    "bobbili": "Vizianagaram",
+
+    "kadapa": "Kadapa",
+    "cuddapah": "Kadapa",
+    "pulivendula": "Kadapa",
+    "proddatur": "Kadapa",
+    "rayachoti": "Kadapa",
+    "rajampet": "Kadapa",
+
+    "hyderabad": "Hyderabad",
+    "secunderabad": "Hyderabad",
+
+    "rangareddy": "Rangareddy",
+    "rajendranagar": "Rangareddy",
+    "sherilingampally": "Rangareddy",
+
+    "medchal": "Medchal",
+    "malkajgiri": "Medchal",
+    "kukatpally": "Medchal",
+
+    "nalgonda": "Nalgonda",
+    "miryalaguda": "Nalgonda",
+
+    "warangal": "Warangal",
+    "hanamkonda": "Warangal",
+
+    "khammam": "Khammam",
+    "karimnagar": "Karimnagar",
+    "nizamabad": "Nizamabad",
+    "mahabubnagar": "Mahabubnagar",
+    "medak": "Medak",
+    "adilabad": "Adilabad"
+  };
+
+  // 1. Check for exact city/town names in the address string
+  for (const [city, district] of Object.entries(cityToDistrictMap)) {
+    const regex = new RegExp(`\\b${city}\\b`, 'i');
+    if (regex.test(addressLower)) {
+      return district;
+    }
+  }
+
+  // 2. Fallback to check for direct matches of known districts
+  const knownDistricts = [
+    "Visakhapatnam", "East Godavari", "West Godavari", "Krishna", "Guntur", "Prakasam", 
+    "Nellore", "Chittoor", "Anantapur", "Kurnool", "Srikakulam", "Vizianagaram", "Kadapa", "Cuddapah",
+    "Hyderabad", "Rangareddy", "Medchal", "Nalgonda", "Warangal", "Khammam", "Karimnagar", 
+    "Nizamabad", "Mahabubnagar", "Medak", "Adilabad"
+  ];
+
+  for (const dist of knownDistricts) {
+    const regex = new RegExp(`\\b${dist}\\b`, 'i');
+    if (regex.test(addressLower)) {
+      return dist === "Cuddapah" ? "Kadapa" : dist;
+    }
+  }
+
+  return "Other / Unknown";
+};
+
 
 
 function AdminDashboard({ onLogout }: { onLogout: () => void }) {
@@ -159,6 +294,8 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
 
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
   const [showCustomerModal, setShowCustomerModal] = useState(false);
+  const [editingModalDealer, setEditingModalDealer] = useState(false);
+  const [selectedDistrict, setSelectedDistrict] = useState<string>("All");
   const [selectedDealer, setSelectedDealer] = useState<any>(null);
   const [showDealerModal, setShowDealerModal] = useState(false);
 
@@ -1130,10 +1267,28 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
             </div>
           ) : activeTab === "Customers" ? (
             <div className="max-w-7xl mx-auto space-y-6">
-               <div className="flex items-center justify-between">
+               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div>
                      <h2 className="text-2xl font-bold text-slate-800">Customer Bookings</h2>
                      <p className="text-slate-500 mt-1">Assign customers to dealers and manage their bookings.</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                     <span className="text-sm font-bold text-slate-500 whitespace-nowrap">Filter by District:</span>
+                     <select
+                        value={selectedDistrict}
+                        onChange={(e) => setSelectedDistrict(e.target.value)}
+                        className="text-sm border border-slate-200 bg-white rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand font-bold text-slate-700 min-w-[160px] shadow-sm cursor-pointer"
+                     >
+                        <option value="All">All Districts ({bookings.length})</option>
+                        {Array.from(new Set(bookings.map(b => getDistrictFromAddress(b.customerAddress || b.city || ""))))
+                           .filter(Boolean)
+                           .sort()
+                           .map(dist => {
+                              const count = bookings.filter(b => getDistrictFromAddress(b.customerAddress || b.city || "").toLowerCase() === dist.toLowerCase()).length;
+                              return <option key={dist} value={dist}>{dist} ({count})</option>;
+                           })
+                        }
+                     </select>
                   </div>
                </div>
                
@@ -1152,9 +1307,15 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border">
-                      {bookings.map((booking, i) => {
-                         const assignedDealer = dealers.find(d => d.id === booking.dealerId);
-                         return (
+                      {bookings
+                        .filter(booking => {
+                           if (selectedDistrict === "All") return true;
+                           const dist = getDistrictFromAddress(booking.customerAddress || booking.city || "");
+                           return dist.toLowerCase() === selectedDistrict.toLowerCase();
+                        })
+                        .map((booking, i) => {
+                          const assignedDealer = dealers.find(d => d.id === booking.dealerId);
+                          return (
                         <tr key={i} className="hover:bg-slate-50 transition-colors cursor-pointer" onClick={() => { setSelectedCustomer(booking); setShowCustomerModal(true); }}>
                           <td className="py-4 px-6 text-sm font-bold text-slate-900">{booking.bookingId || booking.id}</td>
                           <td className="py-4 px-6">
@@ -1165,17 +1326,17 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                              <div className="text-sm font-medium text-slate-700">{booking.serviceName || booking.service}</div>
                              <div className="text-xs text-slate-500 mt-0.5 flex items-center gap-1"><MapPin className="h-3 w-3"/> {booking.customerAddress || booking.city}</div>
                           </td>
-                          <td className="py-4 px-6" onClick={(e) => e.stopPropagation()}>
-                             <select 
-                                value={booking.dealerId || ""}
-                                onChange={(e) => assignDealerToBooking(booking.id, e.target.value)}
-                                className={`text-sm border rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand ${booking.dealerId ? 'border-brand/30 bg-brand/5 font-medium text-brand' : 'border-slate-200 bg-slate-50 text-slate-500'}`}
-                             >
-                                <option value="">-- Unassigned --</option>
-                                {dealers.filter(d => d.status === 'Active').map(d => (
-                                   <option key={d.id} value={d.id}>{d.name} ({d.city})</option>
-                                ))}
-                             </select>
+                          <td className="py-4 px-6">
+                             {assignedDealer ? (
+                                <div className="flex flex-col">
+                                   <span className="font-semibold text-slate-800 text-sm">{assignedDealer.name}</span>
+                                   <span className="text-xs text-slate-500 font-mono mt-0.5">{assignedDealer.phone}</span>
+                                </div>
+                             ) : (
+                                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-100 uppercase tracking-wider">
+                                   Unassigned
+                                </span>
+                             )}
                           </td>
                           <td className="py-4 px-6" onClick={(e) => e.stopPropagation()}>
                             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${
@@ -1376,124 +1537,244 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
         )}
 
         {/* Customer Details Modal */}
-        {showCustomerModal && selectedCustomer && (
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-3xl w-full max-w-lg shadow-xl overflow-hidden max-h-[90vh] flex flex-col">
-               <div className="p-6 border-b border-border flex justify-between items-center bg-slate-50 shrink-0">
-                  <h3 className="font-bold text-xl text-slate-800">
-                     Customer Details
-                  </h3>
-                  <button onClick={() => setShowCustomerModal(false)} className="text-slate-400 hover:text-red-500 transition-colors">
-                     <XCircle className="h-6 w-6" />
-                  </button>
-               </div>
-               <div className="p-6 space-y-4 overflow-y-auto flex-1 custom-scrollbar">
-                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                   <div>
-                     <p className="text-xs text-slate-500 font-bold uppercase">Booking ID</p>
-                     <p className="font-medium text-slate-800">{selectedCustomer.bookingId || selectedCustomer.id}</p>
-                   </div>
-                   <div>
-                     <p className="text-xs text-slate-500 font-bold uppercase">Status</p>
-                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${
-                       selectedCustomer.status === 'Completed' ? 'bg-emerald-100 text-emerald-800' :
-                       selectedCustomer.status === 'In Progress' ? 'bg-brand/20 text-brand' :
-                       'bg-amber-100 text-amber-800'
-                     }`}>
-                       {selectedCustomer.status}
-                     </span>
-                   </div>
-                   {selectedCustomer.customerAddress && (
-                     <div className="col-span-1 sm:col-span-2 break-words">
-                       <p className="text-xs text-slate-500 font-bold uppercase">Customer Address</p>
-                       <p className="font-medium text-slate-800">{selectedCustomer.customerAddress}</p>
-                     </div>
-                   )}
-                   
-                   {Object.keys(selectedCustomer).filter(key => 
-                     !['id', 'status', 'bookingId', 'customerAddress'].includes(key) && 
-                     typeof selectedCustomer[key] !== 'object'
-                   ).map((key) => (
-                     <div key={key} className="col-span-1 sm:col-span-2 md:col-span-1 break-words">
-                       <p className="text-xs text-slate-500 font-bold uppercase">{key.replace(/([A-Z])/g, ' $1').trim()}</p>
-                       <p className="font-medium text-slate-800">{String(selectedCustomer[key])}</p>
-                     </div>
-                   ))}
+        {showCustomerModal && selectedCustomer && (() => {
+           const currentBooking = bookings.find(b => b.id === selectedCustomer.id) || selectedCustomer;
+           const assignedDealer = dealers.find(d => d.id === currentBooking.dealerId);
+           const customerPhone = currentBooking.customerPhone || currentBooking.phone || "";
 
-                   {selectedCustomer.selectedItems && Array.isArray(selectedCustomer.selectedItems) && (
-                     <div className="col-span-1 sm:col-span-2">
-                       <p className="text-xs text-slate-500 font-bold uppercase mb-1">Selected Items</p>
-                       <div className="flex flex-wrap gap-2">
-                         {selectedCustomer.selectedItems.map((item: string, idx: number) => (
-                           <span key={idx} className="bg-brand/10 text-brand text-xs font-bold px-2.5 py-1 rounded-lg border border-brand/20">
-                             {item}
-                           </span>
-                         ))}
-                       </div>
+           return (
+             <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+               <div className="bg-white rounded-3xl w-full max-w-xl shadow-xl overflow-hidden max-h-[90vh] flex flex-col">
+                  {/* Modal Header */}
+                  <div className="p-6 border-b border-border flex justify-between items-center bg-slate-50 shrink-0">
+                     <div>
+                        <h3 className="font-bold text-xl text-slate-800">
+                           Customer Booking Details
+                        </h3>
+                        <p className="text-xs text-slate-500 mt-0.5 font-mono">Booking ID: {currentBooking.bookingId || currentBooking.id}</p>
                      </div>
-                   )}
-                   
-                   {/* Work Milestone Steps Progress */}
-                   <div className="col-span-1 sm:col-span-2 border-t border-slate-100 pt-4 mt-2">
-                     <p className="text-xs text-slate-500 font-bold uppercase mb-4">Work Steps Completion</p>
-                     {selectedCustomer.workSteps && Array.isArray(selectedCustomer.workSteps) ? (
-                       <div className="space-y-0 pl-2">
-                         {selectedCustomer.workSteps.map((step: any, idx: number) => {
-                           const isCompleted = step.completed;
-                           const isLast = idx === selectedCustomer.workSteps.length - 1;
-                           const isLineActive = isCompleted;
-                           return (
-                             <div key={step.id || idx} className="relative flex gap-4 items-start pb-4">
-                               {/* Left Timeline Column */}
-                               <div className="flex flex-col items-center shrink-0 relative">
-                                 <div className={`w-6 h-6 rounded-full flex items-center justify-center border-2 transition-all z-10 ${
-                                   isCompleted 
-                                     ? "bg-emerald-500 border-emerald-500 text-white shadow-[0_0_8px_rgba(16,185,129,0.3)]" 
-                                     : "bg-white border-slate-300 text-slate-400 font-extrabold text-[10px]"
-                                 }`}>
-                                   {isCompleted ? (
-                                     <CheckCircle2 className="h-3.5 w-3.5" />
-                                   ) : (
-                                     <span>{idx + 1}</span>
-                                   )}
-                                 </div>
-                                 {!isLast && (
-                                   <div className={`w-0.5 absolute top-6 bottom-0 left-3 -translate-x-1/2 transition-colors ${
-                                     isLineActive ? "bg-emerald-500" : "bg-slate-200"
-                                   }`} />
-                                 )}
-                               </div>
-                               {/* Right Details Column */}
-                               <div className="pt-0.5">
-                                 <span className={`text-xs font-bold block ${
-                                   isCompleted ? "text-slate-800" : "text-slate-500"
-                                 }`}>
-                                   {step.name}
+                     <button onClick={() => { setShowCustomerModal(false); setSelectedCustomer(null); setEditingModalDealer(false); }} className="text-slate-400 hover:text-red-500 transition-colors">
+                        <XCircle className="h-6 w-6" />
+                     </button>
+                  </div>
+
+                  {/* Modal Body */}
+                  <div className="p-6 space-y-6 overflow-y-auto flex-1 custom-scrollbar">
+                     {/* Part 1: Customer Info & Contact Details */}
+                     <div className="bg-slate-50 border border-slate-100 rounded-2xl p-5 space-y-4">
+                        <div className="flex justify-between items-start flex-wrap gap-3">
+                           <div>
+                              <h4 className="text-xs text-slate-400 font-bold uppercase tracking-wider">Customer Contact</h4>
+                              <p className="font-extrabold text-lg text-slate-800 mt-0.5">{currentBooking.customerName}</p>
+                              {customerPhone && (
+                                 <p className="font-mono text-sm text-slate-600 mt-0.5">{customerPhone}</p>
+                              )}
+                           </div>
+                           <div className="flex gap-2">
+                              {customerPhone && (
+                                 <>
+                                    <a 
+                                       href={`tel:${customerPhone}`}
+                                       className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 font-bold rounded-xl text-xs transition-colors"
+                                    >
+                                       <Phone className="h-3.5 w-3.5" /> Call
+                                    </a>
+                                    <a 
+                                       href={`https://wa.me/91${customerPhone}`}
+                                       target="_blank"
+                                       rel="noopener noreferrer"
+                                       className="inline-flex items-center gap-1 px-3 py-1.5 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 font-bold rounded-xl text-xs transition-colors"
+                                    >
+                                       <MessageCircle className="h-3.5 w-3.5" /> WhatsApp
+                                    </a>
+                                 </>
+                              )}
+                           </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-3 border-t border-slate-200/60">
+                           <div>
+                              <span className="text-[10px] text-slate-400 font-bold uppercase block">Service Requested</span>
+                              <span className="font-semibold text-slate-800 text-sm">{currentBooking.serviceName || currentBooking.service}</span>
+                           </div>
+                           <div>
+                              <span className="text-[10px] text-slate-400 font-bold uppercase block">Scheduled Date & Time</span>
+                              <span className="font-semibold text-slate-800 text-sm">
+                                 {currentBooking.bookingDate || currentBooking.date || "N/A"} at {currentBooking.bookingTime || currentBooking.time || "N/A"}
+                              </span>
+                           </div>
+                           <div className="col-span-1 sm:col-span-2">
+                              <span className="text-[10px] text-slate-400 font-bold uppercase block">Full Address</span>
+                              <span className="text-slate-800 text-sm flex items-start gap-1 mt-0.5">
+                                 <MapPin className="h-4 w-4 text-brand shrink-0 mt-0.5" />
+                                 {currentBooking.customerAddress || currentBooking.city || "No address provided"}
+                              </span>
+                           </div>
+                           {currentBooking.customerLat && currentBooking.customerLng && (
+                              <div className="col-span-1 sm:col-span-2 bg-white px-3 py-2 rounded-xl border border-slate-100 flex items-center justify-between">
+                                 <span className="text-[10px] text-slate-500 font-bold uppercase">GPS Location Coordinates</span>
+                                 <span className="font-mono text-xs text-slate-600 font-bold">
+                                    {currentBooking.customerLat.toFixed(5)}, {currentBooking.customerLng.toFixed(5)}
                                  </span>
-                                 <span className={`text-[9px] font-bold uppercase tracking-wider block mt-0.5 ${
-                                   isCompleted ? "text-emerald-600" : "text-slate-400"
-                                 }`}>
-                                   {isCompleted ? "Completed" : "Pending"}
-                                 </span>
-                               </div>
-                             </div>
-                           );
-                         })}
+                              </div>
+                           )}
+                        </div>
+
+                        {currentBooking.selectedItems && Array.isArray(currentBooking.selectedItems) && currentBooking.selectedItems.length > 0 && (
+                          <div className="pt-3 border-t border-slate-200/60">
+                            <p className="text-[10px] text-slate-400 font-bold uppercase mb-1.5">Selected Items</p>
+                            <div className="flex flex-wrap gap-1.5">
+                              {currentBooking.selectedItems.map((item: string, idx: number) => (
+                                <span key={idx} className="bg-brand/10 text-brand text-[10px] font-bold px-2 py-0.5 rounded-lg border border-brand/20">
+                                  {item}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                     </div>
+
+                     {/* Part 2: Dealer Connection Status Flowchart Diagram */}
+                     <div className="space-y-3">
+                        <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">Dealer Connection Flow</h4>
+                        <div className="relative border-l-2 border-slate-200 pl-6 ml-3 space-y-5 py-1">
+                           
+                           {/* Step 1: Customer booking initiated */}
+                           <div className="relative">
+                              <div className="absolute -left-[31px] top-0 w-4 h-4 rounded-full bg-emerald-500 border-4 border-emerald-100 flex items-center justify-center shadow-sm" />
+                              <div className="text-xs font-bold text-slate-800">Service Booking Requested</div>
+                              <div className="text-[10px] text-slate-500 mt-0.5">Booking successfully captured in the platform database.</div>
+                           </div>
+
+                           {/* Step 2: System notifications */}
+                           <div className="relative">
+                              <div className="absolute -left-[31px] top-0 w-4 h-4 rounded-full bg-emerald-500 border-4 border-emerald-100 flex items-center justify-center shadow-sm" />
+                              <div className="text-xs font-bold text-slate-800">Technician Matching & Notification</div>
+                              <div className="text-[10px] text-slate-500 mt-0.5">
+                                 {currentBooking.eligibleDealers && currentBooking.eligibleDealers.length > 0 
+                                    ? `Notified ${currentBooking.eligibleDealers.length} nearest active technician partners.`
+                                    : "Matching system notified nearby technicians."}
+                              </div>
+                           </div>
+
+                           {/* Step 3: Dealer assignment */}
+                           <div className="relative">
+                              {assignedDealer ? (
+                                 <>
+                                    <div className="absolute -left-[31px] top-0 w-4 h-4 rounded-full bg-emerald-500 border-4 border-emerald-100 flex items-center justify-center shadow-sm" />
+                                    <div className="text-xs font-bold text-slate-800">Technician Assigned & Connected</div>
+                                    <div className="mt-2 bg-white border border-slate-200 rounded-xl p-3.5 shadow-sm space-y-2.5">
+                                       <div className="flex justify-between items-start">
+                                          <div>
+                                             <div className="font-extrabold text-sm text-slate-800">{assignedDealer.name}</div>
+                                             <div className="text-xs text-slate-500 font-medium">{assignedDealer.expertise || "Technician"} • {assignedDealer.city}</div>
+                                          </div>
+                                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-100 uppercase tracking-wider">
+                                             Connected
+                                          </span>
+                                       </div>
+                                       <div className="flex gap-2">
+                                          <a 
+                                             href={`tel:${assignedDealer.phone}`}
+                                             className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-blue-50 text-blue-600 hover:bg-blue-100 font-bold rounded-xl text-xs transition-colors"
+                                          >
+                                             <Phone className="h-3.5 w-3.5" /> Call Partner
+                                          </a>
+                                          <a 
+                                             href={`https://wa.me/91${assignedDealer.phone}`}
+                                             target="_blank"
+                                             rel="noopener noreferrer"
+                                             className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 font-bold rounded-xl text-xs transition-colors"
+                                          >
+                                             <MessageCircle className="h-3.5 w-3.5" /> WhatsApp Partner
+                                          </a>
+                                       </div>
+                                    </div>
+                                 </>
+                              ) : (
+                                 <>
+                                    <div className="absolute -left-[31px] top-0 w-4 h-4 rounded-full bg-amber-500 border-4 border-amber-100 flex items-center justify-center shadow-sm" />
+                                    <div className="text-xs font-bold text-slate-800">Awaiting Partner Acceptance</div>
+                                    <div className="mt-2 text-xs text-slate-500 bg-amber-50/50 border border-amber-100 rounded-xl p-3">
+                                       No technician has accepted or been manually assigned to this booking yet.
+                                    </div>
+                                 </>
+                              )}
+                           </div>
+
+                           {/* Step 4: Service status */}
+                           <div className="relative">
+                              <div className={`absolute -left-[31px] top-0 w-4 h-4 rounded-full flex items-center justify-center shadow-sm ${
+                                 currentBooking.status === 'Completed' 
+                                    ? 'bg-emerald-500 border-4 border-emerald-100'
+                                    : 'bg-slate-300 border-4 border-slate-100'
+                              }`} />
+                              <div className="text-xs font-bold text-slate-800">Service Completion</div>
+                              <div className="text-[10px] text-slate-500 mt-0.5">
+                                 {currentBooking.status === 'Completed' 
+                                    ? "Service successfully completed and verified."
+                                    : `Current status is "${currentBooking.status || 'Pending'}".`}
+                              </div>
+                           </div>
+
+                        </div>
+                     </div>
+
+                     {/* Part 3: Manual Assignment Card (Rare Cases) */}
+                     <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 mt-2">
+                       <div className="flex justify-between items-center mb-3">
+                         <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">Manual Assignment (Rare Cases)</h4>
+                         <button 
+                           onClick={() => setEditingModalDealer(!editingModalDealer)}
+                           className="text-xs font-bold text-brand hover:underline"
+                         >
+                           {editingModalDealer ? "Cancel" : "Assign/Change Partner"}
+                         </button>
                        </div>
-                     ) : (
-                       <p className="text-xs text-slate-400 italic">Work steps have not been initialized by the partner yet.</p>
-                     )}
-                   </div>
-                 </div>
-               </div>
-               <div className="p-4 border-t border-border bg-slate-50 text-right">
-                  <button onClick={() => setShowCustomerModal(false)} className="bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold py-2 px-6 rounded-xl transition-colors">
-                     Close
-                  </button>
+                       {editingModalDealer ? (
+                         <div className="space-y-3">
+                           <p className="text-xs text-slate-500">Select a registered active partner to manually route this service booking.</p>
+                           <div className="flex gap-2">
+                             <select
+                               value={currentBooking.dealerId || ""}
+                               onChange={(e) => assignDealerToBooking(currentBooking.id, e.target.value)}
+                               className="flex-1 text-sm border border-slate-200 bg-white rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand font-semibold text-slate-700"
+                             >
+                               <option value="">-- Unassigned (Remove Assigned Partner) --</option>
+                               {dealers.filter(d => d.status === 'Active').map(d => (
+                                 <option key={d.id} value={d.id}>{d.name} ({d.city})</option>
+                               ))}
+                             </select>
+                             <button
+                               onClick={() => setEditingModalDealer(false)}
+                               className="bg-brand text-white font-bold px-4 py-2.5 rounded-xl text-xs hover:bg-brand-dark transition-colors shadow-sm"
+                             >
+                               Done
+                             </button>
+                           </div>
+                         </div>
+                       ) : (
+                         <div className="flex justify-between items-center text-sm">
+                           <span className="text-slate-500 font-medium">Current Partner:</span>
+                           <span className="font-bold text-slate-800">
+                             {assignedDealer ? assignedDealer.name : "None (Unassigned)"}
+                           </span>
+                         </div>
+                       )}
+                     </div>
+
+                  </div>
+
+                  {/* Modal Footer */}
+                  <div className="p-4 border-t border-border bg-slate-50 text-right">
+                     <button onClick={() => { setShowCustomerModal(false); setSelectedCustomer(null); setEditingModalDealer(false); }} className="bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold py-2 px-6 rounded-xl transition-colors">
+                        Close
+                     </button>
+                  </div>
                </div>
             </div>
-          </div>
-        )}
+           );
+        })()}
 
          {/* Dealer Details & Tracking Modal */}
          {showDealerModal && selectedDealer && (

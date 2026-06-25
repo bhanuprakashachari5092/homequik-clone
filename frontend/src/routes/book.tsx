@@ -34,7 +34,7 @@ function BookServicePage() {
 
           <div className="grid md:grid-cols-2 gap-6">
              {/* CCTV */}
-             <div className="bg-white rounded-[2rem] border border-border/50 p-8 shadow-sm hover:shadow-md transition-all">
+             <div className="bg-white rounded-4xl border border-border/50 p-8 shadow-sm hover:shadow-md transition-all">
                 <h3 className="text-2xl font-bold text-slate-800 mb-2">CCTV & Surveillance</h3>
                 <p className="text-slate-500 mb-6">Installation, Repair, and Maintenance</p>
                 <ul className="space-y-3 mb-8">
@@ -48,7 +48,7 @@ function BookServicePage() {
              </div>
 
              {/* Biometric */}
-             <div className="bg-white rounded-[2rem] border border-border/50 p-8 shadow-sm hover:shadow-md transition-all">
+             <div className="bg-white rounded-4xl border border-border/50 p-8 shadow-sm hover:shadow-md transition-all">
                 <h3 className="text-2xl font-bold text-slate-800 mb-2">Biometric Systems</h3>
                 <p className="text-slate-500 mb-6">Attendance & Access Control</p>
                 <ul className="space-y-3 mb-8">
@@ -62,7 +62,7 @@ function BookServicePage() {
              </div>
 
              {/* Smart Home */}
-             <div className="bg-white rounded-[2rem] border border-border/50 p-8 shadow-sm hover:shadow-md transition-all">
+             <div className="bg-white rounded-4xl border border-border/50 p-8 shadow-sm hover:shadow-md transition-all">
                 <h3 className="text-2xl font-bold text-slate-800 mb-2">Home Automation</h3>
                 <p className="text-slate-500 mb-6">Smart Lights, PDLC Glass, Alexa setup</p>
                 <ul className="space-y-3 mb-8">
@@ -75,7 +75,7 @@ function BookServicePage() {
              </div>
 
              {/* Electrical */}
-             <div className="bg-white rounded-[2rem] border border-border/50 p-8 shadow-sm hover:shadow-md transition-all">
+             <div className="bg-white rounded-4xl border border-border/50 p-8 shadow-sm hover:shadow-md transition-all">
                 <h3 className="text-2xl font-bold text-slate-800 mb-2">Electrical Work</h3>
                 <p className="text-slate-500 mb-6">Wiring, UPS, Inverter setup</p>
                 <ul className="space-y-3 mb-8">

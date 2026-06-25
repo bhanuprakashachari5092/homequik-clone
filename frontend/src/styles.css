@@ -38,39 +38,39 @@
 }
 
 :root {
-  --radius: 1rem;
-  --background: #ffffff;
-  --foreground: #0f172a;
+  --radius: 1.25rem;
+  --background: #fdfbf7; /* Cream/Warm Off-White */
+  --foreground: #2d3e35; /* Soft Olive/Dark Slate Green */
   --card: #ffffff;
-  --card-foreground: #0f172a;
+  --card-foreground: #2d3e35;
   --popover: #ffffff;
-  --popover-foreground: #0f172a;
-  --primary: #E11D48;
+  --popover-foreground: #2d3e35;
+  --primary: #b35d38; /* Rust/Terracotta */
   --primary-foreground: #ffffff;
-  --secondary: #FFF1F2;
-  --secondary-foreground: #E11D48;
-  --muted: #f1f5f9;
-  --muted-foreground: #64748b;
-  --accent: #FFE4E6;
-  --accent-foreground: #E11D48;
-  --destructive: #EF4444;
+  --secondary: #7d9c82; /* Sage Green */
+  --secondary-foreground: #ffffff;
+  --muted: #ebf0eb; /* Light Sage Green */
+  --muted-foreground: #5e6f65;
+  --accent: #f6f3eb; /* Beige Accent */
+  --accent-foreground: #b35d38;
+  --destructive: #b91c1c;
   --destructive-foreground: #ffffff;
-  --success: #10B981;
-  --warning: #F59E0B;
-  --danger: #EF4444;
-  --border: #e2e8f0;
-  --input: #e2e8f0;
-  --ring: #E11D48;
+  --success: #7d9c82;
+  --warning: #d97706;
+  --danger: #b91c1c;
+  --border: #e2ded7;
+  --input: #e2ded7;
+  --ring: #b35d38;
 
-  --brand: #E11D48;
-  --brand-dark: #BE123C;
-  --brand-soft: #FFF1F2;
-  --ink: #0f172a;
-  --ink-soft: #475569;
+  --brand: #b35d38; /* Terracotta */
+  --brand-dark: #8f4727; /* Darker Terracotta */
+  --brand-soft: #f6f3eb; /* Warm Cream */
+  --ink: #2d3e35;
+  --ink-soft: #5e6f65;
 
-  --shadow-card: 0 10px 30px -10px rgba(225, 29, 72, 0.05);
-  --shadow-hover: 0 20px 40px -10px rgba(225, 29, 72, 0.1);
-  --shadow-premium: 0 30px 60px -15px rgba(225, 29, 72, 0.15);
+  --shadow-card: 0 10px 30px -10px rgba(125, 156, 130, 0.12);
+  --shadow-hover: 0 20px 40px -10px rgba(179, 93, 56, 0.15);
+  --shadow-premium: 0 30px 60px -15px rgba(179, 93, 56, 0.2);
 }
 
 @layer base {
@@ -240,3 +240,69 @@
 .animate-run-knee-b { animation: run-knee-b 0.6s linear infinite; }
 .animate-run-arm-f { animation: run-arm-f 0.6s linear infinite; }
 .animate-run-arm-b { animation: run-arm-b 0.6s linear infinite; }
+
+@keyframes scan {
+  0%, 100% {
+    top: 0%;
+  }
+  50% {
+    top: 100%;
+  }
+}
+
+.animate-scan {
+  animation: scan 4s ease-in-out infinite;
+}
+
+@keyframes grid-scroll {
+  0% {
+    background-position: 0 0;
+  }
+  100% {
+    background-position: 0 40px;
+  }
+}
+
+.cyber-grid {
+  background-size: 40px 40px;
+  background-image: 
+    linear-gradient(to right, rgba(125, 156, 130, 0.12) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(125, 156, 130, 0.12) 1px, transparent 1px);
+  transform: rotateX(75deg) translateZ(-180px);
+  animation: grid-scroll 2.5s linear infinite;
+}
+
+@keyframes rotate-clockwise {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes rotate-counter {
+  from { transform: rotate(360deg); }
+  to { transform: rotate(0deg); }
+}
+
+.animate-rotate-cw {
+  animation: rotate-clockwise 25s linear infinite;
+}
+
+.animate-rotate-ccw {
+  animation: rotate-counter 20s linear infinite;
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    opacity: 0.3;
+    transform: scale(0.98);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(1.02);
+  }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 3s ease-in-out infinite;
+}
+
+

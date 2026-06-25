@@ -1,0 +1,9 @@
+bookingId,customerName,customerPhone,customerAddress,serviceName,status,amount,paymentStatus,bookingDate
+BKG-TEST-4592,Automated Test Customer,9876543210,"123 Test Street, Bangalore",CCTV Installation,Pending,₹949,,2026-06-25
+HQ-G33EN6,Roddham Bhanu prakash,08985541157,Anantapur,CCTV & Surveillance,Pending,"₹7,760",,2026-06-13
+HQ-7I6LI1,Manoj,7013550760,Pulivendula,CCTV & Surveillance,Completed,"₹4,000",,2026-06-13
+HQ-FN143B,Roddham Bhanu prakash,08985541157,Anantapur,CCTV & Surveillance,Completed,"₹24,815",,2026-06-14
+HQ-ZKH84O,Roddham Bhanu prakash,08985541157,Anantapur,CCTV & Surveillance,Pending,₹0,,2026-06-13
+HQ-0RC2B4,Roddham Bhanu prakash,08985541157,Anantapur,CCTV & Surveillance,Pending,"₹4,539",,2026-06-13
+HQ-8WI5WY,Roddham Bhanu Prakash,08985541157,Near CR college,CCTV & Surveillance,Pending,"₹3,799",,2026-06-25
+HQ-WD025B,Roddham Bhanu prakash,08985541157,Anantapur,CCTV & Surveillance,Completed,"₹5,539",Pending,2026-06-13

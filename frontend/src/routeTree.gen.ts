@@ -12,8 +12,6 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as QuoteRouteImport } from './routes/quote'
 import { Route as PartnerRouteImport } from './routes/partner'
 import { Route as LoginRouteImport } from './routes/login'
-import { Route as DealerPortalRouteImport } from './routes/dealer-portal'
-import { Route as DealerRouteImport } from './routes/dealer'
 import { Route as CartRouteImport } from './routes/cart'
 import { Route as BookRouteImport } from './routes/book'
 import { Route as BecomePartnerRouteImport } from './routes/become-partner'
@@ -34,16 +32,6 @@ const PartnerRoute = PartnerRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DealerPortalRoute = DealerPortalRouteImport.update({
-  id: '/dealer-portal',
-  path: '/dealer-portal',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DealerRoute = DealerRouteImport.update({
-  id: '/dealer',
-  path: '/dealer',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CartRoute = CartRouteImport.update({
@@ -84,8 +72,6 @@ export interface FileRoutesByFullPath {
   '/become-partner': typeof BecomePartnerRoute
   '/book': typeof BookRoute
   '/cart': typeof CartRoute
-  '/dealer': typeof DealerRoute
-  '/dealer-portal': typeof DealerPortalRoute
   '/login': typeof LoginRoute
   '/partner': typeof PartnerRoute
   '/quote': typeof QuoteRoute
@@ -97,8 +83,6 @@ export interface FileRoutesByTo {
   '/become-partner': typeof BecomePartnerRoute
   '/book': typeof BookRoute
   '/cart': typeof CartRoute
-  '/dealer': typeof DealerRoute
-  '/dealer-portal': typeof DealerPortalRoute
   '/login': typeof LoginRoute
   '/partner': typeof PartnerRoute
   '/quote': typeof QuoteRoute
@@ -111,8 +95,6 @@ export interface FileRoutesById {
   '/become-partner': typeof BecomePartnerRoute
   '/book': typeof BookRoute
   '/cart': typeof CartRoute
-  '/dealer': typeof DealerRoute
-  '/dealer-portal': typeof DealerPortalRoute
   '/login': typeof LoginRoute
   '/partner': typeof PartnerRoute
   '/quote': typeof QuoteRoute
@@ -126,8 +108,6 @@ export interface FileRouteTypes {
     | '/become-partner'
     | '/book'
     | '/cart'
-    | '/dealer'
-    | '/dealer-portal'
     | '/login'
     | '/partner'
     | '/quote'
@@ -139,8 +119,6 @@ export interface FileRouteTypes {
     | '/become-partner'
     | '/book'
     | '/cart'
-    | '/dealer'
-    | '/dealer-portal'
     | '/login'
     | '/partner'
     | '/quote'
@@ -152,8 +130,6 @@ export interface FileRouteTypes {
     | '/become-partner'
     | '/book'
     | '/cart'
-    | '/dealer'
-    | '/dealer-portal'
     | '/login'
     | '/partner'
     | '/quote'
@@ -166,8 +142,6 @@ export interface RootRouteChildren {
   BecomePartnerRoute: typeof BecomePartnerRoute
   BookRoute: typeof BookRoute
   CartRoute: typeof CartRoute
-  DealerRoute: typeof DealerRoute
-  DealerPortalRoute: typeof DealerPortalRoute
   LoginRoute: typeof LoginRoute
   PartnerRoute: typeof PartnerRoute
   QuoteRoute: typeof QuoteRoute
@@ -194,20 +168,6 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/dealer-portal': {
-      id: '/dealer-portal'
-      path: '/dealer-portal'
-      fullPath: '/dealer-portal'
-      preLoaderRoute: typeof DealerPortalRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/dealer': {
-      id: '/dealer'
-      path: '/dealer'
-      fullPath: '/dealer'
-      preLoaderRoute: typeof DealerRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/cart': {
@@ -262,8 +222,6 @@ const rootRouteChildren: RootRouteChildren = {
   BecomePartnerRoute: BecomePartnerRoute,
   BookRoute: BookRoute,
   CartRoute: CartRoute,
-  DealerRoute: DealerRoute,
-  DealerPortalRoute: DealerPortalRoute,
   LoginRoute: LoginRoute,
   PartnerRoute: PartnerRoute,
   QuoteRoute: QuoteRoute,

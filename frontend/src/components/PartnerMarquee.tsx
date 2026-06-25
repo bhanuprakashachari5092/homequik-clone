@@ -15,7 +15,7 @@ const PartnerMarquee: React.FC = () => {
         </div>
         <div className="flex w-full overflow-hidden relative group">
            {/* We use 3 blocks of the same content to create the seamless infinite scroll */}
-           <div className="flex w-max animate-marquee-reverse whitespace-nowrap group-hover:[animation-play-state:paused] transition-all duration-300">
+           <div className="flex w-max animate-marquee-reverse whitespace-nowrap group-hover:paused transition-all duration-300">
               {/* Block 1 */}
               <div className="flex items-center gap-24 md:gap-32 px-12 md:px-16">
                  <div className="w-32 md:w-48 flex items-center justify-center">
@@ -67,8 +67,8 @@ const PartnerMarquee: React.FC = () => {
            </div>
         </div>
         {/* Gradients to fade edges */}
-        <div className="absolute top-0 left-0 w-32 h-full bg-gradient-to-r from-white via-white/80 to-transparent pointer-events-none"></div>
-        <div className="absolute top-0 right-0 w-32 h-full bg-gradient-to-l from-white via-white/80 to-transparent pointer-events-none"></div>
+        <div className="absolute top-0 left-0 w-32 h-full bg-linear-to-r from-white via-white/80 to-transparent pointer-events-none"></div>
+        <div className="absolute top-0 right-0 w-32 h-full bg-linear-to-l from-white via-white/80 to-transparent pointer-events-none"></div>
       </div>
     </section>
   );

@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, User, Phone, MapPin, Calendar, Clock, CheckCircle2, Loader2, FileText } from "lucide-react";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { collection, addDoc, serverTimestamp, getDocs, query, where, doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
@@ -10,7 +10,9 @@ import { Loader } from "@/components/Loader";
 import { useOffers } from "@/context/OfferContext";
 import { useLocation } from "@/context/LocationContext";
 import { NearestDealers } from "@/components/NearestDealers";
-
+import { usePreciseLocation } from "@/hooks/usePreciseLocation";
+import { useDistanceCalculator } from "@/hooks/useDistanceCalculator";
+import { reverseGeocodeNominatim } from "@/services/nominatimService";
 
 interface BookingModalProps {
   isOpen: boolean;
@@ -24,7 +26,7 @@ export function BookingModal({ isOpen, onClose, serviceName, selectedItems = [],
   const { user } = useAuth();
   const navigate = useNavigate();
   const { getApplicableOffer } = useOffers();
-  const { location: userLocation } = useLocation();
+  const { location: userLocation, coords: userCoords } = useLocation();
   const [step, setStep] = useState<"form" | "submitting" | "success">("form");
   const [bookingId, setBookingId] = useState("");
   const [whatsappLink, setWhatsappLink] = useState("");
@@ -42,6 +44,44 @@ export function BookingModal({ isOpen, onClose, serviceName, selectedItems = [],
     time: defaultTime,
     notes: ""
   });
+
+  const {
+    coords: preciseCoords,
+    isLocating: isLocatingGPS,
+    error: locationError,
+    waitingForPrecise,
+    permissionStatus,
+    retry: retryGPS
+  } = usePreciseLocation();
+  const { getDistance } = useDistanceCalculator();
+  const [assignedDealerId, setAssignedDealerId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (user) {
+      setFormData(prev => ({
+        ...prev,
+        fullName: prev.fullName || user.displayName || "",
+        phone: prev.phone || user.phoneNumber || ""
+      }));
+    }
+  }, [user]);
+
+  useEffect(() => {
+    let isMounted = true;
+    if (preciseCoords && !formData.address) {
+      reverseGeocodeNominatim(preciseCoords.latitude, preciseCoords.longitude).then((res) => {
+        if (isMounted && res && res.fullAddress) {
+          setFormData(prev => ({
+            ...prev,
+            address: res.fullAddress
+          }));
+        }
+      });
+    }
+    return () => {
+      isMounted = false;
+    };
+  }, [preciseCoords]);
 
   const getPriceDetails = () => {
     let originalAmount = 0;
@@ -127,11 +167,119 @@ export function BookingModal({ isOpen, onClose, serviceName, selectedItems = [],
         calculatedAmount = Math.max(0, Math.round(calculatedAmount));
       }
 
+      // Fetch active dealers to find the 5 nearest by coordinates (distance in meters/km)
+      let eligibleDealerIds: string[] = [];
+      const dealerDistancesMap: { [dealerId: string]: string } = {};
+      let customerCoords: { latitude: number, longitude: number } | null = null;
+      try {
+        const dealersQuery = query(collection(db, "dealers"), where("status", "==", "Active"));
+        const dealersSnapshot = await getDocs(dealersQuery);
+        const allDealers: any[] = [];
+        dealersSnapshot.forEach(doc => {
+          allDealers.push({ id: doc.id, ...doc.data() });
+        });
+
+        // 1. Geocoding helpers
+        const geocodeString = async (queryStr: string): Promise<{ latitude: number, longitude: number } | null> => {
+          try {
+            const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(queryStr)}&limit=1`, {
+              headers: {
+                "Accept-Language": "en-US,en;q=0.9",
+                "User-Agent": "Vendor99-Precise-Locator/1.0 (contact: support@vendor99.com)"
+              }
+            });
+            if (res.ok) {
+              const data = await res.json();
+              if (data && data.length > 0) {
+                return { latitude: parseFloat(data[0].lat), longitude: parseFloat(data[0].lon) };
+              }
+            }
+          } catch (err) {
+            console.error("Geocoding failed for:", queryStr, err);
+          }
+          return null;
+        };
+
+        // 2. Resolve customer coordinates
+        if (preciseCoords) {
+          customerCoords = { latitude: preciseCoords.latitude, longitude: preciseCoords.longitude };
+        } else {
+          const fullAddressQuery = userLocation ? `${formData.address}, ${userLocation}` : formData.address;
+          customerCoords = await geocodeString(fullAddressQuery);
+          if (!customerCoords && userCoords) {
+            customerCoords = userCoords;
+          }
+        }
+
+        if (customerCoords) {
+          // Calculate distances to active dealers using getDistance
+          const dealersWithDistance = await Promise.all(allDealers.map(async (dealer) => {
+            let dLat = dealer.latitude;
+            let dLng = dealer.longitude;
+
+            if ((dLat === null || dLat === undefined || dLng === null || dLng === undefined) && dealer.city) {
+              const coords = await geocodeString(dealer.city);
+              if (coords) {
+                dLat = coords.latitude;
+                dLng = coords.longitude;
+              }
+            }
+
+            if (dLat !== null && dLat !== undefined && dLng !== null && dLng !== undefined) {
+              const distanceInMeters = getDistance(customerCoords!.latitude, customerCoords!.longitude, dLat, dLng);
+              return { dealer, distance: distanceInMeters };
+            }
+
+            return { dealer, distance: 9999999 };
+          }));
+
+          // Sort by distance ascending
+          dealersWithDistance.sort((a, b) => a.distance - b.distance);
+          const eligibleDealers = dealersWithDistance.slice(0, 5);
+          eligibleDealerIds = eligibleDealers.map(x => x.dealer.id);
+          
+          eligibleDealers.forEach(x => {
+            if (x.distance !== 9999999) {
+              const roundedMeters = Math.round(x.distance);
+              const km = (x.distance / 1000).toFixed(2);
+              dealerDistancesMap[x.dealer.id] = `${roundedMeters} m (${km} km)`;
+            } else {
+              dealerDistancesMap[x.dealer.id] = "N/A";
+            }
+          });
+        } else {
+          console.warn("Geocoding and GPS failed. Falling back to keyword-based matching.");
+          const cleanAddress = (formData.address || "").toLowerCase();
+          const cleanTargetCity = (userLocation || "").toLowerCase();
+
+          const matchedDealers = allDealers.filter(dealer => {
+            const dealerCity = (dealer.city || "").toLowerCase();
+            const words = dealerCity.split(/[\s,]+/);
+            return words.some((word: string) => 
+              word.length > 2 && (cleanAddress.includes(word) || cleanTargetCity.includes(word))
+            );
+          });
+
+          const eligibleDealers = matchedDealers.length > 0 
+            ? matchedDealers.slice(0, 5) 
+            : allDealers.slice(0, 5);
+
+          eligibleDealerIds = eligibleDealers.map(d => d.id);
+          eligibleDealerIds.forEach(id => {
+            dealerDistancesMap[id] = "N/A";
+          });
+        }
+      } catch (err) {
+        console.error("Error matching dealers on booking creation:", err);
+      }
+
       const bookingData = {
         bookingId: generatedId,
         customerName: formData.fullName,
         customerPhone: formData.phone,
         customerAddress: formData.address,
+        customerLat: customerCoords?.latitude || null,
+        customerLng: customerCoords?.longitude || null,
         serviceName: serviceName,
         selectedItems: selectedItems,
         bookingDate: formData.date,
@@ -140,26 +288,99 @@ export function BookingModal({ isOpen, onClose, serviceName, selectedItems = [],
         amount: calculatedAmount > 0 ? `₹${calculatedAmount.toLocaleString('en-IN')}` : "₹0",
         numericAmount: calculatedAmount,
         status: "Pending",
-        createdAt: serverTimestamp()
+        createdAt: serverTimestamp(),
+        eligibleDealers: eligibleDealerIds,
+        dealerDistances: dealerDistancesMap,
+        dealerId: eligibleDealerIds[0] || null // Auto assign nearest available technician!
       };
 
-      // 1. Save to Google Sheets
+      setAssignedDealerId(eligibleDealerIds[0] || null);
+
+      // 1. Save to Google Sheets (Bookings Sheet1 & Leads tab in one single request)
       try {
-        await fetch("https://script.google.com/macros/s/AKfycbxcEHZaSWkogoxOp6PNL0VhLVTNw0X11YEDekRNmCFobqWhL5V4HfMaB9SKTay6DXkK/exec", {
+        await fetch("https://script.google.com/macros/s/AKfycbylfcX1xeYmnGfMR9j6d-VL-9iUCiTolApZ_YURJfpHb3KquLNULAP-mk8K-r6gfVbO/exec", {
           method: "POST",
           mode: "no-cors",
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify(bookingData),
+          body: JSON.stringify({
+            ...bookingData,
+            createdAt: new Date().toISOString(),
+            selectedItems: selectedItems || [],
+            latitude: customerCoords?.latitude || "",
+            longitude: customerCoords?.longitude || ""
+          }),
         });
-        console.log("Sent to Google Sheets");
+        console.log("Sent unified booking to Google Sheets");
       } catch (err) {
         console.error("Error saving to Google Sheets:", err);
       }
 
       // 2. Save to Firebase (Admin Dashboard uses this)
       const docRef = await addDoc(collection(db, "bookings"), bookingData);
+
+      // 3. Create notifications for the 5 nearest dealers in Firebase
+      try {
+        for (const dealerId of eligibleDealerIds) {
+          const distanceText = dealerDistancesMap[dealerId] || "N/A";
+          await addDoc(collection(db, "notifications"), {
+            dealerId: dealerId,
+            title: "New Lead Nearby",
+            message: `New booking request from ${formData.fullName} for ${serviceName} in ${formData.address}`,
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            type: "lead",
+            bookingId: docRef.id,
+            customerName: formData.fullName,
+            serviceRequired: serviceName,
+            area: formData.address,
+            exactDistance: distanceText,
+            createdAt: serverTimestamp()
+          });
+        }
+      } catch (err) {
+        console.error("Error creating dealer notifications:", err);
+      }
+
+      // 4. Send real-time push notifications via Expo Push API to the 5 nearest dealers
+      try {
+        for (const dealerId of eligibleDealerIds) {
+          const dlrDoc = await getDoc(doc(db, "dealers", dealerId));
+          if (dlrDoc.exists()) {
+            const dlrData = dlrDoc.data();
+            const pushToken = dlrData.pushToken;
+            const distanceText = dealerDistancesMap[dealerId] || "N/A";
+            
+            if (pushToken) {
+              await fetch("https://exp.host/--/api/v2/send", {
+                method: "POST",
+                headers: {
+                  "Accept": "application/json",
+                  "Accept-encoding": "gzip, deflate",
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  to: pushToken,
+                  sound: "default",
+                  title: `⚡ New Lead Nearby: ${distanceText}!`,
+                  body: `🛠️ ${serviceName} requested by ${formData.fullName} in ${formData.address.split(',')[0]}`,
+                  channelId: "new-leads",
+                  data: {
+                    leadId: docRef.id,
+                    customerName: formData.fullName,
+                    serviceRequired: serviceName,
+                    area: formData.address,
+                    exactDistance: distanceText
+                  }
+                })
+              });
+              console.log(`Sent push notification to dealer ${dealerId}`);
+            }
+          }
+        }
+      } catch (pushErr) {
+        console.error("Error sending push notifications:", pushErr);
+      }
 
       console.log("SUCCESS:", docRef.id);
 
@@ -180,7 +401,6 @@ export function BookingModal({ isOpen, onClose, serviceName, selectedItems = [],
       const WHATSAPP_NUMBER = "919141052539";
       setWhatsappLink(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(text)}`);
 
-      // Show success animation before requiring WhatsApp click
       setTimeout(() => {
         setStep("success");
       }, 3500); 
@@ -203,6 +423,7 @@ export function BookingModal({ isOpen, onClose, serviceName, selectedItems = [],
       time: today.toTimeString().split(' ')[0].substring(0, 5), 
       notes: "" 
     });
+    setAssignedDealerId(null);
     onClose();
   };
 
@@ -215,7 +436,7 @@ export function BookingModal({ isOpen, onClose, serviceName, selectedItems = [],
           initial={{ opacity: 0, scale: 0.9, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.9, y: 20 }}
-          className="bg-white rounded-[2rem] shadow-premium w-full max-w-lg max-h-[85vh] flex flex-col overflow-hidden relative"
+          className="bg-white rounded-4xl shadow-premium w-full max-w-lg max-h-[85vh] flex flex-col overflow-hidden relative"
         >
           {/* Header */}
           <div className="bg-gradient-premium p-6 text-white relative shrink-0">
@@ -248,6 +469,40 @@ export function BookingModal({ isOpen, onClose, serviceName, selectedItems = [],
                   <div className="relative">
                     <MapPin className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
                     <input required type="text" name="address" value={formData.address} onChange={handleChange} placeholder="Complete Address" className="w-full bg-secondary/50 border border-border rounded-xl py-3 pl-10 pr-4 outline-none focus:border-brand focus:ring-1 focus:ring-brand transition-all" />
+                  </div>
+                  {/* Precise Geolocation Status */}
+                  <div className="text-[11px] mt-1 space-y-1">
+                    {isLocatingGPS && (
+                      <p className="text-blue-600 font-bold animate-pulse flex items-center gap-1">
+                        <span className="h-1.5 w-1.5 rounded-full bg-blue-600 animate-ping" />
+                        Detecting precise GPS coordinates...
+                      </p>
+                    )}
+                    {waitingForPrecise && (
+                      <p className="text-amber-600 font-bold flex items-center gap-1 animate-pulse">
+                        ⚠️ Waiting for precise GPS location (accuracy: {preciseCoords ? `${preciseCoords.accuracy?.toFixed(1)}m` : "checking..."})...
+                      </p>
+                    )}
+                    {permissionStatus === "denied" && (
+                      <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-red-700 space-y-1.5">
+                        <p className="font-bold">GPS permission is denied.</p>
+                        <p className="text-[10px] text-red-600 leading-normal">
+                          Please enable location access in your browser settings (click the lock icon in the browser address bar) to automatically resolve your address.
+                        </p>
+                        <button
+                          type="button"
+                          onClick={retryGPS}
+                          className="bg-red-600 hover:bg-red-700 text-white font-black px-3 py-1 rounded-lg text-[9px] uppercase tracking-wider transition-colors"
+                        >
+                          Retry GPS Detection
+                        </button>
+                      </div>
+                    )}
+                    {!isLocatingGPS && !waitingForPrecise && preciseCoords && (
+                      <p className="text-emerald-600 font-bold flex items-center gap-1">
+                        ✓ Precise location resolved (accuracy: {preciseCoords.accuracy?.toFixed(1)}m)
+                      </p>
+                    )}
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="relative">
@@ -283,7 +538,7 @@ export function BookingModal({ isOpen, onClose, serviceName, selectedItems = [],
                       {discountAmount > 0 && (
                         <div className="flex justify-between items-center text-emerald-600 font-medium">
                           <span>
-                            Discount {offer?.discountCode ? `(${offer.discountCode})` : `(${offer?.title || 'Offer'})`}:
+                            Discount {offer?.discountCode ? `(${offer?.discountCode})` : `(${offer?.title || 'Offer'})`}:
                           </span>
                           <span>- ₹{discountAmount.toLocaleString('en-IN')}</span>
                         </div>
@@ -343,7 +598,7 @@ export function BookingModal({ isOpen, onClose, serviceName, selectedItems = [],
                   initial={{ scale: 0, rotate: -180 }} 
                   animate={{ scale: 1, rotate: 0 }} 
                   transition={{ type: "spring", bounce: 0.6, duration: 0.8 }}
-                  className="w-24 h-24 bg-gradient-to-tr from-success to-emerald-600 rounded-[2rem] flex items-center justify-center mb-8 shadow-2xl shadow-success/30 transform rotate-3"
+                  className="w-24 h-24 bg-linear-to-tr from-success to-emerald-600 rounded-4xl flex items-center justify-center mb-8 shadow-2xl shadow-success/30 transform rotate-3"
                 >
                   <motion.div
                     initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.5, type: "spring", bounce: 0.5 }}
@@ -354,7 +609,7 @@ export function BookingModal({ isOpen, onClose, serviceName, selectedItems = [],
 
                 <motion.h3 
                   initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
-                  className="text-3xl font-black mb-3 bg-gradient-to-r from-success to-emerald-600 bg-clip-text text-transparent"
+                  className="text-3xl font-black mb-3 bg-linear-to-r from-success to-emerald-600 bg-clip-text text-transparent"
                 >
                   Booking Confirmed!
                 </motion.h3>
@@ -367,7 +622,7 @@ export function BookingModal({ isOpen, onClose, serviceName, selectedItems = [],
                 
                 <motion.div 
                   initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}
-                  className="w-full bg-white/50 backdrop-blur-md border border-slate-200/60 rounded-[2rem] p-6 mb-8 text-left space-y-4 shadow-xl shadow-slate-200/20"
+                  className="w-full bg-white/50 backdrop-blur-md border border-slate-200/60 rounded-4xl p-6 mb-8 text-left space-y-4 shadow-xl shadow-slate-200/20"
                 >
                   <div className="flex justify-between items-center border-b border-slate-100 pb-4">
                     <span className="text-slate-500 font-medium">Tracking ID</span>
@@ -387,8 +642,13 @@ export function BookingModal({ isOpen, onClose, serviceName, selectedItems = [],
                   </div>
                 </motion.div>
 
-                <div className="w-full max-h-[260px] overflow-y-auto pr-1.5 mb-6 border-b border-slate-100 pb-2 custom-scrollbar">
-                  <NearestDealers targetCity={userLocation} address={formData.address} />
+                <div className="w-full max-h-65 overflow-y-auto pr-1.5 mb-6 border-b border-slate-100 pb-2 custom-scrollbar">
+                  <NearestDealers 
+                    targetCity={userLocation} 
+                    address={formData.address} 
+                    customerCoords={preciseCoords} 
+                    assignedDealerId={assignedDealerId} 
+                  />
                 </div>
 
                 <motion.button 

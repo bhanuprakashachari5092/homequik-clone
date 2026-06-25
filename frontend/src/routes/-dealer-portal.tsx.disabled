@@ -114,7 +114,7 @@ function DealerPortal() {
         <motion.div 
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="bg-white p-10 rounded-[2.5rem] shadow-2xl border border-white/50 w-full max-w-md text-center relative z-10 backdrop-blur-sm bg-white/80"
+          className="p-10 rounded-[2.5rem] shadow-2xl border border-white/50 w-full max-w-md text-center relative z-10 backdrop-blur-sm bg-white/80"
         >
           {loginStep === "verifying" && (
             <div className="flex flex-col items-center py-8 space-y-6">
@@ -159,7 +159,7 @@ function DealerPortal() {
         <div className="absolute top-[-10%] left-[-10%] w-96 h-96 bg-brand/10 rounded-full blur-3xl"></div>
         <div className="absolute bottom-[-10%] right-[-10%] w-96 h-96 bg-blue-500/10 rounded-full blur-3xl"></div>
 
-        <div className="bg-white p-8 md:p-10 rounded-[2.5rem] shadow-2xl border border-white/50 w-full max-w-md relative z-10 backdrop-blur-sm bg-white/80">
+        <div className="p-8 md:p-10 rounded-[2.5rem] shadow-2xl border border-white/50 w-full max-w-md relative z-10 backdrop-blur-sm bg-white/80">
           <Link to="/" className="text-brand font-bold text-sm hover:underline absolute top-6 right-8">
              Back to Home
           </Link>
@@ -341,7 +341,7 @@ function DealerDashboard({ currentDealer, onLogout }: { currentDealer: any, onLo
          </div>
 
          {/* Bookings List */}
-         <div className="bg-white rounded-[2rem] shadow-sm border border-slate-100 overflow-hidden">
+          <div className="bg-white rounded-4xl shadow-sm border border-slate-100 overflow-hidden">
             <div className="p-8 border-b border-slate-100">
                <h3 className="text-xl font-bold text-slate-800">Customer Assignments</h3>
             </div>
@@ -384,7 +384,7 @@ function DealerDashboard({ currentDealer, onLogout }: { currentDealer: any, onLo
                               </div>
                               <div className="flex items-center gap-1.5 bg-slate-100 px-3 py-1.5 rounded-lg">
                                  <MapPin className="h-4 w-4 text-slate-400 shrink-0" />
-                                 <span className="truncate max-w-[200px] sm:max-w-xs">{booking.customerAddress || booking.city}</span>
+                                  <span className="truncate max-w-50 sm:max-w-xs">{booking.customerAddress || booking.city}</span>
                               </div>
                            </div>
 
@@ -427,14 +427,14 @@ function DealerDashboard({ currentDealer, onLogout }: { currentDealer: any, onLo
                                                 
                                                 {/* Line segment */}
                                                 {!isLast && (
-                                                   <div className={`w-0.5 absolute top-8 bottom-[-10px] left-4 -translate-x-1/2 transition-colors ${
+                                                    <div className={`w-0.5 absolute top-8 -bottom-2.5 left-4 -translate-x-1/2 transition-colors ${
                                                       isLineActive ? "bg-emerald-500" : "bg-slate-200"
                                                    }`} />
                                                 )}
                                              </div>
                                              
                                              {/* Right Column */}
-                                             <div className="pt-1 flex-grow">
+                                              <div className="pt-1 grow">
                                                 <span className={`text-sm font-bold block transition-colors ${
                                                    isCompleted ? "text-slate-800" : "text-slate-500 group-hover:text-slate-700"
                                                 }`}>

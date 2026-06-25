@@ -26,7 +26,6 @@ const columns = [
     title: "For professionals",
     links: [
       ["Register as a Dealer", "/partner"],
-      ["Dealer Login", "/dealer-portal"],
     ],
   },
   {
@@ -48,7 +47,7 @@ export function SiteFooter() {
       transition={{ duration: 0.7 }}
       className="mt-24 border-t border-white/10 bg-ink text-white overflow-hidden relative"
     >
-      <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-brand to-transparent opacity-50" />
+      <div className="absolute top-0 inset-x-0 h-px bg-linear-to-r from-transparent via-brand to-transparent opacity-50" />
       <div className="mx-auto max-w-7xl px-6 py-20">
         <div className="grid gap-10 md:grid-cols-5">
           <div className="md:col-span-1">

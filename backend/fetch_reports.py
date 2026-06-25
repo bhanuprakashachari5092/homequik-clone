@@ -6,7 +6,7 @@ from datetime import datetime
 
 PROJECT_ID = "homequik-clone"
 FIRESTORE_URL = f"https://firestore.googleapis.com/v1/projects/{PROJECT_ID}/databases/(default)/documents"
-GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbxcEHZaSWkogoxOp6PNL0VhLVTNw0X11YEDekRNmCFobqWhL5V4HfMaB9SKTay6DXkK/exec"
+GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbylfcX1xeYmnGfMR9j6d-VL-9iUCiTolApZ_YURJfpHb3KquLNULAP-mk8K-r6gfVbO/exec"
 
 def fetch_firestore_collection(collection_name):
     url = f"{FIRESTORE_URL}/{collection_name}?pageSize=100"

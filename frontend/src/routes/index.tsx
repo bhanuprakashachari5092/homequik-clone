@@ -145,7 +145,7 @@ function Home() {
       {/* Recommended Features Strip */}
       <section id="services" className="bg-slate-50/50 py-12 border-b border-slate-100 relative z-10 overflow-hidden">
         {/* Subtle background glow */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-3xl h-[100px] bg-brand/5 blur-[80px] rounded-full pointer-events-none" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-3xl h-25 bg-brand/5 blur-[80px] rounded-full pointer-events-none" />
         
         <div className="mx-auto max-w-7xl px-6 lg:px-8 relative">
           <div className="text-center mb-8">
@@ -194,7 +194,7 @@ function Home() {
                    viewport={{ once: true }}
                    className="text-4xl font-black tracking-tight sm:text-5xl text-slate-900"
                  >
-                   Latest Services & <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand to-orange-500">Offers</span>
+                   Latest Services & <span className="text-transparent bg-clip-text bg-linear-to-r from-brand to-orange-500">Offers</span>
                  </motion.h2>
                  <motion.p 
                    initial={{ opacity: 0, y: 20 }}
@@ -215,14 +215,14 @@ function Home() {
                        whileInView={{ opacity: 1, y: 0 }} 
                        viewport={{ once: true, margin: "-100px" }}
                        transition={{ delay: idx * 0.1, duration: 0.5, ease: "easeOut" }}
-                       className="group bg-white rounded-[2rem] border border-slate-100 shadow-[0_8px_30px_rgba(0,0,0,0.04)] overflow-hidden hover:shadow-[0_20px_40px_rgba(217,46,16,0.1)] hover:-translate-y-2 transition-all duration-500 flex flex-col relative"
+                       className="group bg-white rounded-4xl border border-slate-100 shadow-[0_8px_30px_rgba(0,0,0,0.04)] overflow-hidden hover:shadow-[0_20px_40px_rgba(217,46,16,0.1)] hover:-translate-y-2 transition-all duration-500 flex flex-col relative"
                      >
                         {/* Shine effect on hover */}
-                        <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/40 to-white/0 opacity-0 group-hover:opacity-100 group-hover:translate-x-full transition-all duration-1000 -skew-x-12 z-20 pointer-events-none" />
+                        <div className="absolute inset-0 bg-linear-to-tr from-white/0 via-white/40 to-white/0 opacity-0 group-hover:opacity-100 group-hover:translate-x-full transition-all duration-1000 -skew-x-12 z-20 pointer-events-none" />
 
                         {service.imageUrl ? (
                            <div className="h-64 w-full overflow-hidden relative">
-                              <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 to-transparent z-10" />
+                              <div className="absolute inset-0 bg-linear-to-t from-slate-900/60 to-transparent z-10" />
                               <SafeImage 
                                 src={service.imageUrl} 
                                 alt={service.title} 
@@ -243,7 +243,7 @@ function Home() {
                               </div>
                            </div>
                         ) : (
-                           <div className="h-64 w-full bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center relative">
+                           <div className="h-64 w-full bg-linear-to-br from-slate-50 to-slate-100 flex items-center justify-center relative">
                               <Sparkles className="h-16 w-16 text-brand/20 group-hover:scale-110 transition-transform duration-500" />
                               <div className="absolute bottom-4 left-6 z-20">
                                 <span className="text-xs font-black text-brand bg-white/90 backdrop-blur-md px-3 py-1.5 rounded-full uppercase tracking-wider shadow-sm border border-slate-100">
@@ -256,10 +256,7 @@ function Home() {
                            <h3 className="text-2xl font-bold text-slate-800 mb-3 line-clamp-2 group-hover:text-brand transition-colors">{service.title}</h3>
                            <p className="text-base text-slate-500 line-clamp-3 mb-8 flex-1 leading-relaxed">{service.description}</p>
                            
-                           <Link to="/book" className="inline-flex items-center justify-center gap-2 bg-slate-50 hover:bg-brand text-slate-700 hover:text-white font-bold py-3.5 px-6 rounded-xl transition-all duration-300 mt-auto group/btn border border-slate-100 hover:border-brand">
-                              Book Service 
-                              <ArrowRight className="h-4 w-4 group-hover/btn:translate-x-1 transition-transform" />
-                           </Link>
+
                         </div>
                      </motion.div>
                   ))}

@@ -80,8 +80,8 @@ function Login() {
   return (
     <SiteLayout>
       <section className="relative overflow-hidden bg-background min-h-[calc(100vh-64px)] flex items-center">
-        <div className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] rounded-full bg-brand/10 blur-[120px] opacity-70 pointer-events-none animate-pulse" />
-        <div className="absolute bottom-[-20%] right-[-10%] w-[600px] h-[600px] rounded-full bg-secondary/10 blur-[120px] opacity-70 pointer-events-none animate-pulse" style={{ animationDelay: "2s" }} />
+        <div className="absolute top-[-20%] left-[-10%] w-150 h-150 rounded-full bg-brand/10 blur-[120px] opacity-70 pointer-events-none animate-pulse" />
+        <div className="absolute bottom-[-20%] right-[-10%] w-150 h-150 rounded-full bg-secondary/10 blur-[120px] opacity-70 pointer-events-none animate-pulse" style={{ animationDelay: "2s" }} />
         
         <div className="mx-auto grid max-w-7xl gap-16 px-6 py-16 lg:grid-cols-2 lg:py-24 relative z-10 w-full">
           <motion.div 
@@ -257,11 +257,7 @@ function Login() {
               </motion.button>
             </form>
 
-            <div className="mt-6 text-center">
-              <Link to="/dealer-portal" className="text-sm font-bold text-brand hover:underline">
-                Are you a Service Partner? Login here →
-              </Link>
-            </div>
+
 
             <p className="mt-8 text-center text-xs font-medium text-muted-foreground">
               By continuing you agree to our{" "}
@@ -274,12 +270,12 @@ function Login() {
 
       <AnimatePresence>
         {showSuccess && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="fixed inset-0 z-100 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
             <motion.div
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="bg-white rounded-[2rem] shadow-2xl p-8 max-w-sm w-full text-center space-y-6"
+              className="bg-white rounded-4xl shadow-2xl p-8 max-w-sm w-full text-center space-y-6"
             >
               <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto text-emerald-600 animate-bounce">
                 <CheckCircle2 className="h-10 w-10 animate-pulse" />

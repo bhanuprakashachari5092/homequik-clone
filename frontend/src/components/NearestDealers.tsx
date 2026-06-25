@@ -3,15 +3,26 @@ import { db } from "@/lib/firebase";
 import { collection, getDocs, query, where } from "firebase/firestore";
 import { MapPin, Phone, Star, User, ShieldCheck, MessageCircle } from "lucide-react";
 import { motion } from "framer-motion";
+import { useDistanceCalculator } from "@/hooks/useDistanceCalculator";
 
 interface NearestDealersProps {
   targetCity?: string;
   address?: string;
+  customerCoords?: { latitude: number; longitude: number } | null;
+  assignedDealerId?: string | null;
 }
 
-export function NearestDealers({ targetCity, address }: NearestDealersProps) {
+export function NearestDealers({ targetCity, address, customerCoords, assignedDealerId }: NearestDealersProps) {
   const [dealers, setDealers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const { getDistance } = useDistanceCalculator();
+
+  const formatDistanceBoth = (meters: number): string => {
+    if (meters >= 9999999) return "Distance N/A";
+    const roundedMeters = Math.round(meters);
+    const km = (meters / 1000).toFixed(2);
+    return `${roundedMeters} m (${km} km)`;
+  };
 
   useEffect(() => {
     async function fetchDealers() {
@@ -26,8 +37,53 @@ export function NearestDealers({ targetCity, address }: NearestDealersProps) {
           list.push({ id: doc.id, ...doc.data() });
         });
 
-        // Match algorithm: check if keywords in targetCity or address match dealer's city
-        if (address || targetCity) {
+        const geocodeString = async (queryStr: string): Promise<{ latitude: number, longitude: number } | null> => {
+          try {
+            const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(queryStr)}&limit=1`, {
+              headers: {
+                "Accept-Language": "en-US,en;q=0.9",
+                "User-Agent": "Vendor99-Precise-Locator/1.0 (contact: support@vendor99.com)"
+              }
+            });
+            if (res.ok) {
+              const data = await res.json();
+              if (data && data.length > 0) {
+                return { latitude: parseFloat(data[0].lat), longitude: parseFloat(data[0].lon) };
+              }
+            }
+          } catch (err) {
+            console.error("Geocoding failed for:", queryStr, err);
+          }
+          return null;
+        };
+
+        if (customerCoords) {
+          const dealersWithDistance = await Promise.all(
+            list.map(async (dealer) => {
+              let dLat = dealer.latitude;
+              let dLng = dealer.longitude;
+
+              if ((dLat === null || dLat === undefined || dLng === null || dLng === undefined) && dealer.city) {
+                const coords = await geocodeString(dealer.city);
+                if (coords) {
+                  dLat = coords.latitude;
+                  dLng = coords.longitude;
+                }
+              }
+
+              if (dLat !== null && dLat !== undefined && dLng !== null && dLng !== undefined) {
+                const dist = getDistance(customerCoords.latitude, customerCoords.longitude, dLat, dLng);
+                return { ...dealer, distance: dist };
+              }
+              return { ...dealer, distance: 9999999 };
+            })
+          );
+
+          // Sort by distance ascending
+          dealersWithDistance.sort((a, b) => a.distance - b.distance);
+          setDealers(dealersWithDistance.slice(0, 5));
+        } else if (address || targetCity) {
+          // Match algorithm: check if keywords in targetCity or address match dealer's city
           const cleanAddress = (address || "").toLowerCase();
           const cleanTargetCity = (targetCity || "").toLowerCase();
 
@@ -57,7 +113,7 @@ export function NearestDealers({ targetCity, address }: NearestDealersProps) {
     }
 
     fetchDealers();
-  }, [targetCity, address]);
+  }, [targetCity, address, customerCoords]);
 
   if (loading) {
     return (
@@ -89,18 +145,33 @@ export function NearestDealers({ targetCity, address }: NearestDealersProps) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: idx * 0.1 }}
             whileHover={{ scale: 1.01, y: -2 }}
-            className="bg-slate-50/80 hover:bg-white border border-slate-200/50 rounded-2xl p-5 transition-all shadow-sm hover:shadow-md flex flex-col justify-between"
+            className={`border rounded-2xl p-5 transition-all shadow-sm hover:shadow-md flex flex-col justify-between ${
+              assignedDealerId === dealer.id
+                ? "bg-emerald-50/40 hover:bg-emerald-50/60 border-emerald-500/50 shadow-emerald-100"
+                : "bg-slate-50/80 hover:bg-white border-slate-200/50"
+            }`}
           >
             <div>
               <div className="flex justify-between items-start gap-4">
                 <div>
-                  <h5 className="font-black text-slate-800 text-base leading-tight flex items-center gap-2">
+                  <h5 className="font-black text-slate-800 text-base leading-tight flex flex-wrap items-center gap-2">
                     {dealer.businessName || dealer.ownerName}
+                    {assignedDealerId === dealer.id && (
+                      <span className="inline-flex items-center rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] font-bold text-white ring-1 ring-inset ring-emerald-600/10">
+                        ⚡ Assigned Technician
+                      </span>
+                    )}
                     <span className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 ring-1 ring-inset ring-emerald-600/10">
                       ✓ Verified
                     </span>
                   </h5>
                   <p className="text-xs text-brand font-bold uppercase tracking-wider mt-1">{dealer.category || "CCTV & Security Solutions"}</p>
+                  {dealer.distance !== undefined && (
+                    <p className="text-xs font-bold text-indigo-600 mt-1 flex items-center gap-1">
+                      <span>📍 Distance:</span>
+                      <span>{formatDistanceBoth(dealer.distance)}</span>
+                    </p>
+                  )}
                 </div>
                 <div className="flex items-center gap-1 bg-amber-100 text-amber-800 px-2.5 py-1 rounded-full text-xs font-black shrink-0">
                   <Star className="h-3.5 w-3.5 fill-current text-amber-500" /> 4.9
@@ -119,6 +190,7 @@ export function NearestDealers({ targetCity, address }: NearestDealersProps) {
               </div>
               <div className="flex items-center gap-2 sm:col-span-2 mt-2 w-full">
                 <button
+                  type="button"
                   onClick={() => {
                      const text = `Hi Vendor99, I want to connect with verified partner "${dealer.businessName || dealer.ownerName}" (${dealer.id}) for my service booking.`;
                      window.open(`https://wa.me/919141052539?text=${encodeURIComponent(text)}`, '_blank');

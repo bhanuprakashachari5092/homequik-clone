@@ -73,8 +73,39 @@ const PLANS = [
 // Configuration
 const USE_MOCK_PAYMENT = false; // Using real Razorpay payment
 
+async function geocodeCity(city: string): Promise<{ latitude: number, longitude: number } | null> {
+  try {
+    const googleApiKey = (import.meta as any).env.VITE_GOOGLE_MAPS_API_KEY;
+    if (googleApiKey) {
+      const res = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(city)}&key=${googleApiKey}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.status === "OK" && data.results && data.results.length > 0) {
+          const loc = data.results[0].geometry.location;
+          return { latitude: loc.lat, longitude: loc.lng };
+        }
+      }
+    }
+    // Fallback: Nominatim OpenStreetMap geocoding
+    const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(city)}&limit=1`, {
+      headers: {
+        "Accept-Language": "en-US,en;q=0.9",
+      }
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.length > 0) {
+        return { latitude: parseFloat(data[0].lat), longitude: parseFloat(data[0].lon) };
+      }
+    }
+  } catch (err) {
+    console.error("Geocoding failed for city:", city, err);
+  }
+  return null;
+}
+
 function PartnerPage() {
-  const { location, isLocating, fetchDynamicLocation } = useLocation();
+  const { location, coords, isLocating, fetchDynamicLocation } = useLocation();
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -194,6 +225,19 @@ function PartnerPage() {
   const handlePaymentSuccess = async (orderId: string, txnId: string) => {
     setIsSubmitting(true);
     
+    let resolvedLat = coords?.latitude || null;
+    let resolvedLng = coords?.longitude || null;
+
+    try {
+      const geo = await geocodeCity(formData.city);
+      if (geo) {
+        resolvedLat = geo.latitude;
+        resolvedLng = geo.longitude;
+      }
+    } catch (err) {
+      console.warn("Failed to geocode dealer registered city:", err);
+    }
+    
     const newDealerId = `DLR-${Math.floor(Math.random() * 1000000)}`;
     const dealerData = {
       ...formData,
@@ -203,7 +247,9 @@ function PartnerPage() {
       transactionId: txnId,
       paymentId: `PAY_${Math.floor(Math.random() * 1000000)}`, // From Cashfree webhook
       paymentDate: new Date().toISOString(),
-      status: "Active"
+      status: "Active",
+      latitude: resolvedLat,
+      longitude: resolvedLng
     };
 
     try {
@@ -272,8 +318,8 @@ function PartnerPage() {
     <SiteLayout>
       <div className="bg-[#f8fafc] min-h-screen py-12 font-sans relative overflow-hidden">
         {/* Decorative Background Elements */}
-        <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-brand/5 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/3 pointer-events-none" />
-        <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-purple-500/5 rounded-full blur-[100px] translate-y-1/3 -translate-x-1/3 pointer-events-none" />
+        <div className="absolute top-0 right-0 w-200 h-200 bg-brand/5 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/3 pointer-events-none" />
+        <div className="absolute bottom-0 left-0 w-150 h-150 bg-purple-500/5 rounded-full blur-[100px] translate-y-1/3 -translate-x-1/3 pointer-events-none" />
 
         <div className="max-w-5xl mx-auto px-6 relative z-10">
           
@@ -315,7 +361,7 @@ function PartnerPage() {
                         </span>
                      </div>
                      {idx < arr.length - 1 && (
-                        <div className="absolute top-6 left-[50%] w-full h-[2px] -z-10">
+                        <div className="absolute top-6 left-[50%] w-full h-0.5 -z-10">
                            <div className={`h-full transition-all duration-500 ${step > s.num ? 'bg-brand' : 'bg-slate-200'}`} style={{ width: '100%' }} />
                         </div>
                      )}
@@ -590,14 +636,11 @@ function PartnerPage() {
                    </div>
                 </div>
 
-                <div className="flex justify-center gap-4">
-                   <Link to="/" className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3.5 px-6 rounded-xl transition-all">
-                      View Profile
-                   </Link>
-                   <Link to="/dealer-portal" className="bg-brand hover:bg-brand-dark text-white font-bold py-3.5 px-6 rounded-xl transition-all shadow-md">
-                      Go To Dashboard
-                   </Link>
-                </div>
+                 <div className="flex justify-center">
+                    <Link to="/" className="bg-brand hover:bg-brand-dark text-white font-bold py-3.5 px-8 rounded-xl transition-all shadow-md">
+                       Go to Home
+                    </Link>
+                 </div>
               </motion.div>
             )}
           </AnimatePresence>

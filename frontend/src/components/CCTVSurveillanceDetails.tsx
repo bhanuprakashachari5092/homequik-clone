@@ -201,11 +201,35 @@ export function CCTVSurveillanceDetails() {
   const [modalItems, setModalItems] = useState<string[]>([]);
   
   const toggleSelection = (serviceName: string) => {
+    if (serviceName.startsWith("Repair:")) {
+      setSelectedItems(prev => {
+        const withoutRepairs = prev.filter(item => !item.startsWith("Repair:"));
+        if (prev.includes(serviceName)) return withoutRepairs;
+        return [...withoutRepairs, serviceName];
+      });
+      return;
+    }
     setSelectedItems(prev => 
       prev.includes(serviceName) 
         ? prev.filter(item => item !== serviceName)
         : [...prev, serviceName]
     );
+  };
+
+  const incrementSelection = (serviceName: string) => {
+    setSelectedItems(prev => [...prev, serviceName]);
+  };
+
+  const decrementSelection = (serviceName: string) => {
+    setSelectedItems(prev => {
+      const idx = prev.lastIndexOf(serviceName);
+      if (idx !== -1) {
+        const newArr = [...prev];
+        newArr.splice(idx, 1);
+        return newArr;
+      }
+      return prev;
+    });
   };
 
   const handleWhatsApp = (customText?: string) => {
@@ -289,7 +313,7 @@ export function CCTVSurveillanceDetails() {
   })();
 
   return (
-    <div className="bg-[#f0f4f8] min-h-screen pb-32 font-sans">
+    <div className="bg-[#fdfbf7] min-h-screen pb-32 font-sans">
 
 
       {/* Main Content Area */}
@@ -298,10 +322,10 @@ export function CCTVSurveillanceDetails() {
 
 
         {/* Navigation Tabs (Hero Area) */}
-        <div className="bg-slate-900 rounded-[2.5rem] overflow-hidden mb-12 shadow-[0_20px_50px_rgba(0,0,0,0.1)] relative border border-slate-800">
+        <div className="bg-[#2d3e35] rounded-[2.5rem] overflow-hidden mb-12 shadow-[0_20px_50px_rgba(0,0,0,0.1)] relative border border-slate-800">
            {/* Hero Image Section */}
-           <div className="relative h-[450px] w-full overflow-hidden transition-all duration-500 group">
-             <div className="absolute inset-0 bg-gradient-to-r from-slate-900 via-slate-900/80 to-transparent z-10"></div>
+           <div className="relative h-112.5 w-full overflow-hidden transition-all duration-500 group">
+             <div className="absolute inset-0 bg-linear-to-r from-slate-900 via-slate-900/80 to-transparent z-10"></div>
              <img 
                src={activeTab === 'buy' ? '/cctv_hero_buy.png' : '/cctv_hero.png'}  
                alt="CCTV Expert" 
@@ -317,7 +341,7 @@ export function CCTVSurveillanceDetails() {
                  key={activeTab}
                  className="text-4xl md:text-6xl font-black text-white tracking-tight leading-tight mb-6"
                >
-                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand to-rose-500">Vendor99:</span><br/>
+                 <span className="text-transparent bg-clip-text bg-linear-to-r from-[#b35d38] to-[#7d9c82]">Vendor99:</span><br/>
                  Premium CCTV<br/>Solutions.
                </motion.h2>
                <p className="text-slate-300 font-medium text-lg md:text-xl max-w-md">
@@ -366,9 +390,9 @@ export function CCTVSurveillanceDetails() {
                     <motion.div 
                        key="installation"
                        initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
-                       className="bg-white rounded-[2rem] border border-slate-100 shadow-[0_8px_30px_rgba(0,0,0,0.04)] overflow-hidden"
+                       className="bg-white rounded-4xl border border-slate-100 shadow-[0_8px_30px_rgba(0,0,0,0.04)] overflow-hidden"
                     >
-                       <div className="bg-gradient-to-r from-brand to-rose-600 p-8 text-white relative overflow-hidden">
+                       <div className="bg-[#7d9c82] p-8 text-white relative overflow-hidden">
                           <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
                           <h3 className="text-2xl font-black relative z-10 flex items-center gap-3"><Settings className="h-8 w-8" /> Book Only Installation</h3>
                           <p className="text-white/80 mt-2 relative z-10">Select the specific installation services you require.</p>
@@ -384,16 +408,25 @@ export function CCTVSurveillanceDetails() {
                              </div>
                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                <div 
-                                 className={`p-5 rounded-2xl border-2 flex items-center cursor-pointer transition-all duration-300 relative overflow-hidden group ${selectedItems.includes("Installation: CAMERA [₹499/-]") ? 'bg-brand/5 border-brand shadow-[0_8px_20px_rgba(217,46,16,0.1)]' : 'border-slate-100 hover:border-brand/30 hover:bg-slate-50'}`} 
-                                 onClick={() => toggleSelection("Installation: CAMERA [₹499/-]")}
+                                 className={`p-4 md:p-5 rounded-2xl border-2 flex flex-col justify-between gap-4 cursor-pointer transition-all duration-300 relative overflow-hidden group h-full ${selectedItems.includes("Installation: CAMERA [₹499/-]") ? 'bg-brand/5 border-brand shadow-[0_8px_20px_rgba(217,46,16,0.1)]' : 'border-slate-100 hover:border-brand/30 hover:bg-slate-50'}`} 
+                                 onClick={() => {
+                                   if (!selectedItems.includes("Installation: CAMERA [₹499/-]")) incrementSelection("Installation: CAMERA [₹499/-]");
+                                 }}
                                >
-                                  <div className={`mr-4 p-2 rounded-xl transition-colors ${selectedItems.includes("Installation: CAMERA [₹499/-]") ? 'bg-brand text-white' : 'bg-slate-100 text-slate-400 group-hover:text-brand group-hover:bg-brand/10'}`}>
-                                    {selectedItems.includes("Installation: CAMERA [₹499/-]") ? <CheckCircle2 className="h-6 w-6" /> : <Video className="h-6 w-6" />}
-                                  </div>
-                                  <div>
+                                  <div className="flex items-center gap-4">
+                                    <div className={`p-3 rounded-xl shrink-0 transition-colors ${selectedItems.includes("Installation: CAMERA [₹499/-]") ? 'bg-brand text-white shadow-md' : 'bg-slate-100 text-slate-400 group-hover:text-brand group-hover:bg-brand/10'}`}>
+                                      {selectedItems.includes("Installation: CAMERA [₹499/-]") ? <CheckCircle2 className="h-6 w-6" /> : <Video className="h-6 w-6" />}
+                                    </div>
                                     <span className="block font-bold text-slate-800 text-lg">CAMERA</span>
-                                    <span className="block font-black text-brand">₹499/-</span>
                                   </div>
+                                  
+                                  {selectedItems.includes("Installation: CAMERA [₹499/-]") && (
+                                    <div className="flex items-center justify-between bg-white px-4 py-2 rounded-xl border border-brand/20 mt-auto shadow-sm" onClick={e => e.stopPropagation()}>
+                                      <button onClick={() => decrementSelection("Installation: CAMERA [₹499/-]")} className="text-brand hover:bg-brand/10 w-10 h-10 rounded-full flex items-center justify-center font-bold text-xl transition-colors">-</button>
+                                      <span className="font-black text-lg w-8 text-center text-brand">{selectedItems.filter(i => i === "Installation: CAMERA [₹499/-]").length}</span>
+                                      <button onClick={() => incrementSelection("Installation: CAMERA [₹499/-]")} className="text-brand hover:bg-brand/10 w-10 h-10 rounded-full flex items-center justify-center font-bold text-xl transition-colors">+</button>
+                                    </div>
+                                  )}
                                </div>
                              </div>
                           </div>
@@ -412,16 +445,25 @@ export function CCTVSurveillanceDetails() {
                                 ].map((item, idx) => (
                                    <div 
                                       key={idx}
-                                      className={`p-5 rounded-2xl border-2 flex items-center cursor-pointer transition-all duration-300 relative overflow-hidden group ${selectedItems.includes(item.id) ? 'bg-slate-800 border-slate-800 shadow-xl' : 'border-slate-100 hover:border-slate-300 hover:bg-slate-50'}`} 
-                                      onClick={() => toggleSelection(item.id)}
+                                      className={`p-4 md:p-5 rounded-2xl border-2 flex flex-col justify-between gap-4 cursor-pointer transition-all duration-300 relative overflow-hidden group h-full ${selectedItems.includes(item.id) ? 'bg-slate-800 border-slate-800 shadow-xl' : 'border-slate-100 hover:border-slate-300 hover:bg-slate-50'}`} 
+                                      onClick={() => {
+                                        if (!selectedItems.includes(item.id)) incrementSelection(item.id);
+                                      }}
                                    >
-                                      <div className={`mr-4 p-2 rounded-xl transition-colors ${selectedItems.includes(item.id) ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-400 group-hover:text-slate-800 group-hover:bg-slate-200'}`}>
-                                        {selectedItems.includes(item.id) ? <CheckCircle2 className="h-6 w-6" /> : <Server className="h-6 w-6" />}
-                                      </div>
-                                      <div>
+                                      <div className="flex items-center gap-3">
+                                        <div className={`p-3 rounded-xl shrink-0 transition-colors ${selectedItems.includes(item.id) ? 'bg-white/20 text-white shadow-inner' : 'bg-slate-100 text-slate-400 group-hover:text-slate-800 group-hover:bg-slate-200'}`}>
+                                          {selectedItems.includes(item.id) ? <CheckCircle2 className="h-6 w-6" /> : <Server className="h-6 w-6" />}
+                                        </div>
                                         <span className={`block font-bold text-lg ${selectedItems.includes(item.id) ? 'text-white' : 'text-slate-800'}`}>{item.label}</span>
-                                        <span className={`block font-black ${selectedItems.includes(item.id) ? 'text-white/80' : 'text-brand'}`}>{item.price}</span>
                                       </div>
+                                      
+                                      {selectedItems.includes(item.id) && (
+                                        <div className="flex items-center justify-between bg-white/10 px-4 py-2 rounded-xl border border-white/20 mt-auto" onClick={e => e.stopPropagation()}>
+                                          <button onClick={() => decrementSelection(item.id)} className="text-white hover:bg-white/20 w-10 h-10 rounded-full flex items-center justify-center font-bold text-xl transition-colors">-</button>
+                                          <span className="font-black text-lg w-8 text-center text-white">{selectedItems.filter(i => i === item.id).length}</span>
+                                          <button onClick={() => incrementSelection(item.id)} className="text-white hover:bg-white/20 w-10 h-10 rounded-full flex items-center justify-center font-bold text-xl transition-colors">+</button>
+                                        </div>
+                                      )}
                                    </div>
                                 ))}
                              </div>
@@ -441,14 +483,25 @@ export function CCTVSurveillanceDetails() {
                                 ].map((item, idx) => (
                                    <div 
                                       key={idx}
-                                      className={`p-4 rounded-2xl border-2 flex flex-col justify-center cursor-pointer transition-all duration-300 relative overflow-hidden group ${selectedItems.includes(item.id) ? 'bg-orange-500/10 border-orange-500 shadow-lg' : 'border-slate-100 hover:border-orange-500/30 hover:bg-orange-500/5'}`} 
-                                      onClick={() => toggleSelection(item.id)}
+                                      className={`p-4 md:p-5 rounded-2xl border-2 flex flex-col justify-between gap-4 cursor-pointer transition-all duration-300 relative overflow-hidden group h-full ${selectedItems.includes(item.id) ? 'bg-orange-500/10 border-orange-500 shadow-lg' : 'border-slate-100 hover:border-orange-500/30 hover:bg-orange-500/5'}`} 
+                                      onClick={() => {
+                                        if (!selectedItems.includes(item.id)) incrementSelection(item.id);
+                                      }}
                                    >
-                                      <div className="flex justify-between items-start mb-2">
-                                        <span className={`font-bold text-lg ${selectedItems.includes(item.id) ? 'text-orange-700' : 'text-slate-800'}`}>{item.label}</span>
-                                        {selectedItems.includes(item.id) && <CheckCircle2 className="h-5 w-5 text-orange-500" />}
+                                      <div className="flex items-center gap-3">
+                                        <div className={`p-3 rounded-xl shrink-0 transition-colors ${selectedItems.includes(item.id) ? 'bg-orange-500 text-white shadow-md' : 'bg-slate-100 text-slate-400 group-hover:text-orange-500 group-hover:bg-orange-500/10'}`}>
+                                          {selectedItems.includes(item.id) ? <CheckCircle2 className="h-6 w-6" /> : <Wrench className="h-6 w-6" />}
+                                        </div>
+                                        <span className={`block font-bold text-lg leading-tight ${selectedItems.includes(item.id) ? 'text-orange-700' : 'text-slate-800'}`}>{item.label}</span>
                                       </div>
-                                      <span className={`font-black text-sm ${selectedItems.includes(item.id) ? 'text-orange-600' : 'text-slate-500'}`}>{item.price}</span>
+                                      
+                                      {selectedItems.includes(item.id) && (
+                                        <div className="flex items-center justify-between bg-white px-4 py-2 rounded-xl border border-orange-500/30 mt-auto shadow-sm" onClick={e => e.stopPropagation()}>
+                                          <button onClick={() => decrementSelection(item.id)} className="text-orange-500 hover:bg-orange-500/10 w-10 h-10 rounded-full flex items-center justify-center font-bold text-xl transition-colors">-</button>
+                                          <span className="font-black text-lg w-8 text-center text-orange-600">{selectedItems.filter(i => i === item.id).length}</span>
+                                          <button onClick={() => incrementSelection(item.id)} className="text-orange-500 hover:bg-orange-500/10 w-10 h-10 rounded-full flex items-center justify-center font-bold text-xl transition-colors">+</button>
+                                        </div>
+                                      )}
                                    </div>
                                 ))}
                              </div>
@@ -468,14 +521,25 @@ export function CCTVSurveillanceDetails() {
                                 ].map((item, idx) => (
                                    <div 
                                       key={idx}
-                                      className={`p-4 rounded-2xl border-2 flex flex-col justify-center cursor-pointer transition-all duration-300 relative overflow-hidden group ${selectedItems.includes(item.id) ? 'bg-blue-500/10 border-blue-500 shadow-lg' : 'border-slate-100 hover:border-blue-500/30 hover:bg-blue-500/5'}`} 
-                                      onClick={() => toggleSelection(item.id)}
+                                      className={`p-4 md:p-5 rounded-2xl border-2 flex flex-col justify-between gap-4 cursor-pointer transition-all duration-300 relative overflow-hidden group h-full ${selectedItems.includes(item.id) ? 'bg-blue-500/10 border-blue-500 shadow-lg' : 'border-slate-100 hover:border-blue-500/30 hover:bg-blue-500/5'}`} 
+                                      onClick={() => {
+                                        if (!selectedItems.includes(item.id)) incrementSelection(item.id);
+                                      }}
                                    >
-                                      <div className="flex justify-between items-start mb-2">
-                                        <span className={`font-bold text-lg ${selectedItems.includes(item.id) ? 'text-blue-700' : 'text-slate-800'}`}>{item.label}</span>
-                                        {selectedItems.includes(item.id) && <CheckCircle2 className="h-5 w-5 text-blue-500" />}
+                                      <div className="flex items-center gap-3">
+                                        <div className={`p-3 rounded-xl shrink-0 transition-colors ${selectedItems.includes(item.id) ? 'bg-blue-500 text-white shadow-md' : 'bg-slate-100 text-slate-400 group-hover:text-blue-500 group-hover:bg-blue-500/10'}`}>
+                                          {selectedItems.includes(item.id) ? <CheckCircle2 className="h-6 w-6" /> : <Server className="h-6 w-6" />}
+                                        </div>
+                                        <span className={`block font-bold text-lg leading-tight ${selectedItems.includes(item.id) ? 'text-blue-700' : 'text-slate-800'}`}>{item.label}</span>
                                       </div>
-                                      <span className={`font-black text-sm ${selectedItems.includes(item.id) ? 'text-blue-600' : 'text-slate-500'}`}>{item.price}</span>
+                                      
+                                      {selectedItems.includes(item.id) && (
+                                        <div className="flex items-center justify-between bg-white px-4 py-2 rounded-xl border border-blue-500/30 mt-auto shadow-sm" onClick={e => e.stopPropagation()}>
+                                          <button onClick={() => decrementSelection(item.id)} className="text-blue-500 hover:bg-blue-500/10 w-10 h-10 rounded-full flex items-center justify-center font-bold text-xl transition-colors">-</button>
+                                          <span className="font-black text-lg w-8 text-center text-blue-600">{selectedItems.filter(i => i === item.id).length}</span>
+                                          <button onClick={() => incrementSelection(item.id)} className="text-blue-500 hover:bg-blue-500/10 w-10 h-10 rounded-full flex items-center justify-center font-bold text-xl transition-colors">+</button>
+                                        </div>
+                                      )}
                                    </div>
                                 ))}
                              </div>
@@ -496,13 +560,13 @@ export function CCTVSurveillanceDetails() {
                     <motion.div 
                        key="repair"
                        initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
-                       className="bg-white rounded-[2rem] border border-slate-100 shadow-[0_8px_30px_rgba(0,0,0,0.04)] overflow-hidden"
+                       className="bg-white rounded-4xl border border-slate-100 shadow-[0_8px_30px_rgba(0,0,0,0.04)] overflow-hidden"
                     >
-                       <div className="bg-gradient-to-r from-orange-500 to-amber-500 p-8 text-white relative overflow-hidden flex justify-between items-center">
+                       <div className="bg-linear-to-r from-[#b35d38] to-[#d97706] p-8 text-white relative overflow-hidden flex justify-between items-center">
                           <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
                           <div className="relative z-10">
                             <h3 className="text-2xl font-black flex items-center gap-3"><Wrench className="h-8 w-8" /> CCTV Repair & Service</h3>
-                            <p className="text-white/80 mt-2">Select the specific parts or services you need repaired.</p>
+                            <p className="text-white/80 mt-2">Select the specific parts or services you need repaired. (Select only one)</p>
                           </div>
                           <span className="font-black text-xl bg-white/20 px-6 py-2 rounded-2xl relative z-10 shadow-lg border border-white/20 backdrop-blur-md">₹ 450/- <span className="text-sm font-medium opacity-80 block text-center">Visit Charge</span></span>
                        </div>
@@ -545,7 +609,7 @@ export function CCTVSurveillanceDetails() {
                              <button onClick={() => handleAddToCart()} className="bg-slate-800 hover:bg-slate-900 w-full sm:w-auto text-white font-bold py-4 px-10 rounded-2xl transition-all shadow-[0_8px_20px_rgba(0,0,0,0.1)] hover:-translate-y-1 hover:shadow-xl text-lg">
                                 Add to Cart
                              </button>
-                             <button onClick={() => handleWhatsApp()} className="bg-gradient-to-r from-orange-500 to-amber-500 w-full sm:w-auto text-white font-black py-4 px-10 rounded-2xl transition-all shadow-[0_8px_20px_rgba(249,115,22,0.3)] hover:-translate-y-1 hover:shadow-[0_15px_30px_rgba(249,115,22,0.4)] text-lg">
+                             <button onClick={() => handleWhatsApp()} className="bg-linear-to-r from-orange-500 to-amber-500 w-full sm:w-auto text-white font-black py-4 px-10 rounded-2xl transition-all shadow-[0_8px_20px_rgba(249,115,22,0.3)] hover:-translate-y-1 hover:shadow-[0_15px_30px_rgba(249,115,22,0.4)] text-lg">
                                 Proceed to Booking
                              </button>
                            </div>
@@ -560,7 +624,7 @@ export function CCTVSurveillanceDetails() {
                        initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
                     >
                        {/* Camera Price List */}
-                       <div className="bg-[#f8fafc] rounded-[2rem] border border-border shadow-md overflow-hidden mb-8">
+                       <div className="bg-[#f8fafc] rounded-4xl border border-border shadow-md overflow-hidden mb-8">
                           <div className="p-8 text-center border-b border-border bg-white">
                              <div className="flex items-center justify-center gap-3 mb-2">
                                 <ShieldCheck className="text-primary h-8 w-8" />
@@ -588,12 +652,13 @@ export function CCTVSurveillanceDetails() {
                                              </div>
                                              
                                              <div className="overflow-x-auto">
-                                                <table className="w-full text-left border-collapse min-w-[600px]">
+                                                <table className="w-full text-left border-collapse min-w-150">
                                                    <thead>
                                                       <tr className="bg-slate-100 text-slate-700 text-sm border-b border-slate-200">
-                                                         {section.headers.map((header, k) => (
-                                                            <th key={k} className="p-4 font-bold whitespace-nowrap">{header}</th>
-                                                         ))}
+                                                         {section.headers.map((header, k) => {
+                                                            if (header.toLowerCase().includes("price")) return null;
+                                                            return <th key={k} className="p-4 font-bold whitespace-nowrap">{header}</th>;
+                                                         })}
                                                       </tr>
                                                    </thead>
                                                    <tbody>
@@ -611,7 +676,7 @@ export function CCTVSurveillanceDetails() {
                                                                   <span className="whitespace-pre-line">{item.col1}</span>
                                                                </td>
                                                                <td className="p-4 text-sm font-semibold text-slate-600">{item.col2}</td>
-                                                               <td className="p-4"><DynamicPrice originalPrice={item.col3} category="CCTV Cameras" discountClassName="text-sm font-extrabold text-brand whitespace-nowrap" /></td>
+                                                               {/* <td className="p-4"><DynamicPrice originalPrice={item.col3} category="CCTV Cameras" discountClassName="text-sm font-extrabold text-brand whitespace-nowrap" /></td> */}
                                                             </tr>
                                                          );
                                                       })}
@@ -676,33 +741,26 @@ export function CCTVSurveillanceDetails() {
                  
                  {/* Selection Summary (Visible only if items selected) */}
                  {selectedItems.length > 0 && (
-                    <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-slate-900 text-white rounded-[2rem] p-8 shadow-[0_20px_50px_rgba(0,0,0,0.15)] relative overflow-hidden border border-slate-800">
+                    <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-slate-900 text-white rounded-4xl p-8 shadow-[0_20px_50px_rgba(0,0,0,0.15)] relative overflow-hidden border border-slate-800">
                        <div className="absolute top-0 right-0 w-32 h-32 bg-brand/20 blur-3xl rounded-full" />
                        <h3 className="font-black text-xl mb-6 flex items-center gap-3 relative z-10">
                          <div className="bg-brand text-white p-2 rounded-xl"><ShoppingCart className="h-5 w-5" /></div> 
                          Your Selection ({selectedItems.length})
                        </h3>
-                       <div className="max-h-[300px] overflow-y-auto pr-2 space-y-3 mb-6 custom-scrollbar relative z-10">
+                       <div className="max-h-75 overflow-y-auto pr-2 space-y-3 mb-6 custom-scrollbar relative z-10">
                           {selectedItems.map((item, i) => (
                              <div key={i} className="text-sm bg-white/5 border border-white/10 rounded-xl p-4 flex justify-between items-start gap-3 backdrop-blur-md">
-                                <span className="font-semibold text-slate-200 leading-snug">{item}</span>
+                                <span className="font-semibold text-slate-200 leading-snug">{item.replace(/\[₹.*?\]/g, '')}</span>
                                 <button onClick={() => toggleSelection(item)} className="text-white/40 hover:text-white shrink-0 bg-white/10 hover:bg-brand rounded-full p-1 transition-colors"><CheckCircle2 className="h-4 w-4" /></button>
                              </div>
                           ))}
                        </div>
                        
-                       {totalPrice > 0 && (
-                         <div className="bg-brand/10 border border-brand/20 rounded-2xl p-5 mb-6 flex justify-between items-center relative z-10">
-                            <span className="font-bold text-brand">Total Cost</span>
-                            <span className="font-black text-2xl text-white">₹ {totalPrice.toLocaleString('en-IN')}/-</span>
-                         </div>
-                       )}
-
                        <div className="space-y-3 relative z-10">
                          <button onClick={() => handleAddToCart()} className="w-full bg-white/10 text-white font-bold py-4 rounded-xl hover:bg-white/20 transition-colors shadow-md border border-white/10 flex justify-center items-center gap-2">
                             Add to Cart
                          </button>
-                         <button onClick={() => handleWhatsApp()} className="w-full bg-gradient-to-r from-brand to-rose-600 text-white font-black py-4 rounded-xl hover:shadow-[0_10px_20px_rgba(217,46,16,0.3)] hover:-translate-y-0.5 transition-all shadow-md flex justify-center items-center gap-2">
+                         <button onClick={() => handleWhatsApp()} className="w-full bg-linear-to-r from-brand to-rose-600 text-white font-black py-4 rounded-xl hover:shadow-[0_10px_20px_rgba(217,46,16,0.3)] hover:-translate-y-0.5 transition-all shadow-md flex justify-center items-center gap-2">
                             Proceed to Booking
                          </button>
                        </div>
@@ -710,7 +768,7 @@ export function CCTVSurveillanceDetails() {
                  )}
 
                  {/* Information Sidebar Box */}
-                 <div className="bg-white rounded-[2rem] border border-border shadow-md p-6 lg:p-8">
+                 <div className="bg-white rounded-4xl border border-border shadow-md p-6 lg:p-8">
                     <ul className="space-y-4">
                        {activeTab === "buy" && (
                           <>

@@ -94,7 +94,7 @@ export function PaintingDetails() {
           <p className="text-muted-foreground mb-6">Targeted refreshes varying depending on room configuration and localized preparation requirements.</p>
           
           <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm">
-            <div className="grid grid-cols-1 md:grid-cols-[1fr_2fr_100px_150px_120px] gap-4 p-4 bg-secondary/50 border-b border-border text-xs font-bold text-muted-foreground uppercase tracking-wider hidden md:grid">
+            <div className="grid-cols-1 md:grid-cols-[1fr_2fr_100px_150px_120px] gap-4 p-4 bg-secondary/50 border-b border-border text-xs font-bold text-muted-foreground uppercase tracking-wider hidden md:grid">
               <div>Service Segment</div>
               <div>Standard Coverage Scope</div>
               <div>Timeline</div>
@@ -185,7 +185,7 @@ export function PaintingDetails() {
 
           {/* Standard & Premium Tiers */}
           <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm">
-            <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_1fr_1fr_120px] gap-4 p-4 bg-secondary/50 border-b border-border text-xs font-bold text-muted-foreground uppercase tracking-wider hidden md:grid">
+            <div className="grid-cols-1 md:grid-cols-[1fr_1fr_1fr_1fr_120px] gap-4 p-4 bg-secondary/50 border-b border-border text-xs font-bold text-muted-foreground uppercase tracking-wider hidden md:grid">
               <div>Apartment Size</div>
               <div>Unfurnished Layout</div>
               <div>Furnished Layout</div>
@@ -334,7 +334,7 @@ export function PaintingDetails() {
             <Briefcase className="h-6 w-6 text-brand" />
             <h2 className="text-2xl font-bold text-foreground">The Operating Framework</h2>
           </div>
-          <div className="space-y-6 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-border before:to-transparent">
+          <div className="space-y-6 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-linear-to-b before:from-transparent before:via-border before:to-transparent">
             {[
               { step: "Step 1", title: "Digital Consultation & Laser Diagnosis", desc: "Precise measurements mapped using laser distance meters to eliminate manual padding anomalies. Dynamic, transparent digital quotation detailing materials and labor." },
               { step: "Step 2", title: "Asset Masking & Protection Protocol", desc: "Heavy-duty masking paper and plastic drop sheets deployed. Flooring, static woodwork, and electronics comprehensively wrapped for a 100% dust-free workspace." },
